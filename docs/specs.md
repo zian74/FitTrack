@@ -6,8 +6,9 @@ Application de suivi de la condition physique fondée sur un plan de test de 14 
 objectives (repos, mobilité, force, cardio). Logique première : **comparaison à soi-même
 dans le temps** plutôt qu'aux normes.
 
-- v1 : usage individuel (1 profil), données locales
-- v2 : multi-profils (famille, coach), synchro optionnelle
+- **Mono-profil par design** : l'app gère les données d'une seule personne, stockées
+  exclusivement en local sur son appareil (localStorage). Aucun compte, aucun serveur,
+  aucun partage — décision produit assumée, hors périmètre.
 
 ## 2. Tests couverts
 
@@ -56,10 +57,9 @@ dans le temps** plutôt qu'aux normes.
 - M3 — Visualisation : graphes, dashboard, calendrier re-test ✅
 - M4 — Export & polish : CSV/JSON ✅, PDF à faire, onboarding à faire
 
-## 6. Backlog v2
+## 6. Backlog
 
-- Multi-profils / mode coach
 - PWA installable (manifest, service worker)
-- GPS pour le Cooper
-- Notifications de rappel
+- Notifications de rappel des tests
+- Intégration GPS pour le Cooper
 - Intégration HealthKit / Google Fit
