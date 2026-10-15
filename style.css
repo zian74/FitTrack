@@ -88,6 +88,17 @@ tr:nth-child(even) td { background: var(--accent-light); }
 /* Graphique */
 #chart { width: 100%; min-height: 260px; }
 #chart svg { width: 100%; height: auto; }
+/* Tableau « Dernière session » (3 sessions en colonnes) */
+.last3-table { table-layout: fixed; }
+.last3-table th:first-child,
+.last3-table td.test-name { width: 42%; }
+.last3-table th:not(:first-child),
+.last3-table td.num {
+  width: 19.3%; text-align: right; white-space: nowrap;
+}
+.last3-table th { white-space: nowrap; }
+.last3-table td.muted { color: #aaa; text-align: center; }
+
 /* Bouton crayon d'édition dans les tableaux */
 .edit-btn {
   background: none; border: none; cursor: pointer;

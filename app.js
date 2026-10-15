@@ -159,8 +159,7 @@ function renderDashboard() {
     const rows = scored.map(id => {
       const t = byId(id);
       const st = statusOf(t, lv[id].value, profile);
-      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span>
-        <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${lv[id].date}" data-edit-test="${id}">✏️</button></li>`;
+      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
     });
     const avg = Math.round(scored.reduce((a, id) => {
       const t = byId(id);
@@ -180,8 +179,9 @@ function renderDashboard() {
     if (!last) due.push(`<li><b>${label}</b> — jamais effectué <span class="badge low">à faire</span></li>`);
     else {
       const m = monthsSince(last);
-      if (m >= months) due.push(`<li><b>${label}</b> — dernier : ${last} <span class="badge low">à refaire (${m} mois)</span></li>`);
-      else due.push(`<li><b>${label}</b> — dernier : ${last} <span class="badge good">à jour</span></li>`);
+      const lastFr = last.split('-').reverse().join('/');
+      if (m >= months) due.push(`<li><b>${label}</b> — dernier : ${lastFr} <span class="badge low">à refaire (${m} mois)</span></li>`);
+      else due.push(`<li><b>${label}</b> — dernier : ${lastFr} <span class="badge good">à jour</span></li>`);
     }
   }
   $('#due-tests').innerHTML = due.join('');
@@ -202,22 +202,30 @@ function renderDashboard() {
   }
   $('#alerts').innerHTML = alerts.length ? alerts.join('') : '<li>Aucune alerte. 👍</li>';
 
-  // Dernière vs précédente session
+  // Dernière session — 3 dernières sessions en colonnes
   const sessions = getSessions();
   const compEl = $('#last-comparison');
   if (sessions.length === 0) compEl.innerHTML = '<p>Aucune donnée.</p>';
   else {
-    const last = sessions[sessions.length - 1];
-    const prev = sessions[sessions.length - 2];
-    let html = `<table><tr><th>Test</th><th>${prev ? prev.date : '—'}</th><th>${last.date}</th><th>Δ</th><th></th></tr>`;
-    for (const [id, v] of Object.entries(last.values || {})) {
-      if (v == null || v === '') continue;
+    const last3 = sessions.slice(-3).reverse(); // la plus récente d'abord
+    const frDate = d => d.split('-').reverse().join('/');
+    // tous les tests présents dans les 3 dernières sessions
+    const ids = [];
+    for (const s of last3) for (const id of Object.keys(s.values || {})) {
+      if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
+    }
+    let html = '<table class="last3-table">';
+    html += '<tr><th>Test</th>' + last3.map((s, i) => `<th>${i === 0 ? '📍 ' : ''}${frDate(s.date)}</th>`).join('') + '</tr>';
+    for (const id of ids) {
       const t = byId(id);
-      const pv = prev?.values?.[id];
-      const delta = pv != null && pv !== '' ? (v - pv) : null;
-      const arrow = delta == null ? '—' : (delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '= ') + delta + ' ' + t.unit;
-      html += `<tr><td>${t.name}</td><td>${pv ?? '—'}</td><td>${v}</td><td>${arrow}</td>
-        <td><button class="edit-btn" title="Modifier cette mesure" data-edit-date="${last.date}" data-edit-test="${id}">✏️</button></td></tr>`;
+      html += `<tr><td class="test-name">${t.name}</td>`;
+      for (const s of last3) {
+        const v = s.values?.[id];
+        html += v != null && v !== ''
+          ? `<td class="num">${v} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button></td>`
+          : '<td class="num muted">—</td>';
+      }
+      html += '</tr>';
     }
     html += '</table>';
     compEl.innerHTML = html;
