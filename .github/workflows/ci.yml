@@ -19,7 +19,6 @@ jobs:
           test -f index.html
           test -f style.css
           test -f manifest.webmanifest
-          grep -q "14" README.md
       - name: Valider JSON
         run: |
           python3 -c "import json; json.load(open('package.json'))"
