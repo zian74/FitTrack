@@ -208,19 +208,99 @@ function renderDashboard() {
   else {
     const last = sessions[sessions.length - 1];
     const prev = sessions[sessions.length - 2];
-    let html = `<table><tr><th>Test</th><th>${prev ? prev.date : '—'}</th><th>${last.date}</th><th>Δ</th></tr>`;
+    let html = `<table><tr><th>Test</th><th>${prev ? prev.date : '—'}</th><th>${last.date}</th><th>Δ</th><th></th></tr>`;
     for (const [id, v] of Object.entries(last.values || {})) {
       if (v == null || v === '') continue;
       const t = byId(id);
       const pv = prev?.values?.[id];
       const delta = pv != null && pv !== '' ? (v - pv) : null;
       const arrow = delta == null ? '—' : (delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '= ') + delta + ' ' + t.unit;
-      html += `<tr><td>${t.name}</td><td>${pv ?? '—'}</td><td>${v}</td><td>${arrow}</td></tr>`;
+      html += `<tr><td>${t.name}</td><td>${pv ?? '—'}</td><td>${v}</td><td>${arrow}</td>
+        <td><button class="edit-btn" title="Modifier cette mesure" data-edit-date="${last.date}" data-edit-test="${id}">✏️</button></td></tr>`;
     }
     html += '</table>';
     compEl.innerHTML = html;
   }
 }
+
+// ---------- Édition d'une mesure (crayon ✏️) ----------
+let editCtx = null; // { date, testId }
+
+function openEditModal(date, testId) {
+  const t = byId(testId);
+  const session = getSessions().find(s => s.date === date);
+  if (!session || session.values[testId] == null) return;
+  editCtx = { date, testId };
+  $('#edit-title').textContent = `Modifier — ${t.name}`;
+  $('#edit-info').textContent = `Session du ${date} · unité : ${t.unit}`;
+  $('#edit-date').value = date;
+  $('#edit-value').value = session.values[testId];
+  $('#edit-value').min = t.min ?? 0;
+  $('#edit-value').max = t.max ?? 999;
+  $('#edit-value').placeholder = t.unit;
+  $('#edit-modal').classList.remove('hidden');
+  $('#edit-value').focus();
+}
+
+function closeEditModal() {
+  editCtx = null;
+  $('#edit-modal').classList.add('hidden');
+}
+
+$('#edit-cancel').addEventListener('click', closeEditModal);
+$('#edit-modal').addEventListener('click', e => {
+  if (e.target === $('#edit-modal')) closeEditModal();
+});
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.edit-btn');
+  if (btn) openEditModal(btn.dataset.editDate, btn.dataset.editTest);
+});
+
+$('#edit-save').addEventListener('click', () => {
+  if (!editCtx) return;
+  const t = byId(editCtx.testId);
+  const raw = $('#edit-value').value.trim().replace(',', '.');
+  const num = parseFloat(raw);
+  if (raw === '' || isNaN(num)) { alert('Valeur invalide.'); return; }
+  if (t.max != null && num > t.max) { alert(`Valeur trop élevée (max ${t.max} ${t.unit}).`); return; }
+  if (t.min != null && num < t.min) { alert(`Valeur trop faible (min ${t.min} ${t.unit}).`); return; }
+  const newDate = $('#edit-date').value || editCtx.date;
+  const sessions = getSessions();
+  const idx = sessions.findIndex(s => s.date === editCtx.date);
+  if (idx === -1) { closeEditModal(); return; }
+  const s = sessions[idx];
+  delete s.values[editCtx.testId];
+  // changement de date -> déplacer dans la session correspondante (ou la créer)
+  if (newDate !== editCtx.date) {
+    delete s.values[editCtx.testId];
+    let target = sessions.find(x => x.date === newDate);
+    if (!target) { target = { date: newDate, type: t.group, values: {} }; sessions.push(target); }
+    target.values[editCtx.testId] = num;
+  } else {
+    s.values[editCtx.testId] = num;
+  }
+  // supprimer la session si vide
+  if (Object.keys(s.values).length === 0) sessions.splice(idx, 1);
+  sessions.sort((a, b) => a.date < b.date ? -1 : 1);
+  store.set('sessions', sessions);
+  closeEditModal();
+  renderDashboard();
+});
+
+$('#edit-delete').addEventListener('click', () => {
+  if (!editCtx) return;
+  if (!confirm('Supprimer définitivement cette mesure ?')) return;
+  const sessions = getSessions();
+  const idx = sessions.findIndex(s => s.date === editCtx.date);
+  if (idx !== -1) {
+    delete sessions[idx].values[editCtx.testId];
+    if (Object.keys(sessions[idx].values).length === 0) sessions.splice(idx, 1);
+    store.set('sessions', sessions);
+  }
+  closeEditModal();
+  renderDashboard();
+});
 
 // ---------- Session ----------
 const chronoBtns = ['plank', 'balance_open', 'balance_closed'];
