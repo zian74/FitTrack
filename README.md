@@ -33,6 +33,8 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 
 **PWA installable** : servie via HTTP(S), l'app peut être installée sur mobile/desktop (manifest + service worker, fonctionne hors ligne).
 
+**Démo en ligne (GitHub Pages)** : à activer via *Settings → Pages → Deploy from a branch → `main` / racine*. L'URL sera `https://zian74.github.io/HealthTest/`. Tous les chemins (`./sw.js`, `./manifest.webmanifest`, icônes) sont relatifs, donc compatibles avec un sous-chemin.
+
 ## Roadmap
 
 - [x] Onboarding guidé
