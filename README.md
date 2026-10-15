@@ -41,5 +41,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] PWA installable (manifest + service worker)
 - [x] Export PDF de la fiche de score
 - [x] CI GitHub Actions (syntaxe + validation JSON)
-- [ ] Multi-profils
+Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
 - [ ] Intégration GPS pour le Cooper
