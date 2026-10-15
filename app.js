@@ -388,7 +388,7 @@ function renderSessionFields() {
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
-      const last = latestValues()[t.id];
+      const last = latestValues()[t.id]?.value;
       const lastInfo = last != null
         ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
       row.innerHTML = `
