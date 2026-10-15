@@ -219,7 +219,7 @@ function renderLastSession() {
       if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
     }
     let html = '<table class="last3-table">';
-    html += '<tr><th>Test</th>' + last2.map((s, i) => `<th>${i === 0 ? '📍 ' : ''}${frDate(s.date)}</th>`).join('') + '<th>Δ</th></tr>';
+    html += '<tr><th>Test</th>' + last2.map(s => `<th>${frDate(s.date)} <button class="delete-session-btn" title="Supprimer cette session complète" data-del-session="${s.id || ''}" data-del-date="${s.date}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
     for (const id of ids) {
       const t = byId(id);
       const cur = last2[0].values?.[id];   // plus récente
@@ -250,6 +250,22 @@ function renderLastSession() {
     compEl.innerHTML = html;
   }
 }
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.delete-session-btn');
+  if (!btn) return;
+  const { delSession: id, delDate: date } = btn.dataset;
+  const n = Object.keys(findSession({ id, date, testId: null })?.values || {}).length;
+  if (!confirm(`Supprimer la session complète du ${date.split('-').reverse().join('/')} (${n} mesure${n > 1 ? 's' : ''}) ?\nCette action est définitive.`)) return;
+  const sessions = getSessions();
+  const idx = sessions.findIndex(s => (id ? s.id === id : s.date === date));
+  if (idx !== -1) {
+    sessions.splice(idx, 1);
+    store.set('sessions', sessions);
+  }
+  renderDashboard();
+  renderLastSession();
+});
 
 // Couleur du delta de poids selon la trajectoire IMC
 // vert = se rapproche de la zone saine [18.5, 25], rouge = s'en éloigne, gris = stable ou taille inconnue

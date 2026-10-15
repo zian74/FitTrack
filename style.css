@@ -146,3 +146,5 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 .session-type-btn.active { border-color: var(--accent); background: var(--accent); color: #fff; }
 @media (max-width: 640px) { .session-type-btn { flex: 1 1 100%; } }
+
+.delete-session-btn { padding: 2px 5px; font-size: .8em; background: #fdecea; color: var(--bad); border: none; border-radius: 5px; cursor: pointer; }
