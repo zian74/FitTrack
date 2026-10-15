@@ -1,0 +1,495 @@
+/* ============================================================
+ * FitTrack — moteur applicatif (vanilla JS, offline-first)
+ * Stockage : localStorage
+ * ============================================================ */
+
+// ---------- Utilitaires ----------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem('ft_' + k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem('ft_' + k, JSON.stringify(v)); }
+};
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+// ---------- Définition des tests ----------
+// type : lower-is-better si rev : true (plus bas = mieux)
+const TESTS = [
+  { id: 'fc', name: 'FC de repos (bpm)', unit: 'bpm', group: 'rest', rev: true,
+    hint: 'Pouls 60 s au réveil, avant de se lever', good: 60, mid: 70,
+    max: 120, min: 25 },
+  { id: 'pa_sys', name: 'PA systolique (mmHg)', unit: 'mmHg', group: 'rest', rev: true,
+    hint: 'Bras au repos, 2 mesures', good: 120, mid: 130, max: 250, min: 60 },
+  { id: 'pa_dia', name: 'PA diastolique (mmHg)', unit: 'mmHg', group: 'rest', rev: true,
+    hint: '', good: 80, mid: 85, max: 150, min: 40 },
+  { id: 'waist', name: 'Tour de taille (cm)', unit: 'cm', group: 'rest', rev: true,
+    hint: 'Mètre au nombril, sans rentrer le ventre', good: 94, mid: 102, max: 200, min: 40,
+    gender: { H: { good: 94, mid: 102 }, F: { good: 80, mid: 88 } } },
+  { id: 'weight', name: 'Poids (kg)', unit: 'kg', group: 'rest', rev: null,
+    hint: 'Le matin à jeun', max: 300, min: 25 },
+  { id: 'balance_open', name: 'Équilibre unipodal yeux ouverts (s)', unit: 's', group: 'rest',
+    hint: 'Sur un pied jusqu\u2019à échec (2 essais/pied)', good: 40, mid: 20, max: 300, min: 0 },
+  { id: 'balance_closed', name: 'Équilibre yeux fermés (s)', unit: 's', group: 'rest',
+    hint: '', good: 10, mid: 5, max: 120, min: 0 },
+  { id: 'reach', name: 'Sit-and-reach (cm atteints)', unit: 'cm', group: 'rest',
+    hint: '0 = orteils, négatif = avant, positif = au-delà',
+    good: 0, mid: -10, max: 40, min: -40 },
+  { id: 'grip', name: 'Poigne — meilleure main (kg)', unit: 'kg', group: 'strength',
+    hint: '2–3 essais par main, 30 s de repos entre essais',
+    good: 45, mid: 35, max: 100, min: 5,
+    gender: { H: { good: 45, mid: 35 }, F: { good: 30, mid: 20 } } },
+  { id: 'pushups', name: 'Pompes maximales', unit: 'rép.', group: 'strength',
+    hint: 'Sans pause, technique correcte',
+    good: 35, mid: 20, max: 200, min: 0,
+    gender: { H: { good: 35, mid: 20 }, F: { good: 20, mid: 10 } } },
+  { id: 'plank', name: 'Gainage planche (s)', unit: 's', group: 'strength',
+    hint: 'Dos plat, tenue maximale', good: 120, mid: 60, max: 600, min: 0 },
+  { id: 'chair', name: 'Chaise 30 s (répétitions)', unit: 'rép.', group: 'strength',
+    hint: 'Bras croisés, se lever/asseoir pendant 30 s', good: 17, mid: 12, max: 40, min: 0,
+    gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } } },
+  { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min', unit: 'bpm', group: 'cardio', rev: true,
+    hint: '3 min de montées (24/min), pouls 1 min après', good: 100, mid: 110, max: 200, min: 50 },
+  { id: 'cooper', name: 'Cooper — distance 12 min (m)', unit: 'm', group: 'cardio',
+    hint: 'Personnes actives uniquement', good: 2400, mid: 2200, max: 5000, min: 200,
+    gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } } },
+];
+
+const byId = id => TESTS.find(t => t.id === id);
+const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio' };
+// Groups présents par type de session
+const SESSION_GROUPS = {
+  rest: ['rest'],
+  strength: ['strength'],
+  cardio: ['cardio'],
+};
+
+// ---------- Interprétation ----------
+function thresholds(t, profile) {
+  if (t.gender && profile && profile.sex) {
+    const g = t.gender[profile.sex];
+    if (g) return { good: g.good, mid: g.mid, rev: t.rev };
+  }
+  return { good: t.good, mid: t.mid, rev: t.rev };
+}
+
+function statusOf(t, value, profile) {
+  if (value == null || t.good == null) return null;
+  const { good, mid, rev } = thresholds(t, profile);
+  if (good == null) return null;
+  if (rev) {
+    // plus bas = mieux : good = seuil bon, mid = seuil alerte
+    if (value <= good) return 'good';
+    if (value <= mid) return 'mid';
+    return 'low';
+  } else {
+    // plus haut = mieux
+    if (value >= good) return 'good';
+    if (value >= mid) return 'mid';
+    return 'low';
+  }
+}
+
+const STATUS_LABEL = { good: '🟢 Bon', mid: '🟠 Moyen', low: '🔴 Faible' };
+
+// ---------- Données ----------
+function getProfile() { return store.get('profile', null); }
+function getSessions() { return store.get('sessions', []); }
+function addSession(session) {
+  const s = getSessions();
+  s.push(session);
+  s.sort((a, b) => a.date < b.date ? -1 : 1);
+  store.set('sessions', s);
+}
+
+// dernière valeur par test
+function latestValues() {
+  const out = {};
+  for (const s of getSessions()) {
+    for (const [k, v] of Object.entries(s.values || {})) {
+      if (v != null && v !== '') out[k] = { value: v, date: s.date };
+    }
+  }
+  return out;
+}
+
+// valeurs par test, ordonnées par date
+function seriesOf(testId) {
+  return getSessions()
+    .map(s => ({ date: s.date, value: s.values?.[testId] }))
+    .filter(x => x.value != null && x.value !== '');
+}
+
+// Fréquence de re-test (en mois)
+const RETEST = { rest: 1, strength: 3, cardio: 3 };
+
+function monthsSince(dateStr) {
+  const d = new Date(dateStr), n = new Date();
+  return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth());
+}
+
+// ---------- Rendu : navigation ----------
+$$('nav button').forEach(b => b.addEventListener('click', () => {
+  $$('nav button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  $$('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + b.dataset.view).classList.add('active');
+  if (b.dataset.view === 'dashboard') renderDashboard();
+  if (b.dataset.view === 'history') renderHistory();
+}));
+
+function showView(name) {
+  $$('nav button').find?.(x => x.dataset.view === name)?.click?.();
+}
+
+// ---------- Dashboard ----------
+function renderDashboard() {
+  const profile = getProfile();
+  $('#no-profile-warning').classList.toggle('hidden', !!profile);
+
+  // Score global : moyenne des statuts des 5 tests prédictifs
+  const PREDICTIVE = ['grip', 'waist', 'fc', 'stair_pulse', 'balance_open'];
+  const lv = latestValues();
+  const scoreEl = $('#score-global-content');
+  const scored = PREDICTIVE.filter(id => lv[id]);
+  if (!scored.length) {
+    scoreEl.innerHTML = '<p>Aucune mesure enregistrée. Commencez par une <b>session de test</b>.</p>';
+  } else {
+    const pts = { good: 100, mid: 60, low: 25 };
+    const rows = scored.map(id => {
+      const t = byId(id);
+      const st = statusOf(t, lv[id].value, profile);
+      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
+    });
+    const avg = Math.round(scored.reduce((a, id) => {
+      const t = byId(id);
+      return a + pts[statusOf(t, lv[id].value, profile)];
+    }, 0) / scored.length);
+    scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${avg}<span style="font-size:.6em"> /100</span></p>
+      <ul class="list">${rows.join('')}</ul>
+      <p class="small">Basé sur les 5 mesures les plus prédictives (littérature) : poigne, tour de taille, FC repos, cardio sous-max, équilibre.</p>`;
+  }
+
+  // Tests dus
+  const due = [];
+  for (const [group, months] of Object.entries(RETEST)) {
+    const ids = TESTS.filter(t => t.group === group).map(t => t.id);
+    const last = ids.map(id => lv[id]?.date).filter(Boolean).sort().pop();
+    const label = GROUP_LABELS[group];
+    if (!last) due.push(`<li><b>${label}</b> — jamais effectué <span class="badge low">à faire</span></li>`);
+    else {
+      const m = monthsSince(last);
+      if (m >= months) due.push(`<li><b>${label}</b> — dernier : ${last} <span class="badge low">à refaire (${m} mois)</span></li>`);
+      else due.push(`<li><b>${label}</b> — dernier : ${last} <span class="badge good">à jour</span></li>`);
+    }
+  }
+  $('#due-tests').innerHTML = due.join('');
+
+  // Alertes de tendance : dégradation ou stagnation sur 2 sessions
+  const alerts = [];
+  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05 };
+  for (const t of TESTS) {
+    if (t.good == null) continue;
+    const series = seriesOf(t.id);
+    if (series.length < 2) continue;
+    const [prev, last] = series.slice(-2);
+    const delta = (last.value - prev.value) / Math.max(prev.value, 1);
+    const bad = t.rev ? delta > THRESH[t.group] : delta < -THRESH[t.group];
+    const stagnant = Math.abs(delta) <= 0.01;
+    if (bad) alerts.push(`<li>🔴 <b>${t.name}</b> : ${prev.value} → ${last.value} ${t.unit} (dégradation). Ajustez l'entraînement${['fc','pa_sys','pa_dia'].includes(t.id) ? ' ou consultez' : ''}.</li>`);
+    else if (stagnant && series.length >= 3) alerts.push(`<li>🟠 <b>${t.name}</b> : stable sur 2 sessions. Pensez à varier l'entraînement.</li>`);
+  }
+  $('#alerts').innerHTML = alerts.length ? alerts.join('') : '<li>Aucune alerte. 👍</li>';
+
+  // Dernière vs précédente session
+  const sessions = getSessions();
+  const compEl = $('#last-comparison');
+  if (sessions.length === 0) compEl.innerHTML = '<p>Aucune donnée.</p>';
+  else {
+    const last = sessions[sessions.length - 1];
+    const prev = sessions[sessions.length - 2];
+    let html = `<table><tr><th>Test</th><th>${prev ? prev.date : '—'}</th><th>${last.date}</th><th>Δ</th></tr>`;
+    for (const [id, v] of Object.entries(last.values || {})) {
+      if (v == null || v === '') continue;
+      const t = byId(id);
+      const pv = prev?.values?.[id];
+      const delta = pv != null && pv !== '' ? (v - pv) : null;
+      const arrow = delta == null ? '—' : (delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '= ') + delta + ' ' + t.unit;
+      html += `<tr><td>${t.name}</td><td>${pv ?? '—'}</td><td>${v}</td><td>${arrow}</td></tr>`;
+    }
+    html += '</table>';
+    compEl.innerHTML = html;
+  }
+}
+
+// ---------- Session ----------
+const chronoBtns = ['plank', 'balance_open', 'balance_closed'];
+
+function renderSessionFields() {
+  const type = $('#session-type').value;
+  const groups = SESSION_GROUPS[type];
+  const container = $('#session-fields');
+  container.innerHTML = '';
+  for (const g of groups) {
+    const block = document.createElement('div');
+    block.className = 'session-block';
+    block.innerHTML = `<h3>${GROUP_LABELS[g]}</h3>`;
+    for (const t of TESTS.filter(x => x.group === g)) {
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      const chronoBtn = chronoBtns.includes(t.id)
+        ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+      row.innerHTML = `
+        <label>${t.name}
+          <div class="field-hint">${t.hint || ''}</div>
+        </label>
+        <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
+               data-test="${t.id}" placeholder="${t.unit}">
+        ${chronoBtn}`;
+      block.appendChild(row);
+    }
+    container.appendChild(block);
+  }
+  // Avertissement Cooper si facteurs de risque
+  const profile = getProfile();
+  if (type === 'cardio' && profile && (profile.smoke || profile.cardiacHistory || profile.sedentaryRisk)) {
+    const w = document.createElement('div');
+    w.className = 'warning';
+    w.innerHTML = '⚠️ <b>Test de Cooper déconseillé</b> : facteurs de risque cardio déclarés dans votre profil. Avis médical recommandé avant un test maximal.';
+    container.prepend(w);
+  }
+}
+
+$('#session-type').addEventListener('change', renderSessionFields);
+
+$('#save-session').addEventListener('click', () => {
+  const values = {};
+  let any = false;
+  $$('#session-fields input[data-test]').forEach(inp => {
+    const v = inp.value.trim();
+    if (v !== '') {
+      const t = byId(inp.dataset.test);
+      const num = parseFloat(v.replace(',', '.'));
+      if (isNaN(num)) return;
+      if (t.max != null && num > t.max) { inp.style.borderColor = 'var(--bad)'; return; }
+      if (t.min != null && num < t.min) { inp.style.borderColor = 'var(--bad)'; return; }
+      values[t.id] = num;
+      any = true;
+    }
+  });
+  if (!any) { alert('Aucune valeur saisie.'); return; }
+  const session = { date: $('#session-date').value || todayStr(), type: $('#session-type').value, values };
+  // fusion avec session existante à la même date ? Non : on garde tout l'historique.
+  addSession(session);
+  const msg = $('#session-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2500);
+  $$('#session-fields input').forEach(i => i.value = '');
+});
+
+// ---------- Chronomètre ----------
+let chronoTimer = null, chronoStart = 0, chronoElapsed = 0;
+function chronoFmt(ms) {
+  const s = ms / 1000;
+  const m = Math.floor(s / 60);
+  return `${String(m).padStart(2, '0')}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+}
+function openChrono(targetId) {
+  $('#chrono').classList.remove('hidden');
+  $('#chrono-target').innerHTML = TESTS.filter(t => chronoBtns.includes(t.id))
+    .map(t => `<option value="${t.id}" ${t.id === targetId ? 'selected' : ''}>${t.name}</option>`).join('');
+}
+function chronoUpdate() {
+  chronoElapsed = Date.now() - chronoStart;
+  $('#chrono-display').textContent = chronoFmt(chronoElapsed);
+}
+$('#chrono-start').addEventListener('click', () => {
+  if (chronoTimer) return;
+  chronoStart = Date.now() - chronoElapsed;
+  chronoTimer = setInterval(chronoUpdate, 100);
+});
+$('#chrono-stop').addEventListener('click', () => {
+  clearInterval(chronoTimer); chronoTimer = null;
+});
+$('#chrono-reset').addEventListener('click', () => {
+  clearInterval(chronoTimer); chronoTimer = null; chronoElapsed = 0;
+  $('#chrono-display').textContent = '00:00.0';
+});
+$('#chrono-send').addEventListener('click', () => {
+  const target = $('#chrono-target').value;
+  const inp = $(`#session-fields input[data-test="${target}"]`);
+  if (inp) inp.value = Math.round(chronoElapsed / 100) / 10;
+  $('#chrono').classList.add('hidden');
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('.chrono-btn');
+  if (b) openChrono(b.dataset.chronoTarget);
+});
+
+// ---------- Historique & graphiques ----------
+function renderHistory() {
+  // sélecteur de métrique
+  const sel = $('#chart-metric');
+  const withData = TESTS.filter(t => seriesOf(t.id).length > 0);
+  if (withData.length) {
+    sel.innerHTML = withData.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    drawChart(sel.value);
+  } else {
+    sel.innerHTML = '<option value="">— aucune donnée —</option>';
+    $('#chart').innerHTML = '<p class="small">Enregistrez une session pour voir les graphiques.</p>';
+    $('#chart-stats').textContent = '';
+  }
+  renderHistoryTable();
+}
+
+$('#chart-metric').addEventListener('change', () => drawChart($('#chart-metric').value));
+
+function drawChart(testId) {
+  const t = byId(testId);
+  const data = seriesOf(testId);
+  if (!t || data.length === 0) return;
+  const profile = getProfile();
+  const { good, mid, rev } = thresholds(t, profile);
+
+  const W = 700, H = 260, PAD = 40;
+  const xs = data.map(d => new Date(d.date).getTime());
+  const minT = Math.min(...xs), maxT = Math.max(...xs);
+  const rangeT = Math.max(maxT - minT, 86400000);
+  const vals = data.map(d => d.value);
+  let lo = Math.min(...vals, mid ?? Infinity, good ?? Infinity);
+  let hi = Math.max(...vals, mid ?? -Infinity, good ?? -Infinity);
+  const pad = (hi - lo) * 0.15 || 1;
+  lo -= pad; hi += pad;
+  const X = tm => PAD + (tm - minT) / rangeT * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - lo) / (hi - lo) * (H - 2 * PAD);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // zones de repère
+  if (good != null && mid != null) {
+    const a = Y(Math.max(good, mid)), b = Y(Math.min(good, mid));
+    svg += `<rect x="${PAD}" y="${a}" width="${W - 2 * PAD}" height="${Math.max(b - a, 0)}" fill="#fff1e0" opacity="0.7"/>`;
+    const yGood = rev ? Y(good) : Y(good);
+    const yEdge = rev ? lo : hi;
+    svg += `<rect x="${PAD}" y="${rev ? Y(hi) : Y(hi)}" width="${W - 2 * PAD}" height="${Math.max(Y(good) - (rev ? Y(hi) : Y(hi)), 0)}" fill="#e5f3e5" opacity="0.7"/>`;
+  }
+  // lignes repères
+  if (good != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(good)}" y2="${Y(good)}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(good) - 4}" text-anchor="end" font-size="11" fill="#2e7d32">objectif ${good}${t.unit}</text>`;
+  if (mid != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(mid)}" y2="${Y(mid)}" stroke="#e65100" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(mid) - 4}" text-anchor="end" font-size="11" fill="#e65100">seuil ${mid}${t.unit}</text>`;
+  // axes
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  // points + segments
+  const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  data.forEach(d => {
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+  });
+  // labels date
+  data.forEach((d, i) => {
+    if (data.length <= 8 || i === 0 || i === data.length - 1)
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+  });
+  svg += '</svg>';
+  $('#chart').innerHTML = svg;
+
+  // stats
+  const first = data[0].value, lastV = data[data.length - 1].value;
+  const delta = lastV - first;
+  const pct = (delta / Math.max(first, 1) * 100).toFixed(1);
+  const st = statusOf(t, lastV, profile);
+  $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} ${t.unit}</b> ${st ? STATUS_LABEL[st] : ''} · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${t.unit} (${pct} %)</b>`;
+}
+
+function renderHistoryTable() {
+  const sessions = getSessions().slice().reverse();
+  const el = $('#history-table');
+  if (!sessions.length) { el.innerHTML = '<p class="small">Aucune mesure.</p>'; return; }
+  let html = '<table><tr><th>Date</th><th>Type</th><th>Résultats</th></tr>';
+  for (const s of sessions) {
+    const results = Object.entries(s.values || {})
+      .filter(([, v]) => v != null && v !== '')
+      .map(([id, v]) => `${byId(id)?.name || id} : <b>${v}</b> ${byId(id)?.unit || ''}`)
+      .join(' · ');
+    html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}</td><td>${results}</td></tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+// ---------- Exports ----------
+function download(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+$('#export-csv').addEventListener('click', () => {
+  const ids = TESTS.map(t => t.id);
+  const head = ['date', 'type', ...ids.map(id => byId(id).name)].join(';');
+  const lines = getSessions().map(s =>
+    [s.date, GROUP_LABELS[s.type], ...ids.map(id => s.values?.[id] ?? '')].join(';'));
+  download([head, ...lines].join('\n'), 'fittrack_export.csv', 'text/csv');
+});
+$('#export-json').addEventListener('click', () => {
+  download(JSON.stringify({ profile: getProfile(), sessions: getSessions() }, null, 2),
+    'fittrack_export.json', 'application/json');
+});
+
+// ---------- Profil ----------
+function renderProfileForm() {
+  const p = getProfile();
+  if (!p) return;
+  $('#p-sex').value = p.sex || 'H';
+  $('#p-birth').value = p.birthYear || '';
+  $('#p-height').value = p.height || '';
+  $('#p-activity').value = p.activity || 'sedentary';
+  $('#p-smoke').checked = !!p.smoke;
+  $('#p-sedentaryrisk').checked = !!p.sedentaryRisk;
+  $('#p-history').checked = !!p.cardiacHistory;
+}
+
+$('#save-profile').addEventListener('click', () => {
+  const p = {
+    sex: $('#p-sex').value,
+    birthYear: parseInt($('#p-birth').value) || null,
+    height: parseFloat($('#p-height').value) || null,
+    activity: $('#p-activity').value,
+    smoke: $('#p-smoke').checked,
+    sedentaryRisk: $('#p-sedentaryrisk').checked,
+    cardiacHistory: $('#p-history').checked,
+  };
+  store.set('profile', p);
+  const msg = $('#profile-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2500);
+  renderReferenceTable();
+});
+
+function renderReferenceTable() {
+  const profile = getProfile();
+  let html = '<table><tr><th>Test</th><th>Bon</th><th>Moyen</th><th>Faible</th></tr>';
+  for (const t of TESTS) {
+    if (t.good == null) continue;
+    const { good, mid, rev } = thresholds(t, profile);
+    html += `<tr><td>${t.name}</td><td>${rev ? '≤ ' : '≥ '}${good}</td><td>${rev ? '≤ ' : '≥ '}${mid}</td><td>${rev ? '> ' : '< '}${mid} ${t.unit}</td></tr>`;
+  }
+  html += '</table>';
+  $('#reference-table').innerHTML = html;
+}
+
+$('#wipe-data').addEventListener('click', () => {
+  if (confirm('Effacer TOUTES les données (profil + mesures) ? Action irréversible.')) {
+    Object.keys(localStorage).filter(k => k.startsWith('ft_')).forEach(k => localStorage.removeItem(k));
+    renderProfileForm(); renderReferenceTable();
+    alert('Données effacées.');
+  }
+});
+
+// ---------- Init ----------
+$('#session-date').value = todayStr();
+renderSessionFields();
+renderProfileForm();
+renderReferenceTable();
+renderDashboard();

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1F4E79">
+<title>FitTrack — Suivi condition physique</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🏃 FitTrack</h1>
+  <nav>
+    <button data-view="dashboard" class="active">Tableau de bord</button>
+    <button data-view="session">Session de test</button>
+    <button data-view="history">Historique</button>
+    <button data-view="profile">Profil</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="view-dashboard" class="view active">
+    <div id="no-profile-warning" class="warning hidden">
+      ⚠️ Créez d'abord votre profil (onglet <b>Profil</b>) pour activer les repères personnalisés.
+    </div>
+    <div id="score-global" class="card">
+      <h2>Score global</h2>
+      <div id="score-global-content"><p>Aucune mesure enregistrée.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Prochains tests dus</h2>
+        <ul id="due-tests" class="list"></ul>
+      </div>
+      <div class="card">
+        <h2>Alertes de tendance</h2>
+        <ul id="alerts" class="list"><li>Aucune alerte.</li></ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Dernière session vs précédente</h2>
+      <div id="last-comparison" class="table-wrap"><p>Aucune donnée.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ SESSION ============ -->
+  <section id="view-session" class="view">
+    <div class="card">
+      <h2>Nouvelle session</h2>
+      <p>Choisissez le type de session, puis saisissez vos résultats. Les champs laissés vides sont ignorés.</p>
+      <div class="row">
+        <label>Date : <input type="date" id="session-date"></label>
+        <label>Type :
+          <select id="session-type">
+            <option value="rest">Jour 1 — Repos + mobilité</option>
+            <option value="strength">Jour 2 — Force</option>
+            <option value="cardio">Jour 2 — Cardio</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="session-fields"></div>
+    <div class="card">
+      <button id="save-session" class="primary big">💾 Enregistrer la session</button>
+      <span id="session-saved-msg" class="ok hidden">✅ Session enregistrée</span>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section id="view-history" class="view">
+    <div class="card">
+      <h2>Graphiques par indicateur</h2>
+      <select id="chart-metric"></select>
+      <div id="chart"></div>
+      <div id="chart-stats" class="small"></div>
+    </div>
+    <div class="card">
+      <h2>Toutes les mesures</h2>
+      <div class="row">
+        <button id="export-csv">⬇️ Export CSV</button>
+        <button id="export-json">⬇️ Export JSON</button>
+      </div>
+      <div id="history-table" class="table-wrap"></div>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section id="view-profile" class="view">
+    <div class="card">
+      <h2>Mon profil</h2>
+      <div class="grid2">
+        <label>Sexe :
+          <select id="p-sex"><option value="H">Homme</option><option value="F">Femme</option></select>
+        </label>
+        <label>Année de naissance : <input type="number" id="p-birth" placeholder="1985"></label>
+        <label>Taille (cm) : <input type="number" id="p-height" placeholder="175"></label>
+        <label>Niveau d'activité :
+          <select id="p-activity">
+            <option value="sedentary">Sédentaire</option>
+            <option value="active">Actif</option>
+            <option value="trained">Entraîné</option>
+          </select>
+        </label>
+      </div>
+      <h3>Facteurs de risque cardio</h3>
+      <div class="row">
+        <label><input type="checkbox" id="p-smoke"> Tabagisme</label>
+        <label><input type="checkbox" id="p-sedentaryrisk"> Sédentarité prolongée</label>
+        <label><input type="checkbox" id="p-history"> Antécédents cardiaques</label>
+      </div>
+      <button id="save-profile" class="primary">Enregistrer le profil</button>
+      <span id="profile-saved-msg" class="ok hidden">✅ Profil enregistré</span>
+    </div>
+    <div class="card">
+      <h2>Repères applicables</h2>
+      <div id="reference-table" class="table-wrap"></div>
+    </div>
+    <div class="card">
+      <h2>Données</h2>
+      <button id="wipe-data" class="danger">🗑️ Effacer toutes les données</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- Chronomètre flottant -->
+<div id="chrono" class="hidden">
+  <span id="chrono-display">00:00.0</span>
+  <button id="chrono-start">▶</button>
+  <button id="chrono-stop">⏸</button>
+  <button id="chrono-reset">↺</button>
+  <button id="chrono-send" class="primary">↳ Reporter</button>
+  <select id="chrono-target"></select>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
