@@ -134,16 +134,7 @@ tr:nth-child(even) td { background: var(--accent-light); }
 
 /* ---------- Saisie session (statut en direct) ---------- */
 .field-last { font-size: .82em; color: #666; margin-top: 2px; }
-.field-status { min-width: 130px; font-size: .85em; }
-.badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
-.badge.good { background: #e6f4ea; color: var(--ok); }
-.badge.mid { background: #fff3e0; color: var(--warn); }
-.badge.low { background: #fdecea; color: var(--bad); }
-.badge.bad { background: #fdecea; color: var(--bad); }
 input.invalid { border-color: var(--bad); background: #fff5f5; }
-.delta { font-weight: 600; margin-left: 4px; }
-.delta.up { color: var(--ok); }
-.delta.down { color: var(--bad); }
 button:disabled { opacity: .5; cursor: not-allowed; }
 #session-progress { margin-left: 10px; color: var(--accent); font-weight: 600; }
 

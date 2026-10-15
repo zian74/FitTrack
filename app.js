@@ -374,11 +374,10 @@ function renderSessionFields() {
         </label>
         <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
                data-test="${t.id}" placeholder="${t.unit}">
-        <span class="field-status" data-status="${t.id}"></span>
         ${chronoBtn}`;
       block.appendChild(row);
       const inp = row.querySelector('input[data-test]');
-      inp.addEventListener('input', () => updateFieldStatus(t, inp));
+      inp.addEventListener('input', () => updateFieldValidity(t, inp));
     }
     container.appendChild(block);
   }
@@ -393,31 +392,11 @@ function renderSessionFields() {
   }
 }
 
-function updateFieldStatus(t, inp) {
-  const el = $(`#session-fields .field-status[data-status="${t.id}"]`);
-  const profile = getProfile();
+function updateFieldValidity(t, inp) {
   const raw = inp.value.trim();
   const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
   const invalid = raw !== '' && (isNaN(num) || (t.min != null && num < t.min) || (t.max != null && num > t.max));
   inp.classList.toggle('invalid', invalid);
-  if (!el) { updateSaveState(); return; }
-  if (invalid) {
-    el.innerHTML = '<span class="badge bad">Hors bornes</span>';
-  } else if (num == null) {
-    el.innerHTML = '';
-  } else {
-    const st = statusOf(t, num, profile);
-    const last = latestValues()[t.id];
-    let delta = '';
-    if (last != null) {
-      const d = num - last;
-      const better = t.rev ? d < 0 : d > 0;
-      if (d !== 0) {
-        delta = ` <span class="delta ${better ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d.toFixed(1).replace(/\.0$/, '')}</span>`;
-      }
-    }
-    el.innerHTML = st ? `<span class="badge ${st}">${STATUS_LABEL[st]}</span>${delta}` : delta;
-  }
   updateSaveState();
 }
 
