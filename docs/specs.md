@@ -31,6 +31,19 @@ dans le temps** plutôt qu'aux normes.
 
 ## 3. Exigences fonctionnelles
 
+### Règles d'interprétation du delta (tableau « Dernière session »)
+
+- Les tests à sens d'amélioration (`rev` : plus bas = mieux, ex. FC, PA, tour de taille)
+  affichent un delta vert en cas d'amélioration, rouge en cas de dégradation.
+- **Poids — règle basée sur l'IMC** : la couleur du delta de poids dépend de la
+  trajectoire vers la zone IMC saine [18,5 ; 25] :
+  - **vert** si la variation rapproche de la zone saine (ex. : perte de poids avec IMC > 25,
+    prise de poids avec IMC < 18,5)
+  - **rouge** si la variation éloigne de la zone saine (ex. : perte de poids avec IMC < 18,5,
+    prise de poids avec IMC > 25)
+  - **gris** si la variation reste dans la zone saine, si l'IMC ne change pas de distance,
+    ou si la taille n'est pas renseignée dans le profil (pas d'interprétation possible).
+
 - Profil : sexe, année de naissance, taille, activité, facteurs de risque cardio
 - Saisie des mesures par session datée (3 types : repos, force, cardio)
 - Statut automatique par mesure selon repères sexe/âge
