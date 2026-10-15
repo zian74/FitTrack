@@ -159,7 +159,8 @@ function renderDashboard() {
     const rows = scored.map(id => {
       const t = byId(id);
       const st = statusOf(t, lv[id].value, profile);
-      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
+      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span>
+        <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${lv[id].date}" data-edit-test="${id}">✏️</button></li>`;
     });
     const avg = Math.round(scored.reduce((a, id) => {
       const t = byId(id);
@@ -231,15 +232,16 @@ function openEditModal(date, testId) {
   const session = getSessions().find(s => s.date === date);
   if (!session || session.values[testId] == null) return;
   editCtx = { date, testId };
-  $('#edit-title').textContent = `Modifier — ${t.name}`;
-  $('#edit-info').textContent = `Session du ${date} · unité : ${t.unit}`;
-  $('#edit-date').value = date;
+  $('#edit-title').textContent = `${t.name}`;
+  const dateFr = date.split('-').reverse().join('/');
+  $('#edit-info').textContent = `Mesure du ${dateFr} — corrigez la valeur si elle a été mal saisie.`;
   $('#edit-value').value = session.values[testId];
   $('#edit-value').min = t.min ?? 0;
   $('#edit-value').max = t.max ?? 999;
   $('#edit-value').placeholder = t.unit;
   $('#edit-modal').classList.remove('hidden');
   $('#edit-value').focus();
+  $('#edit-value').select();
 }
 
 function closeEditModal() {
@@ -265,27 +267,15 @@ $('#edit-save').addEventListener('click', () => {
   if (raw === '' || isNaN(num)) { alert('Valeur invalide.'); return; }
   if (t.max != null && num > t.max) { alert(`Valeur trop élevée (max ${t.max} ${t.unit}).`); return; }
   if (t.min != null && num < t.min) { alert(`Valeur trop faible (min ${t.min} ${t.unit}).`); return; }
-  const newDate = $('#edit-date').value || editCtx.date;
   const sessions = getSessions();
-  const idx = sessions.findIndex(s => s.date === editCtx.date);
-  if (idx === -1) { closeEditModal(); return; }
-  const s = sessions[idx];
-  delete s.values[editCtx.testId];
-  // changement de date -> déplacer dans la session correspondante (ou la créer)
-  if (newDate !== editCtx.date) {
-    delete s.values[editCtx.testId];
-    let target = sessions.find(x => x.date === newDate);
-    if (!target) { target = { date: newDate, type: t.group, values: {} }; sessions.push(target); }
-    target.values[editCtx.testId] = num;
-  } else {
-    s.values[editCtx.testId] = num;
-  }
-  // supprimer la session si vide
-  if (Object.keys(s.values).length === 0) sessions.splice(idx, 1);
-  sessions.sort((a, b) => a.date < b.date ? -1 : 1);
+  const s = sessions.find(x => x.date === editCtx.date);
+  if (!s) { closeEditModal(); return; }
+  s.values[editCtx.testId] = num;
   store.set('sessions', sessions);
   closeEditModal();
+  // re-rendu des vues actives
   renderDashboard();
+  if ($('#view-history').classList.contains('active')) renderHistory();
 });
 
 $('#edit-delete').addEventListener('click', () => {
@@ -488,7 +478,11 @@ function renderHistoryTable() {
   for (const s of sessions) {
     const results = Object.entries(s.values || {})
       .filter(([, v]) => v != null && v !== '')
-      .map(([id, v]) => `${byId(id)?.name || id} : <b>${v}</b> ${byId(id)?.unit || ''}`)
+      .map(([id, v]) => {
+        const t = byId(id) || { name: id, unit: '' };
+        return `${t.name} : <b>${v}</b> ${t.unit}
+          <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button>`;
+      })
       .join(' · ');
     html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}</td><td>${results}</td></tr>`;
   }
