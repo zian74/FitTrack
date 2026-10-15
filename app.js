@@ -436,7 +436,8 @@ $('#save-session').addEventListener('click', () => {
   const msg = $('#session-saved-msg');
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2500);
-  $$('#session-fields input').forEach(i => i.value = '');
+  $$('#session-fields input').forEach(i => { i.value = ''; i.classList.remove('invalid'); });
+  updateSaveState();
   renderLastSession();
 });
 
