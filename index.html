@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1F4E79">
+<meta name="description" content="Suivi de la condition physique : 14 tests objectifs, scores, alertes et graphiques.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>FitTrack — Suivi condition physique</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -81,6 +85,7 @@
       <div class="row">
         <button id="export-csv">⬇️ Export CSV</button>
         <button id="export-json">⬇️ Export JSON</button>
+        <button id="export-pdf">🖨️ Fiche de score PDF</button>
       </div>
       <div id="history-table" class="table-wrap"></div>
     </div>
@@ -124,6 +129,24 @@
   </section>
 
 </main>
+
+<!-- Onboarding (première visite) -->
+<div id="onboarding" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Bienvenue sur FitTrack 🏃</h2>
+    <p>Suivez votre condition physique avec <b>14 tests simples</b>, mesurés au rythme :</p>
+    <ul>
+      <li><b>Mensuel</b> — repos : FC, tension, tour de taille, poids, équilibre</li>
+      <li><b>Trimestriel</b> — force : poigne, pompes, gainage, chaise 30 s</li>
+      <li><b>Trimestriel</b> — cardio : escalier, Cooper</li>
+    </ul>
+    <p class="small">L'app compare vos résultats <b>à vous-même dans le temps</b> — pas aux normes. Toutes les données restent sur votre appareil.</p>
+    <div class="row" style="justify-content:flex-end">
+      <button id="onboarding-skip" class="small-btn">Passer</button>
+      <button id="onboarding-go" class="primary">Créer mon profil →</button>
+    </div>
+  </div>
+</div>
 
 <!-- Chronomètre flottant -->
 <div id="chrono" class="hidden">

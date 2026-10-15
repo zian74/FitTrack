@@ -31,10 +31,13 @@ python3 -m http.server 8080
 
 Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` directement.
 
+**PWA installable** : servie via HTTP(S), l'app peut être installée sur mobile/desktop (manifest + service worker, fonctionne hors ligne).
+
 ## Roadmap
 
-- [ ] Export PDF de la fiche de score
-- [ ] Onboarding guidé
-- [ ] PWA installable (manifest + service worker)
+- [x] Onboarding guidé
+- [x] PWA installable (manifest + service worker)
+- [x] Export PDF de la fiche de score
+- [x] CI GitHub Actions (syntaxe + validation JSON)
 - [ ] Multi-profils
 - [ ] Intégration GPS pour le Cooper

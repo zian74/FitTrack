@@ -487,7 +487,77 @@ $('#wipe-data').addEventListener('click', () => {
   }
 });
 
+// ---------- Export PDF (fiche de score imprimable) ----------
+$('#export-pdf').addEventListener('click', () => {
+  const profile = getProfile();
+  const lv = latestValues();
+  const sessions = getSessions();
+  if (!sessions.length) { alert('Aucune donnée à exporter.'); return; }
+
+  let rows = '';
+  for (const t of TESTS) {
+    const v = lv[t.id];
+    if (!v) continue;
+    const st = statusOf(t, v.value, profile);
+    rows += `<tr><td>${t.name}</td><td>${v.value} ${t.unit}</td><td>${v.date}</td><td>${st ? STATUS_LABEL[st] : '—'}</td></tr>`;
+  }
+
+  const PREDICTIVE = ['grip', 'waist', 'fc', 'stair_pulse', 'balance_open'];
+  const pts = { good: 100, mid: 60, low: 25 };
+  const scored = PREDICTIVE.filter(id => lv[id]);
+  const score = scored.length
+    ? Math.round(scored.reduce((a, id) => a + pts[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length)
+    : null;
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>FitTrack — Fiche de score</title>
+  <style>
+    body { font-family: system-ui, sans-serif; color: #222; margin: 30px; }
+    h1 { color: #1F4E79; margin-bottom: 2px; }
+    .sub { color: #666; margin-top: 0; }
+    .score { font-size: 2em; font-weight: 700; color: #1F4E79; margin: 10px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: .95em; }
+    th, td { border: 1px solid #c9d6e2; padding: 6px 10px; text-align: left; }
+    th { background: #1F4E79; color: #fff; }
+    @media print { body { margin: 10mm; } }
+  </style></head><body>
+  <h1>Fiche de score — FitTrack</h1>
+  <p class="sub">Édité le ${new Date().toLocaleDateString('fr-FR')}${profile ? ` · ${profile.sex === 'H' ? 'Homme' : 'Femme'}${profile.birthYear ? ', ' + (new Date().getFullYear() - profile.birthYear) + ' ans' : ''}` : ''}</p>
+  ${score != null ? `<div class="score">Score global : ${score}/100</div>` : ''}
+  <table><tr><th>Test</th><th>Dernière valeur</th><th>Date</th><th>Statut</th></tr>${rows}</table>
+  <p class="sub" style="font-size:.8em">Logique principale : comparaison à soi-même dans le temps. Un indicateur dégradé sur 2 sessions consécutives doit alerter.</p>
+  <script>window.onload = () => setTimeout(() => window.print(), 200);</` + `script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Autorisez les pop-ups pour générer le PDF.'); return; }
+  w.document.write(html);
+  w.document.close();
+});
+
 // ---------- Init ----------
+// Enregistrement du service worker (PWA)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Onboarding au premier lancement
+if (!store.get('profile', null) && !store.get('onboarded', false)) {
+  $('#onboarding').classList.remove('hidden');
+}
+$('#onboarding-go').addEventListener('click', () => {
+  $('#onboarding').classList.add('hidden');
+  store.set('onboarded', true);
+  $$('#view-profile').classList.add('active');
+  $$('#view-dashboard').classList.remove('active');
+  $$('nav button').forEach(x => x.classList.remove('active'));
+  $$('nav button').find(x => x.dataset.view === 'profile')?.classList.add('active');
+});
+$('#onboarding-skip').addEventListener('click', () => {
+  $('#onboarding').classList.add('hidden');
+  store.set('onboarded', true);
+});
+
 $('#session-date').value = todayStr();
 renderSessionFields();
 renderProfileForm();

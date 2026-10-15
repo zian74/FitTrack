@@ -88,6 +88,18 @@ tr:nth-child(even) td { background: var(--accent-light); }
 /* Graphique */
 #chart { width: 100%; min-height: 260px; }
 #chart svg { width: 100%; height: auto; }
+/* Onboarding / modale */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center; z-index: 30; padding: 16px;
+}
+.modal {
+  background: #fff; border-radius: 12px; padding: 24px; max-width: 480px; width: 100%;
+  box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+.modal h2 { margin-top: 0; color: var(--accent); }
+.small-btn { font-size: .85em; }
+
 /* Champs de session */
 .session-block {
   background: #fff; border: 1px solid var(--border); border-radius: 10px;
