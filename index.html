@@ -67,13 +67,11 @@
       <p>Choisissez le type de session, puis saisissez vos résultats. Les champs laissés vides sont ignorés.</p>
       <div class="row">
         <label>Date : <input type="date" id="session-date"></label>
-        <label>Type :
-          <select id="session-type">
-            <option value="rest">Jour 1 — Repos + mobilité</option>
-            <option value="strength">Jour 2 — Force</option>
-            <option value="cardio">Jour 2 — Cardio</option>
-          </select>
-        </label>
+      </div>
+      <div class="session-types">
+        <button class="session-type-btn active" data-type="rest">🧘 Repos + mobilité</button>
+        <button class="session-type-btn" data-type="strength">💪 Force</button>
+        <button class="session-type-btn" data-type="cardio">🏃 Cardio</button>
       </div>
     </div>
     <div id="session-fields"></div>

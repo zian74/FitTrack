@@ -97,6 +97,7 @@ function getProfile() { return store.get('profile', null); }
 function getSessions() { return store.get('sessions', []); }
 function addSession(session) {
   const s = getSessions();
+  if (!session.id) session.id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   s.push(session);
   s.sort((a, b) => a.date < b.date ? -1 : 1);
   store.set('sessions', s);
@@ -238,10 +239,10 @@ function renderLastSession() {
       }
       html += `<tr><td class="test-name">${t.name}</td>`;
       html += hasCur
-        ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${last2[0].date}" data-edit-test="${id}">✏️</button></td>`
+        ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${last2[0].id || ''}" data-edit-date="${last2[0].date}" data-edit-test="${id}">✏️</button></td>`
         : '<td class="num muted">—</td>';
       html += hasPrv
-        ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${last2[1].date}" data-edit-test="${id}">✏️</button></td>`
+        ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${last2[1].id || ''}" data-edit-date="${last2[1].date}" data-edit-test="${id}">✏️</button></td>`
         : '<td class="num muted">—</td>';
       html += deltaCell + '</tr>';
     }
@@ -266,17 +267,26 @@ function weightDeltaClass(curW, prvW) {
 }
 
 // ---------- Édition d'une mesure (crayon ✏️) ----------
-let editCtx = null; // { date, testId }
+let editCtx = null; // { id, date, testId }
 
-function openEditModal(date, testId) {
-  const t = byId(testId);
-  const session = getSessions().find(s => s.date === date);
-  if (!session || session.values[testId] == null) return;
-  editCtx = { date, testId };
+function findSession(ctx) {
+  const sessions = getSessions();
+  if (ctx.id) {
+    const bySid = sessions.find(s => s.id === ctx.id);
+    if (bySid) return bySid;
+  }
+  return sessions.find(s => s.date === ctx.date && s.values?.[ctx.testId] != null);
+}
+
+function openEditModal(ctx) {
+  const t = byId(ctx.testId);
+  const session = findSession(ctx);
+  if (!session || session.values[ctx.testId] == null) return;
+  editCtx = { id: session.id, date: session.date, testId: ctx.testId };
   $('#edit-title').textContent = `${t.name}`;
-  const dateFr = date.split('-').reverse().join('/');
+  const dateFr = session.date.split('-').reverse().join('/');
   $('#edit-info').textContent = `Mesure du ${dateFr} — corrigez la valeur si elle a été mal saisie.`;
-  $('#edit-value').value = session.values[testId];
+  $('#edit-value').value = session.values[ctx.testId];
   $('#edit-value').min = t.min ?? 0;
   $('#edit-value').max = t.max ?? 999;
   $('#edit-value').placeholder = t.unit;
@@ -297,7 +307,7 @@ $('#edit-modal').addEventListener('click', e => {
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('.edit-btn');
-  if (btn) openEditModal(btn.dataset.editDate, btn.dataset.editTest);
+  if (btn) openEditModal({ id: btn.dataset.editId, date: btn.dataset.editDate, testId: btn.dataset.editTest });
 });
 
 $('#edit-save').addEventListener('click', () => {
@@ -309,7 +319,7 @@ $('#edit-save').addEventListener('click', () => {
   if (t.max != null && num > t.max) { alert(`Valeur trop élevée (max ${t.max} ${t.unit}).`); return; }
   if (t.min != null && num < t.min) { alert(`Valeur trop faible (min ${t.min} ${t.unit}).`); return; }
   const sessions = getSessions();
-  const s = sessions.find(x => x.date === editCtx.date);
+  const s = findSession(editCtx);
   if (!s) { closeEditModal(); return; }
   s.values[editCtx.testId] = num;
   store.set('sessions', sessions);
@@ -324,8 +334,9 @@ $('#edit-delete').addEventListener('click', () => {
   if (!editCtx) return;
   if (!confirm('Supprimer définitivement cette mesure ?')) return;
   const sessions = getSessions();
-  const idx = sessions.findIndex(s => s.date === editCtx.date);
-  if (idx !== -1) {
+  const s = findSession(editCtx);
+  if (s) {
+    const idx = sessions.indexOf(s);
     delete sessions[idx].values[editCtx.testId];
     if (Object.keys(sessions[idx].values).length === 0) sessions.splice(idx, 1);
     store.set('sessions', sessions);
@@ -337,8 +348,10 @@ $('#edit-delete').addEventListener('click', () => {
 // ---------- Session ----------
 const chronoBtns = ['plank', 'balance_open', 'balance_closed'];
 
+let currentSessionType = 'rest';
+
 function renderSessionFields() {
-  const type = $('#session-type').value;
+  const type = currentSessionType;
   const groups = SESSION_GROUPS[type];
   const container = $('#session-fields');
   container.innerHTML = '';
@@ -418,7 +431,12 @@ function updateSaveState() {
   btn.title = invalid ? 'Corrigez les valeurs hors bornes' : '';
 }
 
-$('#session-type').addEventListener('change', renderSessionFields);
+$$('.session-type-btn').forEach(b => b.addEventListener('click', () => {
+  $$('.session-type-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  currentSessionType = b.dataset.type;
+  renderSessionFields();
+}));
 
 $('#save-session').addEventListener('click', () => {
   const values = {};
@@ -433,7 +451,7 @@ $('#save-session').addEventListener('click', () => {
     }
   });
   if (!any) { alert('Aucune valeur saisie.'); return; }
-  const session = { date: $('#session-date').value || todayStr(), type: $('#session-type').value, values };
+  const session = { date: $('#session-date').value || todayStr(), type: currentSessionType, values };
   // fusion avec session existante à la même date ? Non : on garde tout l'historique.
   addSession(session);
   const msg = $('#session-saved-msg');
@@ -570,7 +588,7 @@ function renderHistoryTable() {
       .map(([id, v]) => {
         const t = byId(id) || { name: id, unit: '' };
         return `${t.name} : <b>${v}</b> ${t.unit}
-          <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button>`;
+          <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button>`;
       })
       .join(' · ');
     html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}</td><td>${results}</td></tr>`;
