@@ -227,7 +227,10 @@ function renderDashboard() {
       if (hasCur && hasPrv) {
         const d = cur - prv;
         const sign = d > 0 ? '+' : '';
-        const cls = d === 0 ? 'muted' : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down'));
+        // poids : couleur basée sur la trajectoire IMC (vert = vers meilleure zone IMC)
+        const cls = d === 0 ? 'muted'
+          : (t.id === 'weight' ? weightDeltaClass(cur, prv)
+          : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
         deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
       }
       html += `<tr><td class="test-name">${t.name}</td>`;
@@ -242,6 +245,21 @@ function renderDashboard() {
     html += '</table>';
     compEl.innerHTML = html;
   }
+}
+
+// Couleur du delta de poids selon la trajectoire IMC
+// vert = se rapproche de la zone saine [18.5, 25], rouge = s'en éloigne, gris = stable ou taille inconnue
+function weightDeltaClass(curW, prvW) {
+  const profile = getProfile();
+  const h = profile?.height;
+  if (!h || h < 100) return 'muted'; // taille non renseignée : pas d'interprétation
+  const imc = w => w / (h / 100) ** 2;
+  const dist = m => m < 18.5 ? 18.5 - m : (m > 25 ? m - 25 : 0);
+  const dc = dist(imc(curW)), dp = dist(imc(prvW));
+  if (dc === 0 && dp === 0) return 'muted'; // reste dans la zone saine
+  if (dc < dp) return 'up';
+  if (dc > dp) return 'down';
+  return 'muted';
 }
 
 // ---------- Édition d'une mesure (crayon ✏️) ----------
