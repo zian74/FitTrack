@@ -209,60 +209,68 @@ function renderDashboard() {
 function renderLastSession() {
   const sessions = getSessions();
   const compEl = $('#last-comparison');
-  if (sessions.length === 0) compEl.innerHTML = '<p>Aucune donnée.</p>';
-  else {
-    const last2 = sessions.slice(-2).reverse(); // la plus récente d'abord [0], précédente [1]
-    const frDate = d => d.split('-').reverse().join('/');
-    // tous les tests présents dans les 2 dernières sessions
-    const ids = [];
-    for (const s of last2) for (const id of Object.keys(s.values || {})) {
-      if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
-    }
-    let html = '<table class="last3-table">';
-    html += '<tr><th>Test</th>' + last2.map(s => `<th>${frDate(s.date)} <button class="delete-session-btn" title="Supprimer cette session complète" data-del-session="${s.id || ''}" data-del-date="${s.date}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
-    for (const id of ids) {
-      const t = byId(id);
-      const cur = last2[0].values?.[id];   // plus récente
-      const prv = last2[1]?.values?.[id];   // précédente
-      const hasCur = cur != null && cur !== '';
-      const hasPrv = prv != null && prv !== '';
-      // delta : significatif seulement si les deux valeurs existent
-      let deltaCell = '<td class="num muted">—</td>';
-      if (hasCur && hasPrv) {
-        const d = cur - prv;
-        const sign = d > 0 ? '+' : '';
-        // poids : couleur basée sur la trajectoire IMC (vert = vers meilleure zone IMC)
-        const cls = d === 0 ? 'muted'
-          : (t.id === 'weight' ? weightDeltaClass(cur, prv)
-          : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
-        deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
-      }
-      html += `<tr><td class="test-name">${t.name}</td>`;
-      html += hasCur
-        ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${last2[0].id || ''}" data-edit-date="${last2[0].date}" data-edit-test="${id}">✏️</button></td>`
-        : '<td class="num muted">—</td>';
-      html += hasPrv
-        ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${last2[1].id || ''}" data-edit-date="${last2[1].date}" data-edit-test="${id}">✏️</button></td>`
-        : '<td class="num muted">—</td>';
-      html += deltaCell + '</tr>';
-    }
-    html += '</table>';
-    compEl.innerHTML = html;
+  if (sessions.length === 0) { compEl.innerHTML = '<p>Aucune donnée.</p>'; return; }
+  const frDate = d => d.split('-').reverse().join('/');
+  // regrouper les sessions par date (une colonne par date, sessions multiples fusionnées)
+  const byDate = [];
+  for (const s of sessions.slice().reverse()) {
+    let col = byDate.find(c => c.date === s.date);
+    if (!col) { col = { date: s.date, sessions: [] }; byDate.push(col); }
+    col.sessions.push(s);
   }
+  const cols = byDate.slice(0, 2); // les 2 dates les plus récentes
+  // tous les tests présents dans ces colonnes
+  const ids = [];
+  for (const c of cols) for (const s of c.sessions) for (const id of Object.keys(s.values || {})) {
+    if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
+  }
+  let html = '<table class="last3-table">';
+  html += '<tr><th>Test</th>' + cols.map(c => `<th>${frDate(c.date)} <button class="delete-session-btn" title="Supprimer les sessions de cette date" data-del-session="${c.sessions[0].id || ''}" data-del-date="${c.date}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
+  for (const id of ids) {
+    const t = byId(id);
+    // valeur d'une colonne = celle de la session qui contient ce test (la plus récente si plusieurs)
+    const valOf = c => {
+      for (const s of c.sessions) if (s.values?.[id] != null && s.values[id] !== '') return s;
+      return null;
+    };
+    const curS = valOf(cols[0]);
+    const prvS = cols[1] ? valOf(cols[1]) : null;
+    const cur = curS?.values?.[id];
+    const prv = prvS?.values?.[id];
+    const hasCur = cur != null && cur !== '';
+    const hasPrv = prv != null && prv !== '';
+    // delta : significatif seulement si les deux valeurs existent
+    let deltaCell = '<td class="num muted">—</td>';
+    if (hasCur && hasPrv) {
+      const d = cur - prv;
+      const sign = d > 0 ? '+' : '';
+      // poids : couleur basée sur la trajectoire IMC (vert = vers meilleure zone IMC)
+      const cls = d === 0 ? 'muted'
+        : (t.id === 'weight' ? weightDeltaClass(cur, prv)
+        : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
+      deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
+    }
+    html += `<tr><td class="test-name">${t.name}</td>`;
+    html += hasCur
+      ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${curS.id || ''}" data-edit-date="${curS.date}" data-edit-test="${id}">✏️</button></td>`
+      : '<td class="num muted">—</td>';
+    html += hasPrv
+      ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${prvS.id || ''}" data-edit-date="${prvS.date}" data-edit-test="${id}">✏️</button></td>`
+      : '<td class="num muted">—</td>';
+    html += deltaCell + '</tr>';
+  }
+  html += '</table>';
+  compEl.innerHTML = html;
 }
 
 document.addEventListener('click', e => {
   const btn = e.target.closest('.delete-session-btn');
   if (!btn) return;
   const { delSession: id, delDate: date } = btn.dataset;
-  const n = Object.keys(findSession({ id, date, testId: null })?.values || {}).length;
-  if (!confirm(`Supprimer la session complète du ${date.split('-').reverse().join('/')} (${n} mesure${n > 1 ? 's' : ''}) ?\nCette action est définitive.`)) return;
-  const sessions = getSessions();
-  const idx = sessions.findIndex(s => (id ? s.id === id : s.date === date));
-  if (idx !== -1) {
-    sessions.splice(idx, 1);
-    store.set('sessions', sessions);
-  }
+  const ofDate = getSessions().filter(s => s.date === date);
+  const n = ofDate.reduce((acc, s) => acc + Object.keys(s.values || {}).length, 0);
+  if (!confirm(`Supprimer ${ofDate.length > 1 ? `les ${ofDate.length} sessions` : 'la session'} du ${date.split('-').reverse().join('/')} (${n} mesure${n > 1 ? 's' : ''}) ?\nCette action est définitive.`)) return;
+  store.set('sessions', getSessions().filter(s => s.date !== date));
   renderDashboard();
   renderLastSession();
 });
