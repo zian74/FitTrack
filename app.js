@@ -202,30 +202,42 @@ function renderDashboard() {
   }
   $('#alerts').innerHTML = alerts.length ? alerts.join('') : '<li>Aucune alerte. 👍</li>';
 
-  // Dernière session — 3 dernières sessions en colonnes
+  // Dernière session — 2 dernières sessions + delta
   const sessions = getSessions();
   const compEl = $('#last-comparison');
   if (sessions.length === 0) compEl.innerHTML = '<p>Aucune donnée.</p>';
   else {
-    const last3 = sessions.slice(-3).reverse(); // la plus récente d'abord
+    const last2 = sessions.slice(-2).reverse(); // la plus récente d'abord [0], précédente [1]
     const frDate = d => d.split('-').reverse().join('/');
-    // tous les tests présents dans les 3 dernières sessions
+    // tous les tests présents dans les 2 dernières sessions
     const ids = [];
-    for (const s of last3) for (const id of Object.keys(s.values || {})) {
+    for (const s of last2) for (const id of Object.keys(s.values || {})) {
       if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
     }
     let html = '<table class="last3-table">';
-    html += '<tr><th>Test</th>' + last3.map((s, i) => `<th>${i === 0 ? '📍 ' : ''}${frDate(s.date)}</th>`).join('') + '</tr>';
+    html += '<tr><th>Test</th>' + last2.map((s, i) => `<th>${i === 0 ? '📍 ' : ''}${frDate(s.date)}</th>`).join('') + '<th>Δ</th></tr>';
     for (const id of ids) {
       const t = byId(id);
-      html += `<tr><td class="test-name">${t.name}</td>`;
-      for (const s of last3) {
-        const v = s.values?.[id];
-        html += v != null && v !== ''
-          ? `<td class="num">${v} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button></td>`
-          : '<td class="num muted">—</td>';
+      const cur = last2[0].values?.[id];   // plus récente
+      const prv = last2[1]?.values?.[id];   // précédente
+      const hasCur = cur != null && cur !== '';
+      const hasPrv = prv != null && prv !== '';
+      // delta : significatif seulement si les deux valeurs existent
+      let deltaCell = '<td class="num muted">—</td>';
+      if (hasCur && hasPrv) {
+        const d = cur - prv;
+        const sign = d > 0 ? '+' : '';
+        const cls = d === 0 ? 'muted' : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down'));
+        deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
       }
-      html += '</tr>';
+      html += `<tr><td class="test-name">${t.name}</td>`;
+      html += hasCur
+        ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${last2[0].date}" data-edit-test="${id}">✏️</button></td>`
+        : '<td class="num muted">—</td>';
+      html += hasPrv
+        ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-date="${last2[1].date}" data-edit-test="${id}">✏️</button></td>`
+        : '<td class="num muted">—</td>';
+      html += deltaCell + '</tr>';
     }
     html += '</table>';
     compEl.innerHTML = html;
