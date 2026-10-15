@@ -351,17 +351,25 @@ function renderSessionFields() {
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+      const last = latestValues()[t.id];
+      const lastInfo = last != null
+        ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
       row.innerHTML = `
         <label>${t.name}
           <div class="field-hint">${t.hint || ''}</div>
+          ${lastInfo}
         </label>
         <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
                data-test="${t.id}" placeholder="${t.unit}">
+        <span class="field-status" data-status="${t.id}"></span>
         ${chronoBtn}`;
       block.appendChild(row);
+      const inp = row.querySelector('input[data-test]');
+      inp.addEventListener('input', () => updateFieldStatus(t, inp));
     }
     container.appendChild(block);
   }
+  updateSaveState();
   // Avertissement Cooper si facteurs de risque
   const profile = getProfile();
   if (type === 'cardio' && profile && (profile.smoke || profile.cardiacHistory || profile.sedentaryRisk)) {
@@ -372,6 +380,44 @@ function renderSessionFields() {
   }
 }
 
+function updateFieldStatus(t, inp) {
+  const el = $(`#session-fields .field-status[data-status="${t.id}"]`);
+  const profile = getProfile();
+  const raw = inp.value.trim();
+  const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
+  const invalid = raw !== '' && (isNaN(num) || (t.min != null && num < t.min) || (t.max != null && num > t.max));
+  inp.classList.toggle('invalid', invalid);
+  if (!el) { updateSaveState(); return; }
+  if (invalid) {
+    el.innerHTML = '<span class="badge bad">Hors bornes</span>';
+  } else if (num == null) {
+    el.innerHTML = '';
+  } else {
+    const st = statusOf(t, num, profile);
+    const last = latestValues()[t.id];
+    let delta = '';
+    if (last != null) {
+      const d = num - last;
+      const better = t.rev ? d < 0 : d > 0;
+      if (d !== 0) {
+        delta = ` <span class="delta ${better ? 'up' : 'down'}">${d > 0 ? '+' : ''}${d.toFixed(1).replace(/\.0$/, '')}</span>`;
+      }
+    }
+    el.innerHTML = st ? `<span class="badge ${st}">${STATUS_LABEL[st]}</span>${delta}` : delta;
+  }
+  updateSaveState();
+}
+
+function updateSaveState() {
+  const btn = $('#save-session');
+  const filled = $$('#session-fields input[data-test]').some(i => i.value.trim() !== '' && !i.classList.contains('invalid'));
+  const invalid = $$('#session-fields input[data-test]').some(i => i.classList.contains('invalid'));
+  btn.disabled = !filled;
+  const count = $$('#session-fields input[data-test]').filter(i => i.value.trim() !== '' && !i.classList.contains('invalid')).length;
+  $('#session-progress').textContent = count > 0 ? `${count} mesure${count > 1 ? 's' : ''} saisie${count > 1 ? 's' : ''}` : '';
+  btn.title = invalid ? 'Corrigez les valeurs hors bornes' : '';
+}
+
 $('#session-type').addEventListener('change', renderSessionFields);
 
 $('#save-session').addEventListener('click', () => {
@@ -379,13 +425,10 @@ $('#save-session').addEventListener('click', () => {
   let any = false;
   $$('#session-fields input[data-test]').forEach(inp => {
     const v = inp.value.trim();
-    if (v !== '') {
-      const t = byId(inp.dataset.test);
+    if (v !== '' && !inp.classList.contains('invalid')) {
       const num = parseFloat(v.replace(',', '.'));
       if (isNaN(num)) return;
-      if (t.max != null && num > t.max) { inp.style.borderColor = 'var(--bad)'; return; }
-      if (t.min != null && num < t.min) { inp.style.borderColor = 'var(--bad)'; return; }
-      values[t.id] = num;
+      values[inp.dataset.test] = num;
       any = true;
     }
   });
@@ -431,7 +474,10 @@ $('#chrono-reset').addEventListener('click', () => {
 $('#chrono-send').addEventListener('click', () => {
   const target = $('#chrono-target').value;
   const inp = $(`#session-fields input[data-test="${target}"]`);
-  if (inp) inp.value = Math.round(chronoElapsed / 100) / 10;
+  if (inp) {
+    inp.value = Math.round(chronoElapsed / 100) / 10;
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   $('#chrono').classList.add('hidden');
 });
 document.addEventListener('click', e => {
