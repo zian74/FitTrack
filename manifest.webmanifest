@@ -7,6 +7,22 @@
   "background_color": "#f4f7fa",
   "theme_color": "#1F4E79",
   "lang": "fr",
+  "screenshots": [
+    {
+      "src": "screenshot-narrow.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tableau de bord : score global, tests dus, alertes"
+    },
+    {
+      "src": "screenshot-wide.png",
+      "sizes": "1024x640",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Vue desktop : scores, repères et graphique de progression"
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",
