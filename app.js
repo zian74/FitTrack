@@ -135,6 +135,7 @@ $$('nav button').forEach(b => b.addEventListener('click', () => {
   $$('.view').forEach(v => v.classList.remove('active'));
   $('#view-' + b.dataset.view).classList.add('active');
   if (b.dataset.view === 'dashboard') renderDashboard();
+  if (b.dataset.view === 'session') renderLastSession();
   if (b.dataset.view === 'history') renderHistory();
 }));
 
@@ -148,7 +149,7 @@ function renderDashboard() {
   $('#no-profile-warning').classList.toggle('hidden', !!profile);
 
   // Score global : moyenne des statuts des 5 tests prédictifs
-  const PREDICTIVE = ['grip', 'waist', 'fc', 'stair_pulse', 'balance_open'];
+  const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open']; // ordre fixe: FC, taille, poigne, escalier, équilibre
   const lv = latestValues();
   const scoreEl = $('#score-global-content');
   const scored = PREDICTIVE.filter(id => lv[id]);
@@ -201,8 +202,10 @@ function renderDashboard() {
     else if (stagnant && series.length >= 3) alerts.push(`<li>🟠 <b>${t.name}</b> : stable sur 2 sessions. Pensez à varier l'entraînement.</li>`);
   }
   $('#alerts').innerHTML = alerts.length ? alerts.join('') : '<li>Aucune alerte. 👍</li>';
+}
 
-  // Dernière session — 2 dernières sessions + delta
+// La carte « Dernière session » vit dans l'onglet Session de test
+function renderLastSession() {
   const sessions = getSessions();
   const compEl = $('#last-comparison');
   if (sessions.length === 0) compEl.innerHTML = '<p>Aucune donnée.</p>';
@@ -313,6 +316,7 @@ $('#edit-save').addEventListener('click', () => {
   closeEditModal();
   // re-rendu des vues actives
   renderDashboard();
+  renderLastSession();
   if ($('#view-history').classList.contains('active')) renderHistory();
 });
 
@@ -393,6 +397,7 @@ $('#save-session').addEventListener('click', () => {
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2500);
   $$('#session-fields input').forEach(i => i.value = '');
+  renderLastSession();
 });
 
 // ---------- Chronomètre ----------
@@ -614,7 +619,7 @@ $('#export-pdf').addEventListener('click', () => {
     rows += `<tr><td>${t.name}</td><td>${v.value} ${t.unit}</td><td>${v.date}</td><td>${st ? STATUS_LABEL[st] : '—'}</td></tr>`;
   }
 
-  const PREDICTIVE = ['grip', 'waist', 'fc', 'stair_pulse', 'balance_open'];
+  const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open']; // ordre fixe: FC, taille, poigne, escalier, équilibre
   const pts = { good: 100, mid: 60, low: 25 };
   const scored = PREDICTIVE.filter(id => lv[id]);
   const score = scored.length
