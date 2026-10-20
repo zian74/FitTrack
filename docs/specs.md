@@ -2,9 +2,9 @@
 
 ## 1. Contexte et objectifs
 
-Application de suivi de la condition physique fondée sur un plan de test de 14 mesures
-objectives (repos, mobilité, force, cardio). Logique première : **comparaison à soi-même
-dans le temps** plutôt qu'aux normes.
+Application de suivi de la condition physique fondée sur un plan de test de 16 mesures
+objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique première :
+**comparaison à soi-même dans le temps** plutôt qu'aux normes.
 
 - **Mono-profil par design** : l'app gère les données d'une seule personne, stockées
   exclusivement en local sur son appareil (localStorage). Aucun compte, aucun serveur,
@@ -28,6 +28,8 @@ dans le temps** plutôt qu'aux normes.
 | 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
 | 13 | Test escalier (pouls 1 min) | cardio | trimestriel | < 90–100 |
 | 14 | Cooper (12 min) | cardio | trimestriel | H > 2400 / F > 2000 m |
+| 15 | IPAQ court — score activité (MET-min/sem) | activité | trimestriel | ≥ 600 (OMS) / ≥ 3000 (élevé) |
+| 16 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
 
 ## 3. Exigences fonctionnelles
 
@@ -45,7 +47,10 @@ dans le temps** plutôt qu'aux normes.
     ou si la taille n'est pas renseignée dans le profil (pas d'interprétation possible).
 
 - Profil : sexe, année de naissance, taille, activité, facteurs de risque cardio
-- Saisie des mesures par session datée (3 types : repos, force, cardio)
+- Saisie des mesures par session datée (4 types : repos, force, cardio, activité)
+- Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
+  automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
+  faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
 - Statut automatique par mesure selon repères sexe/âge
 - Score global /100 : moyenne des 5 tests prédictifs
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions

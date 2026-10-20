@@ -53,15 +53,51 @@ const TESTS = [
   { id: 'cooper', name: 'Cooper — distance 12 min (m)', unit: 'm', group: 'cardio',
     hint: 'Personnes actives uniquement', good: 2400, mid: 2200, max: 5000, min: 200,
     gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } } },
+  { id: 'ipaq', name: 'IPAQ court — niveau d’activité', unit: 'MET-min/sem', group: 'activity',
+    hint: 'Questionnaire sur les 7 derniers jours (score calculé automatiquement)',
+    good: 3000, mid: 600, max: 30000, min: 0 },
+  { id: 'sit', name: 'Temps assis (jour de semaine)', unit: 'min', group: 'activity', rev: true,
+    hint: 'Question IPAQ n°7 — temps passé assis un jour de semaine habituel',
+    good: 240, mid: 480, max: 1440, min: 0 },
 ];
 
+// ---------- Questionnaire IPAQ court (évaluation de la sédentarité) ----------
+// 7 questions sur les 7 derniers jours. Q1/Q3/Q5 : jours + minutes (effort vigorous/modéré/marche).
+// Q2/Q4/Q6 : minutes de marche/transports. Q7 : minutes assis (jour de semaine).
+const IPAQ_QUESTIONS = [
+  { id: 'vig_days', label: 'Q1 — Effort intense (course, vélo rapide, aérobic…) : combien de jours ?', unit: 'jours', min: 0, max: 7 },
+  { id: 'vig_min', label: 'Q2 — Un jour type, combien de minutes d’effort intense ?', unit: 'min', min: 0, max: 720 },
+  { id: 'mod_days', label: 'Q3 — Effort modéré (vélo tranquille, jardinage, ménage…) : combien de jours ?', unit: 'jours', min: 0, max: 7 },
+  { id: 'mod_min', label: 'Q4 — Un jour type, combien de minutes d’effort modéré ?', unit: 'min', min: 0, max: 720 },
+  { id: 'walk_days', label: 'Q5 — Marche (au moins 10 min d’affilée : travail, loisirs, déplacements…) : combien de jours ?', unit: 'jours', min: 0, max: 7 },
+  { id: 'walk_min', label: 'Q6 — Un jour type, combien de minutes de marche ?', unit: 'min', min: 0, max: 720 },
+  { id: 'sit_min', label: 'Q7 — Un jour de semaine habituel, combien de temps passé assis ?', unit: 'min', min: 0, max: 1440 },
+];
+
+// Score IPAQ court (protocole de cotation standard, Craig et al. 2003) :
+// MET-min/semaine = 8×min intense + 4×min modérée + 3,3×min marche (somme sur les jours)
+// Niveau : < 600 = inactif (sédentaire), 600–2999 = modéré, ≥ 3000 = élevé
+function ipaqScore(a) {
+  const vig = (a.vig_days || 0) * (a.vig_min || 0);
+  const mod = (a.mod_days || 0) * (a.mod_min || 0);
+  const walk = (a.walk_days || 0) * (a.walk_min || 0);
+  return Math.round(8 * vig + 4 * mod + 3.3 * walk);
+}
+
+function ipaqLevel(met) {
+  if (met >= 3000) return { key: 'high', label: '🟢 Niveau élevé (actif)' };
+  if (met >= 600) return { key: 'mid', label: '🟠 Niveau modéré' };
+  return { key: 'low', label: '🔴 Niveau faible (sédentaire)' };
+}
+
 const byId = id => TESTS.find(t => t.id === id);
-const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio' };
+const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité' };
 // Groups présents par type de session
 const SESSION_GROUPS = {
   rest: ['rest'],
   strength: ['strength'],
   cardio: ['cardio'],
+  activity: ['activity'],
 };
 
 // ---------- Interprétation ----------
@@ -122,7 +158,7 @@ function seriesOf(testId) {
 }
 
 // Fréquence de re-test (en mois)
-const RETEST = { rest: 1, strength: 3, cardio: 3 };
+const RETEST = { rest: 1, strength: 3, cardio: 3, activity: 3 };
 
 function monthsSince(dateStr) {
   const d = new Date(dateStr), n = new Date();
@@ -190,7 +226,7 @@ function renderDashboard() {
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
   const alerts = [];
-  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05 };
+  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05, activity: 0.10 };
   for (const t of TESTS) {
     if (t.good == null) continue;
     const series = seriesOf(t.id);
@@ -374,6 +410,72 @@ const chronoBtns = ['plank', 'balance_open', 'balance_closed'];
 
 let currentSessionType = 'rest';
 
+// Bloc questionnaire IPAQ court : 7 champs, score MET-min/sem calculé en direct
+function renderIpaqBlock(block) {
+  const last = latestValues();
+  const lastIpaq = last['ipaq']?.value;
+  const lastSit = last['sit']?.value;
+  block.innerHTML += `
+    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 7 questions, le score se calcule automatiquement.</p>
+    <div id="ipaq-questions"></div>
+    <div id="ipaq-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
+    <input type="hidden" data-test="ipaq" id="ipaq-score-input">
+    <input type="hidden" data-test="sit" id="ipaq-sit-input">`;
+  const qWrap = block.querySelector('#ipaq-questions');
+  const answers = {};
+  IPAQ_QUESTIONS.forEach(q => {
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    row.innerHTML = `
+      <label>${q.label}
+        <input type="number" step="1" min="${q.min}" max="${q.max}"
+               data-ipaq="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
+      </label>`;
+    qWrap.appendChild(row);
+    const inp = row.querySelector('input[data-ipaq]');
+    inp.addEventListener('input', () => {
+      const raw = inp.value.trim();
+      const num = raw === '' ? null : parseInt(raw, 10);
+      const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
+      inp.classList.toggle('invalid', invalid);
+      answers[q.id] = invalid ? null : num;
+      updateIpaqResult(answers);
+      updateSaveState();
+    });
+  });
+  updateIpaqResult(answers);
+  function updateIpaqResult(a) {
+    const resultEl = block.querySelector('#ipaq-result');
+    const answered = IPAQ_QUESTIONS.filter(q => a[q.id] != null).length;
+    const complete = answered === IPAQ_QUESTIONS.length;
+    if (!complete) {
+      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/7) — le score nécessite les 7 réponses.`;
+      block.querySelector('#ipaq-score-input').value = '';
+      block.querySelector('#ipaq-sit-input').value = '';
+      return;
+    }
+    const met = ipaqScore(a);
+    const lvl = ipaqLevel(met);
+    const sitH = Math.floor((a.sit_min || 0) / 60), sitM = (a.sit_min || 0) % 60;
+    resultEl.innerHTML = `
+      <b>Score IPAQ : ${met} MET-min/semaine</b> — ${lvl.label}<br>
+      <span class="small">Détail : intense ${Math.round((a.vig_days||0)*(a.vig_min||0))} min/j ×8 · modéré ${Math.round((a.mod_days||0)*(a.mod_min||0))} min/j ×4 · marche ${Math.round((a.walk_days||0)*(a.walk_min||0))} min/j ×3,3 (par semaine)</span><br>
+      <span class="small">Temps assis (jour de semaine) : <b>${a.sit_min} min</b> (${sitH} h ${String(sitM).padStart(2,'0')})${a.sit_min > 480 ? ' — au-delà de 8 h : pensez à vous lever régulièrement' : ''}</span>
+      <div class="small" style="margin-top:4px">Repères OMS : ≥ 600 MET-min/sem (ou 150 min d’activité modérée/sem) · objectif haut : ≥ 3000</div>`;
+    block.querySelector('#ipaq-score-input').value = met;
+    block.querySelector('#ipaq-sit-input').value = a.sit_min;
+  }
+  if (lastIpaq != null || lastSit != null) {
+    const info = document.createElement('div');
+    info.className = 'field-last';
+    info.innerHTML = 'Dernier : ' + [
+      lastIpaq != null ? `<b>${lastIpaq}</b> MET-min/sem` : null,
+      lastSit != null ? `assis <b>${lastSit}</b> min/j` : null,
+    ].filter(Boolean).join(' · ');
+    block.insertBefore(info, block.querySelector('#ipaq-questions'));
+  }
+}
+
 function renderSessionFields() {
   const type = currentSessionType;
   const groups = SESSION_GROUPS[type];
@@ -383,6 +485,12 @@ function renderSessionFields() {
     const block = document.createElement('div');
     block.className = 'session-block';
     block.innerHTML = `<h3>${GROUP_LABELS[g]}</h3>`;
+    if (g === 'activity') {
+      renderIpaqBlock(block);
+      container.appendChild(block);
+      updateSaveState();
+      return;
+    }
     for (const t of TESTS.filter(x => x.group === g)) {
       const row = document.createElement('div');
       row.className = 'field-row';
