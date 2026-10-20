@@ -10,6 +10,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Mobilité & équilibre** : unipodal yeux ouverts/fermés, sit-and-reach
 - **Force** (trimestriel) : poigne, pompes, gainage planche, chaise 30 s
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper
+- **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 
 ### Fonctionnalités
 
@@ -21,6 +22,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - Graphiques SVG par indicateur avec zones objectif
 - Export CSV / JSON, données 100 % locales (localStorage)
 - Avertissement médical avant test maximal si facteurs de risque déclarés
+- Suivi du niveau d'activité (IPAQ court) avec repères OMS : ≥ 600 MET-min/sem, objectif ≥ 3000
 
 ### Lancer
 
