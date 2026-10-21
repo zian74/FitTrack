@@ -944,7 +944,7 @@ function renderIfgRadar(dims) {
   svg += '</svg>';
   $('#ifg-radar').innerHTML = svg;
   $('#ifg-radar-legend').innerHTML = dims.map(d =>
-    `<span style="margin-right:10px">${d.icon} ${d.label} : <b>${d.score}</b></span>`).join('');
+    `<div class="ifg-legend-item">${d.icon} ${d.label} : <b>${d.score}</b></div>`).join('');
 }
 
 function renderIfgChart(series) {
