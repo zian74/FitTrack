@@ -21,6 +21,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
   radar, priorités, évolution et corrélation activité ↔ forme
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
+- ⏳ Timer compte à rebours 30 s pour le test « Chaise 30 s » (compte les répétitions, bip de fin, panneau flottant)
 - Graphiques SVG par indicateur avec zones objectif
 - Export CSV / JSON, données 100 % locales (localStorage)
 - Avertissement médical avant test maximal si facteurs de risque déclarés

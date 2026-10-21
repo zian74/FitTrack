@@ -72,6 +72,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - **Récapitulatif des facteurs de risque** dans le Profil : liste, badges « majeur », niveau global (faible/modéré/élevé selon le nombre de facteurs majeurs)
 - **Avertissement avant test maximal (Cooper)** déclenché par tout facteur majeur (déclaré ou IMC ≥ 30), avec conseil de privilégier le test de l'escalier (sous-maximal) ; les facteurs non majeurs (antécédents familiaux, alcool < 14, surpoids, IMC 25–29,9) n'affichent pas l'avertissement
 - Chronomètre intégré pour les tests chronométrés
+- ⏳ Timer compte à rebours **30 s** dédié au test « Chaise 30 s » (bouton à côté du champ, ouverture d'un panneau flottant : démarrage/pause, reset, fermeture ✕, arrêt automatique à 00:00.0 avec bip sonore et état « finished » vert) pour compter les répétitions ; ⓘ instructions du test (position mur, bras croisés, cuisses parallèles au sol)
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
 - Avertissement médical avant test maximal si facteurs de risque

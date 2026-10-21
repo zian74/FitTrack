@@ -120,7 +120,14 @@ const TESTS = [
     </ul>` },
   { id: 'chair', name: 'Chaise 30 s (répétitions)', unit: 'rép.', group: 'strength',
     hint: 'Bras croisés, se lever/asseoir pendant 30 s', good: 17, mid: 12, max: 40, min: 0,
-    gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } } },
+    gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } },
+    info: `<ul>
+      <li>Adossé(e) à un mur, <b>pieds écartés de la largeur des hanches</b>, à environ 50 cm du mur.</li>
+      <li>Glissez le dos le long du mur jusqu'à ce que les <b>cuisses soient parallèles au sol</b> (angle 90° aux genoux), <b>bras croisés sur la poitrine</b>.</li>
+      <li>Le bouton <b>⏳</b> à côté du champ ouvre un <b>compte à rebours de 30 s</b> : pendant ce temps, <b>levez-vous et rasseyez-vous</b> complètement, bras toujours croisés.</li>
+      <li>Comptez vos répétitions complètes (descente + remontée = 1) et reportez le total dans le champ.</li>
+      <li>Respirez normalement ; arrêtez si vous ressentez une douleur au genou ou au dos.</li>
+    </ul>` },
   { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min', unit: 'bpm', group: 'cardio', rev: true,
     hint: '3 min de montées (24/min), pouls 1 min après', good: 100, mid: 110, max: 200, min: 50,
     info: `<ul>
@@ -838,6 +845,9 @@ function renderSessionFields() {
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+      // Timer compte à rebours 30 s dédié au test de la chaise (on compte les répétitions)
+      const chairTimerBtn = t.id === 'chair'
+        ? `<button class="chair-timer-btn" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
       const infoBtn = t.info
         ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
       const last = latestValues()[t.id]?.value;
@@ -858,7 +868,8 @@ function renderSessionFields() {
         <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
                data-test="${t.id}" placeholder="${t.unit}">
         ${cooperSelect}
-        ${chronoBtn}`;
+        ${chronoBtn}
+        ${chairTimerBtn}`;
       block.appendChild(row);
       const inp = row.querySelector('input[data-test]');
       inp.addEventListener('input', () => updateFieldValidity(t, inp));
@@ -1036,6 +1047,90 @@ $('#save-session').addEventListener('click', () => {
 
 // ---------- Chronomètre ----------
 let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = null;
+
+// ---------- Timer compte à rebours 30 s (test de la chaise) ----------
+// Le test « Chaise 30 s » dure exactement 30 s : on compte les répétitions.
+// Le timer démarre/pause/reset manuellement, s'arrête seul à 00:00.0 avec un bip.
+const CHAIR_TIMER_MS = 30000;
+let chairTimer = null, chairRemaining = CHAIR_TIMER_MS, chairRunning = false;
+function chairFmt(ms) {
+  return (ms / 1000).toFixed(1).replace('.', ',');
+}
+function chairBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.5);
+    setTimeout(() => ctx.close(), 600);
+  } catch { /* audio indisponible : pas de bip */ }
+}
+function chairTimerUpdate() {
+  chairRemaining -= 100;
+  if (chairRemaining <= 0) {
+    chairRemaining = 0;
+    chairTimerStop(true);
+  }
+  $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
+}
+function chairTimerSetBtn(running) {
+  const b = $('#chair-timer-startstop');
+  b.textContent = running ? '⏸' : '▶';
+  b.title = running ? 'Pause' : 'Démarrer le compte à rebours';
+  b.classList.toggle('running', running);
+}
+function chairTimerStop(finished = false) {
+  clearInterval(chairTimer);
+  chairTimer = null;
+  chairRunning = false;
+  chairTimerSetBtn(false);
+  $('#chair-timer').classList.toggle('finished', finished);
+  if (finished) chairBeep();
+}
+function chairTimerToggle() {
+  if (chairTimer) {
+    clearInterval(chairTimer); chairTimer = null; chairRunning = false;
+    chairTimerSetBtn(false);
+    $('#chair-timer').classList.remove('finished');
+  } else {
+    chairRunning = true;
+    chairTimerSetBtn(true);
+    $('#chair-timer').classList.remove('finished');
+    chairTimer = setInterval(chairTimerUpdate, 100);
+  }
+}
+function chairTimerReset() {
+  clearInterval(chairTimer); chairTimer = null; chairRunning = false;
+  chairRemaining = CHAIR_TIMER_MS;
+  $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
+  chairTimerSetBtn(false);
+  $('#chair-timer').classList.remove('finished');
+}
+function openChairTimer() {
+  const el = $('#chair-timer');
+  if (!el) return;
+  el.classList.remove('hidden');
+  // Si le chrono est aussi ouvert, on décale le timer au-dessus
+  if (!$('#chrono').classList.contains('hidden')) el.classList.add('above-chrono');
+  if (!chairRunning && chairRemaining === CHAIR_TIMER_MS) {
+    $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
+  }
+}
+$('#chair-timer-startstop').addEventListener('click', chairTimerToggle);
+$('#chair-timer-reset').addEventListener('click', chairTimerReset);
+$('#chair-timer-close').addEventListener('click', () => {
+  chairTimerStop();
+  const el = $('#chair-timer');
+  el.classList.add('hidden');
+  el.classList.remove('above-chrono');
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('.chair-timer-btn');
+  if (b) openChairTimer();
+});
 function chronoFmt(ms) {
   const s = ms / 1000;
   const m = Math.floor(s / 60);
@@ -1047,6 +1142,8 @@ function openChrono(targetId) {
   const t = byId(targetId);
   $('#chrono-target-name').textContent = t ? t.name : '';
   $('#chrono').classList.remove('hidden');
+  // Si le timer 30 s est aussi ouvert, on le décale au-dessus du chrono
+  if (!$('#chair-timer').classList.contains('hidden')) $('#chair-timer').classList.add('above-chrono');
 }
 function chronoUpdate() {
   chronoElapsed = Date.now() - chronoStart;
@@ -1082,6 +1179,7 @@ $('#chrono-send').addEventListener('click', () => {
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }
   $('#chrono').classList.add('hidden');
+  $('#chair-timer').classList.remove('above-chrono');
   chronoReset(); // le temps reporté est consommé : le chrono repart à zéro
 });
 document.addEventListener('click', e => {
