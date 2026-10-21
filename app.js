@@ -194,6 +194,22 @@ function seriesOf(testId) {
 // Fréquence de re-test (en mois)
 const RETEST = { rest: 1, strength: 3, cardio: 3, activity: 3 };
 
+// Groupes de tests dus (réutilisé par le dashboard et les rappels de notification)
+// Retourne [{ group, label, due, last, monthsDue }] — due=true si à refaire ou jamais fait
+function dueGroups() {
+  const lv = latestValues();
+  const out = [];
+  for (const [group, months] of Object.entries(RETEST)) {
+    const ids = TESTS.filter(t => t.group === group).map(t => t.id);
+    const last = ids.map(id => lv[id]?.date).filter(Boolean).sort().pop();
+    const label = GROUP_LABELS[group];
+    if (!last) { out.push({ group, label, due: true, last: null, monthsDue: Infinity }); continue; }
+    const m = monthsSince(last);
+    out.push({ group, label, due: m >= months, last, monthsDue: m });
+  }
+  return out;
+}
+
 function monthsSince(dateStr) {
   const d = new Date(dateStr), n = new Date();
   return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth());
@@ -329,20 +345,14 @@ function renderDashboard() {
       <ul class="list">${result.rows.join('')}</ul>`;
   }
 
-  // Tests dus
-  const due = [];
-  for (const [group, months] of Object.entries(RETEST)) {
-    const ids = TESTS.filter(t => t.group === group).map(t => t.id);
-    const last = ids.map(id => lv[id]?.date).filter(Boolean).sort().pop();
-    const label = GROUP_LABELS[group];
-    if (!last) due.push(`<li><b>${label}</b> — jamais effectué <span class="badge low">à faire</span></li>`);
-    else {
-      const m = monthsSince(last);
-      const lastFr = last.split('-').reverse().join('/');
-      if (m >= months) due.push(`<li><b>${label}</b> — dernier : ${lastFr} <span class="badge low">à refaire (${m} mois)</span></li>`);
-      else due.push(`<li><b>${label}</b> — dernier : ${lastFr} <span class="badge good">à jour</span></li>`);
-    }
-  }
+  // Tests dus (logique factorisée dans dueGroups(), aussi utilisée par les rappels)
+  const due = dueGroups().map(d => {
+    if (!d.last) return `<li><b>${d.label}</b> — jamais effectué <span class="badge low">à faire</span></li>`;
+    const lastFr = d.last.split('-').reverse().join('/');
+    return d.due
+      ? `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge low">à refaire (${d.monthsDue} mois)</span></li>`
+      : `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge good">à jour</span></li>`;
+  });
   $('#due-tests').innerHTML = due.join('');
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
@@ -1454,9 +1464,14 @@ $('#export-pdf').addEventListener('click', () => {
 });
 
 // ---------- Init ----------
-// Enregistrement du service worker (PWA)
+// Enregistrement du service worker (PWA) + inscription au PeriodicSync (rappels app fermée)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    // PeriodicSync : rappel quotidien même quand l'app est fermée (Android/desktop)
+    if ('periodicSync' in reg) {
+      reg.periodicSync.register('fittrack-reminder', { minInterval: 24 * 60 * 60 * 1000 }).catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 // Onboarding au premier lancement
@@ -1481,3 +1496,143 @@ renderSessionFields();
 renderProfileForm();
 renderReferenceTable();
 renderDashboard();
+
+// ---------- Rappels de re-test (notifications) ----------
+// Principe : setTimeout pour l'heure choisie quand l'app est ouverte ;
+// PeriodicSync (service worker) pour le rappel même app fermée (Android/desktop).
+// Le SW lit les groupes dus depuis un cache alimenté par la page.
+const REMIND_KEY = 'reminders'; // { enabled, hour, lastShown: 'YYYY-MM-DD' }
+function getReminders() { return store.get(REMIND_KEY, { enabled: false, hour: 9, lastShown: null }); }
+
+let remindTimer = null;
+
+// Envoie les groupes dus au service worker (pour le PeriodicSync hors-ligne)
+function syncRemindersToSW() {
+  if (!('serviceWorker' in navigator)) return;
+  const reg = navigator.serviceWorker.controller || navigator.serviceWorker.ready?.then?.(r => r);
+  if (!reg || !reg.then) return;
+  reg.then(r => r && r.active && r.active.postMessage({
+    type: 'reminders-data',
+    due: dueGroups().filter(d => d.due).map(d => d.label),
+    enabled: getReminders().enabled,
+  })).catch(() => {});
+}
+
+// Programme le prochain rappel à l'heure choisie (aujourd'hui si l'heure est passée → demain)
+function scheduleReminder() {
+  clearTimeout(remindTimer);
+  const cfg = getReminders();
+  if (!cfg.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(cfg.hour, 0, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  const delay = target - now;
+  remindTimer = setTimeout(() => {
+    const due = dueGroups().filter(d => d.due);
+    if (!due.length) { scheduleReminder(); return; } // rien à faire → reprogramme
+    const cfg2 = getReminders();
+    if (cfg2.lastShown === todayStr()) { scheduleReminder(); return; } // déjà affiché aujourd'hui
+    const body = due.map(d => d.label).join(', ');
+    new Notification('FitTrack — tests à refaire 🔔', {
+      body: `${due.length} groupe${due.length > 1 ? 's' : ''} : ${body}`,
+      icon: './icon-192.png',
+      tag: 'fittrack-reminder',
+    });
+    store.set(REMIND_KEY, { ...cfg2, lastShown: todayStr() });
+    scheduleReminder(); // reprogramme pour le lendemain
+  }, delay);
+  syncRemindersToSW();
+}
+
+// Demande la permission si l'utilisateur active les rappels
+function ensureNotificationPermission() {
+  if (!('Notification' in window)) return Promise.resolve('unsupported');
+  if (Notification.permission === 'granted') return Promise.resolve('granted');
+  if (Notification.permission === 'denied') return Promise.resolve('denied');
+  return Notification.requestPermission();
+}
+
+$('#reminders-enabled').addEventListener('change', async e => {
+  const cfg = getReminders();
+  cfg.enabled = e.target.checked;
+  store.set(REMIND_KEY, cfg);
+  const status = $('#reminders-status');
+  if (cfg.enabled) {
+    const perm = await ensureNotificationPermission();
+    if (perm !== 'granted') {
+      cfg.enabled = false;
+      store.set(REMIND_KEY, cfg);
+      e.target.checked = false;
+      status.textContent = 'Permission refusée — activez les notifications pour FitTrack dans les réglages du navigateur.';
+      status.className = 'err';
+      status.classList.remove('hidden');
+      return;
+    }
+    status.textContent = `Rappels actifs — notification quotidienne à ${String(cfg.hour).padStart(2, '0')}:00 si des tests sont dus.`;
+    status.className = 'ok';
+    status.classList.remove('hidden');
+  } else {
+    status.classList.add('hidden');
+  }
+  scheduleReminder();
+  syncRemindersToSW();
+});
+$('#reminders-hour').addEventListener('change', e => {
+  const cfg = getReminders();
+  cfg.hour = parseInt(e.target.value) || 9;
+  store.set(REMIND_KEY, cfg);
+  scheduleReminder();
+});
+
+// Au démarrage : rattrapage si l'app n'a pas tourné à l'heure prévue (ex. fermée à 9h)
+function catchUpReminder() {
+  const cfg = getReminders();
+  if (!cfg.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+  if (cfg.lastShown === todayStr()) return; // déjà notifié aujourd'hui
+  const now = new Date();
+  const dueAt = new Date(now); dueAt.setHours(cfg.hour, 0, 0, 0);
+  if (now < dueAt) return; // l'heure n'est pas encore passée → le timer prendra le relais
+  const due = dueGroups().filter(d => d.due);
+  if (!due.length) return;
+  new Notification('FitTrack — tests à refaire 🔔', {
+    body: `${due.length} groupe${due.length > 1 ? 's' : ''} en retard : ${due.map(d => d.label).join(', ')}`,
+    icon: './icon-192.png',
+    tag: 'fittrack-reminder',
+  });
+  store.set(REMIND_KEY, { ...cfg, lastShown: todayStr() });
+}
+
+function renderRemindersForm() {
+  const cfg = getReminders();
+  $('#reminders-enabled').checked = cfg.enabled;
+  $('#reminders-hour').value = cfg.hour;
+  const supported = 'Notification' in window;
+  const perm = supported ? Notification.permission : 'unsupported';
+  const note = $('#reminders-note');
+  if (!supported) {
+    note.textContent = 'Les notifications ne sont pas disponibles sur ce navigateur.';
+    note.classList.remove('hidden');
+    $('#reminders-enabled').disabled = true;
+    $('#reminders-hour').disabled = true;
+  } else if (perm === 'denied') {
+    note.textContent = 'Permission refusée — activez les notifications pour FitTrack dans les réglages du navigateur.';
+    note.classList.remove('hidden');
+    $('#reminders-enabled').disabled = true;
+  } else {
+    note.classList.add('hidden');
+    $('#reminders-enabled').disabled = false;
+    $('#reminders-hour').disabled = !cfg.enabled;
+  }
+  if (cfg.enabled && supported && perm === 'granted') {
+    const status = $('#reminders-status');
+    status.textContent = `Rappels actifs — notification quotidienne à ${String(cfg.hour).padStart(2, '0')}:00 si des tests sont dus.`;
+    status.className = 'ok';
+    status.classList.remove('hidden');
+  }
+}
+
+renderRemindersForm();
+scheduleReminder();
+catchUpReminder();
+syncRemindersToSW();
