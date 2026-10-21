@@ -456,13 +456,13 @@ function weightDeltaClass(curW, prvW) {
 // ---------- Édition d'une mesure (crayon ✏️) ----------
 let editCtx = null; // { id, date, testId }
 
-function findSession(ctx) {
-  const sessions = getSessions();
+function findSession(ctx, sessions) {
+  const list = sessions || getSessions();
   if (ctx.id) {
-    const bySid = sessions.find(s => s.id === ctx.id);
+    const bySid = list.find(s => s.id === ctx.id);
     if (bySid) return bySid;
   }
-  return sessions.find(s => s.date === ctx.date && s.values?.[ctx.testId] != null);
+  return list.find(s => s.date === ctx.date && s.values?.[ctx.testId] != null);
 }
 
 function openEditModal(ctx) {
@@ -506,7 +506,7 @@ $('#edit-save').addEventListener('click', () => {
   if (t.max != null && num > t.max) { alert(`Valeur trop élevée (max ${t.max} ${t.unit}).`); return; }
   if (t.min != null && num < t.min) { alert(`Valeur trop faible (min ${t.min} ${t.unit}).`); return; }
   const sessions = getSessions();
-  const s = findSession(editCtx);
+  const s = findSession(editCtx, sessions);
   if (!s) { closeEditModal(); return; }
   s.values[editCtx.testId] = num;
   store.set('sessions', sessions);
@@ -521,7 +521,7 @@ $('#edit-delete').addEventListener('click', () => {
   if (!editCtx) return;
   if (!confirm('Supprimer définitivement cette mesure ?')) return;
   const sessions = getSessions();
-  const s = findSession(editCtx);
+  const s = findSession(editCtx, sessions);
   if (s) {
     const idx = sessions.indexOf(s);
     delete sessions[idx].values[editCtx.testId];

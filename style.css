@@ -103,6 +103,21 @@ tr:nth-child(even) td { background: var(--accent-light); }
 .last3-table td.muted { color: #aaa; text-align: center; }
 .last3-table td.up { color: var(--ok); font-weight: 600; }
 .last3-table td.down { color: var(--bad); font-weight: 600; }
+/* Tableau « Tendances par dimension » (onglet Analyse) */
+#ifg-trends table { table-layout: fixed; }
+#ifg-trends th:first-child, #ifg-trends td:first-child { width: 34%; }
+#ifg-trends th:not(:first-child), #ifg-trends td:not(:first-child) { width: 22%; }
+#ifg-trends th {
+  white-space: normal;          /* autorise le retour à la ligne */
+  overflow-wrap: anywhere;      /* coupe « Score moyen (30 j) » proprement */
+  line-height: 1.25;
+  vertical-align: bottom;
+}
+#ifg-trends td { text-align: center; }
+#ifg-trends td:first-child { text-align: left; }
+#ifg-trends td.muted { color: #aaa; }
+#ifg-trends td.up { color: var(--ok); font-weight: 600; }
+#ifg-trends td.down { color: var(--bad); font-weight: 600; }
 
 /* Bouton crayon d'édition dans les tableaux */
 .edit-btn {
