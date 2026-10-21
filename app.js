@@ -156,7 +156,49 @@ const TESTS = [
   { id: 'sit', name: 'Temps assis (jour de semaine)', unit: 'min', group: 'activity', rev: true,
     hint: 'Question IPAQ n°7 — temps passé assis un jour de semaine habituel',
     good: 240, mid: 480, max: 1440, min: 0 },
+  // --- Indicateurs dérivés (non saisis directement) ---
+  // VMA et VO2max estimées : calculées depuis la dernière session Cooper/demi-Cooper
+  // (champs VMA/VO2max du bloc d'estimation). Utilisées pour les repères du Profil
+  // et la dimension « Endurance cardio » de l'analyse (prioritaires sur Cooper).
+  { id: 'vma', name: 'VMA estimée (km/h)', unit: 'km/h', group: 'cardio', rev: null,
+    hint: 'Calculée automatiquement depuis la dernière session Cooper',
+    good: 14, mid: 12, max: 30, min: 4,
+    gender: { H: { good: 14, mid: 12 }, F: { good: 12, mid: 10 } },
+    info: `<ul>
+      <li><b>VMA</b> = Vitesse Maximale Aérobie : la vitesse la plus élevée que vous pouvez tenir en utilisant principalement votre consommation d'oxygène.</li>
+      <li>Elle est <b>estimée automatiquement</b> à partir de votre dernière session Cooper ou demi-Cooper : VMA = distance (équiv. 12 min) ÷ 200.</li>
+      <li>Vous pouvez aussi la renseigner directement dans le bloc Cooper (onglet Session) — la valeur saisie est alors reprise ici.</li>
+      <li>Repères indicatifs (adultes) : VMA ≥ 14 km/h (H) / ≥ 12 km/h (F) = bonne endurance ; 12–13,9 (H) / 10–11,9 (F) = moyenne.</li>
+    </ul>` },
+  { id: 'vo2max', name: 'VO2max estimée (ml/kg/min)', unit: 'ml/kg/min', group: 'cardio', rev: null,
+    hint: 'Calculée automatiquement depuis la dernière session Cooper',
+    good: 45, mid: 35, max: 90, min: 10,
+    gender: { H: { good: 45, mid: 35 }, F: { good: 38, mid: 30 } },
+    info: `<ul>
+      <li><b>VO2max</b> = consommation maximale d'oxygène : quantité maximale d'oxygène que votre corps peut utiliser par minute et par kg (ml/kg/min). C'est l'indicateur de référence de la capacité cardio-respiratoire.</li>
+      <li>Elle est <b>estimée automatiquement</b> à partir de votre dernière session Cooper/demi-Cooper (VO2max = 3,5 × VMA, ou formule ACSM depuis la distance), ou reprise du champ VO2max saisi dans le bloc Cooper.</li>
+      <li>Repères indicatifs (adultes) : ≥ 45 (H) / ≥ 38 (F) ml/kg/min = bonne forme ; 35–44,9 (H) / 30–37,9 (F) = moyenne.</li>
+      <li>Une VO2max élevée est associée à une meilleure santé cardiovasculaire et une mortalité réduite (Kodama et al., JAMA 2009).</li>
+    </ul>` },
 ];
+
+// ---------- Dérivées VMA / VO2max depuis les sessions ----------
+// À partir de la dernière session cardio contenant cooper (distance déjà normalisée
+// équiv. 12 min, demi-Cooper ×2) ou les champs vma/vo2max saisis dans le bloc Cooper.
+// Priorité : vma/vo2max saisis directement > dérivation depuis la distance Cooper.
+function derivedVMA(lvArg) {
+  const lv = lvArg || latestValues();
+  if (lv.vma?.value != null) return { value: lv.vma.value, source: 'saisie' };
+  if (lv.cooper?.value != null) return { value: cooperVMAFromDist(lv.cooper.value), source: 'cooper' };
+  return null;
+}
+function derivedVO2(lvArg) {
+  const lv = lvArg || latestValues();
+  if (lv.vo2max?.value != null) return { value: lv.vo2max.value, source: 'saisie' };
+  if (lv.vma?.value != null) return { value: vo2FromVMA(lv.vma.value), source: 'saisie-vma' };
+  if (lv.cooper?.value != null) return { value: vo2FromCooperDist(lv.cooper.value), source: 'cooper' };
+  return null;
+}
 
 // ---------- Questionnaire IPAQ court (évaluation de la sédentarité) ----------
 // 7 questions sur les 7 derniers jours. Q1/Q3/Q5 : jours + minutes (effort vigorous/modéré/marche).
@@ -249,6 +291,19 @@ function latestValues() {
       if (v != null && v !== '') out[k] = { value: v, date: s.date };
     }
   }
+  // Indicateurs dérivés VMA / VO2max : saisis directement (champs Cooper) ou
+  // calculés depuis la dernière distance Cooper (déjà normalisée équiv. 12 min).
+  // Ils alimentent les repères du Profil et la dimension « Endurance » de l'IFG.
+  // Une saisie directe conserve son propre drapeau (pas de `derived`) ; seules les
+  // valeurs calculées portent `derived` ('cooper' / 'saisie-vma' / 'saisie').
+  const vmaSaisie = out.vma?.value != null;
+  const vo2Saisie = out.vo2max?.value != null;
+  const dVma = derivedVMA(out);
+  const dVo2 = derivedVO2(out);
+  if (dVma && !vmaSaisie) out.vma = { value: Math.round(dVma.value * 10) / 10, date: out.cooper?.date || out.vma?.date || null, derived: dVma.source };
+  else if (dVma && vmaSaisie && out.vma.derived == null) out.vma = { ...out.vma, derived: 'saisie' };
+  if (dVo2 && !vo2Saisie) out.vo2max = { value: Math.round(dVo2.value * 10) / 10, date: out.cooper?.date || out.vma?.date || out.vo2max?.date || null, derived: dVo2.source };
+  else if (dVo2 && vo2Saisie && out.vo2max.derived == null) out.vo2max = { ...out.vo2max, derived: 'saisie' };
   return out;
 }
 
@@ -369,7 +424,47 @@ function valuesForPeriod(periodKey) {
     const lastDate = arr.map(x => x.date).sort().pop();
     out[k] = { value: Math.round(avg * 100) / 100, date: lastDate, count: arr.length };
   }
+  // Indicateurs dérivés VMA / VO2max sur la période : moyenne des distances Cooper
+  // de la fenêtre → dérivation (cohérent avec latestValues en mode « last »).
+  const coopVals = byTest.cooper?.map(x => x.value) || [];
+  const vmaVals = byTest.vma?.map(x => x.value) || [];
+  const vo2Vals = byTest.vo2max?.map(x => x.value) || [];
+  const coopAvg = coopVals.length ? coopVals.reduce((a, b) => a + b, 0) / coopVals.length : null;
+  const vmaAvg = vmaVals.length ? vmaVals.reduce((a, b) => a + b, 0) / vmaVals.length : null;
+  const vo2Avg = vo2Vals.length ? vo2Vals.reduce((a, b) => a + b, 0) / vo2Vals.length : null;
+  const vmaVal = vmaAvg != null ? vmaAvg : (coopAvg != null ? cooperVMAFromDist(coopAvg) : null);
+  const vo2Val = vo2Avg != null ? vo2Avg : (vmaVal != null ? vo2FromVMA(vmaVal) : (coopAvg != null ? vo2FromCooperDist(coopAvg) : null));
+  const lastDate = out.cooper?.date || out.vma?.date || out.vo2max?.date || null;
+  if (vmaVal != null) out.vma = { value: Math.round(vmaVal * 10) / 10, date: lastDate, count: (vmaVals.length || coopVals.length || 0), derived: vmaAvg != null ? 'saisie' : 'cooper' };
+  if (vo2Val != null) out.vo2max = { value: Math.round(vo2Val * 10) / 10, date: lastDate, count: (vo2Vals.length || vmaVals.length || coopVals.length || 0), derived: vo2Avg != null ? 'saisie' : (vmaAvg != null ? 'saisie-vma' : 'cooper') };
   return out;
+}
+
+// ---------- Dimension « Endurance cardio » (IFG) ----------
+// Priorité selon ce qui est renseigné : VMA saisie > VO2max saisie > Cooper/demi-Cooper
+// (ou VMA/VO2max dérivées de la distance) > test escalier.
+// Un seul indicateur est retenu par dimension (le plus fiable disponible), pour ne pas
+// compter deux fois la même capacité. Renvoie { id, value } ou null.
+function enduranceIndicator(lv) {
+  // Priorité aux saisies directes (VMA > VO2max), quelle que soit leur date.
+  if (lv.vma?.value != null && lv.vma.derived === 'saisie') return { id: 'vma', value: lv.vma.value };
+  if (lv.vo2max?.value != null && lv.vo2max.derived === 'saisie') return { id: 'vo2max', value: lv.vo2max.value };
+  // Puis aux valeurs dérivées du Cooper (VMA préférée à VO2max, déjà ×2 si demi-Cooper).
+  if (lv.vma?.value != null && lv.vma.derived === 'cooper') return { id: 'vma', value: lv.vma.value };
+  if (lv.vo2max?.value != null && lv.vo2max.derived === 'cooper') return { id: 'vo2max', value: lv.vo2max.value };
+  // Distance Cooper brute (pas de dérivation possible) ou test escalier.
+  if (lv.cooper?.value != null) return { id: 'cooper', value: lv.cooper.value };
+  if (lv.stair_pulse?.value != null) return { id: 'stair_pulse', value: lv.stair_pulse.value };
+  return null;
+}
+
+// Tests réellement scorés pour une dimension IFG (endurance = 1 seul indicateur)
+function scoredTestsForDim(d, lv) {
+  if (d.key === 'endurance') {
+    const ind = enduranceIndicator(lv);
+    return ind ? [ind.id] : [];
+  }
+  return d.tests.filter(id => lv[id]);
 }
 
 // IFG calculé sur une période donnée (même pondération que computeIFG)
@@ -378,7 +473,7 @@ function computeIFGPeriod(profile, periodKey) {
   const dims = [];
   let total = 0, totalWeight = 0;
   for (const d of IFG_DIMENSIONS) {
-    const scored = d.tests.filter(id => lv[id]);
+    const scored = scoredTestsForDim(d, lv);
     if (!scored.length) continue;
     const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
     const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
@@ -503,7 +598,7 @@ function computeIFG(profile) {
   const dims = [];
   let total = 0, totalWeight = 0;
   for (const d of IFG_DIMENSIONS) {
-    const scored = d.tests.filter(id => lv[id]);
+    const scored = scoredTestsForDim(d, lv);
     if (!scored.length) continue; // dimension sans donnée : exclue du calcul
     const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
     const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
@@ -843,7 +938,7 @@ function renderSessionFields() {
       return;
     }
     container.appendChild(block); // dans le DOM avant les rows (initCooperEstim fait des querySelector globaux)
-    for (const t of TESTS.filter(x => x.group === g)) {
+    for (const t of TESTS.filter(x => x.group === g && x.id !== 'vma' && x.id !== 'vo2max')) {
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
@@ -1041,7 +1136,7 @@ document.addEventListener('change', e => {
   updateFieldValidity(byId('cooper'), inp);
 });
 
-// ---------- Estimations VMA / VO2max (test Cooper, onglet Session) ----------
+// ---------- Formules VMA / VO2max (test Cooper + indicateurs dérivés) ----------
 // Formules usuelles :
 //   VMA (km/h) depuis la distance Cooper 12 min :  VMA = distance(m) / 200
 //   VO2max estimée depuis la VMA (Léger & Mercier) :  VO2max = 3,5 × VMA
@@ -1136,6 +1231,16 @@ $('#save-session').addEventListener('click', () => {
       any = true;
     }
   });
+  // Champs VMA / VO2max du bloc Cooper (hors #session-fields input[data-test]) :
+  // on les persiste comme indicateurs dérivés de la session cardio.
+  if (currentSessionType === 'cardio') {
+    const vmaRaw = $('#cooper-vma')?.value.trim();
+    const vo2Raw = $('#cooper-vo2')?.value.trim();
+    const vma = vmaRaw ? parseFloat(vmaRaw.replace(',', '.')) : null;
+    const vo2 = vo2Raw ? parseFloat(vo2Raw.replace(',', '.')) : null;
+    if (vma != null && !isNaN(vma)) { values.vma = Math.round(vma * 10) / 10; any = true; }
+    if (vo2 != null && !isNaN(vo2)) { values.vo2max = Math.round(vo2 * 10) / 10; any = true; }
+  }
   if (!any) { alert('Aucune valeur saisie.'); return; }
   const session = { date: $('#session-date').value || todayStr(), type: currentSessionType, values };
   // fusion avec session existante à la même date ? Non : on garde tout l'historique.
@@ -1144,11 +1249,15 @@ $('#save-session').addEventListener('click', () => {
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2500);
   $$('#session-fields input').forEach(i => { i.value = ''; i.classList.remove('invalid'); });
+  // Efface aussi les champs VMA/VO2max du bloc Cooper
+  ['#cooper-vma', '#cooper-vo2'].forEach(sel => { const el = $(sel); if (el) el.value = ''; });
+  const estimBox = $('#cooper-estim-result'); if (estimBox) { estimBox.classList.add('hidden'); estimBox.innerHTML = ''; }
   updateSaveState();
   renderLastSession();
   renderDashboard(); // met à jour l'historique du score global
   recordIFG(); // idem pour l'indice FitTrack Global
   renderIMC(); renderRiskSummary(); // le poids saisi peut changer l'IMC et les facteurs de risque
+  renderReferenceTable(); // VMA/VO2max peuvent avoir changé
 });
 
 // ---------- Chronomètre ----------
@@ -1495,6 +1604,21 @@ function renderIfgTrends(profile) {
   const avgDim = (sessList, dim) => {
     const vals = [];
     for (const s of sessList) {
+      if (dim.key === 'endurance') {
+        // Endurance : un seul indicateur par session (VMA > VO2max > Cooper > escalier),
+        // dérivé si besoin — identique à la logique IFG pour éviter de compter 2 fois.
+        const lv = {};
+        for (const [k, v] of Object.entries(s.values || {})) {
+          if (v != null && v !== '') lv[k] = { value: v, date: s.date };
+        }
+        const dVma = derivedVMA(lv);
+        const dVo2 = derivedVO2(lv);
+        if (dVma) lv.vma = { value: dVma.value };
+        if (dVo2) lv.vo2max = { value: dVo2.value };
+        const ind = enduranceIndicator(lv);
+        if (ind) vals.push(SCORE_PTS[statusOf(byId(ind.id), ind.value, profile)]);
+        continue;
+      }
       for (const id of dim.tests) {
         const v = s.values?.[id];
         if (v != null && v !== '') vals.push(SCORE_PTS[statusOf(byId(id), v, profile)]);
@@ -1568,7 +1692,7 @@ function renderHistory() {
   // sélecteur de métrique : score global en haut de liste s'il a un historique
   const sel = $('#chart-metric');
   const scores = scoreSeries();
-  const withData = TESTS.filter(t => seriesOf(t.id).length > 0);
+  const withData = TESTS.filter(t => t.id !== 'vma' && t.id !== 'vo2max' && seriesOf(t.id).length > 0);
   const options = [];
   if (scores.length) options.push('<option value="__score__">★ Score global (/100)</option>');
   options.push(...withData.map(t => `<option value="${t.id}">${testNum(t.id)}${t.name}</option>`));
@@ -1739,7 +1863,7 @@ function profileCsvLines(profile) {
 }
 
 $('#export-csv').addEventListener('click', () => {
-  const ids = TESTS.map(t => t.id);
+  const ids = TESTS.filter(t => t.id !== 'vma' && t.id !== 'vo2max').map(t => t.id);
   const head = ['date', 'type', ...ids.map(id => byId(id).name)].join(';');
   const lines = getSessions().map(s =>
     [s.date, GROUP_LABELS[s.type], ...ids.map(id => s.values?.[id] ?? '')].join(';'));
@@ -1929,9 +2053,21 @@ function renderReferenceTable() {
   const profile = getProfile();
   let html = '<table><tr><th>Test</th><th>Bon</th><th>Moyen</th><th>Faible</th></tr>';
   for (const t of TESTS) {
-    if (t.good == null) continue;
+    if (t.good == null || t.id === 'vma' || t.id === 'vo2max') continue; // rendus plus bas (avec valeur courante)
     const { good, mid, rev } = thresholds(t, profile);
     html += `<tr><td><span class="test-num">${testNum(t.id)}</span>${t.name}</td><td>${rev ? '≤ ' : '≥ '}${good}</td><td>${rev ? '≤ ' : '≥ '}${mid}</td><td>${rev ? '> ' : '< '}${mid} ${t.unit}</td></tr>`;
+  }
+  // Indicateurs dérivés VMA / VO2max : repères avec la dernière valeur connue
+  const lv = latestValues();
+  for (const id of ['vma', 'vo2max']) {
+    const t = byId(id);
+    if (!t) continue;
+    const { good, mid } = thresholds(t, profile);
+    const cur = lv[id]?.value;
+    const curTxt = cur != null
+      ? ` <span class="small">(vous : <b>${fmt1(cur)}</b> ${t.unit}${lv[id].derived === 'cooper' ? ' · estimé Cooper' : ''})</span>`
+      : ' <span class="small">(aucune mesure Cooper)</span>';
+    html += `<tr><td><span class="test-num">${testNum(id)}</span>${t.name}${curTxt}</td><td>≥ ${good}</td><td>≥ ${mid}</td><td>&lt; ${mid} ${t.unit}</td></tr>`;
   }
   html += '</table>';
   $('#reference-table').innerHTML = html;
