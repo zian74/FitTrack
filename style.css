@@ -85,6 +85,8 @@ tr:nth-child(even) td { background: var(--accent-light); }
   box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 20;
 }
 #chrono-display { font-size: 1.5em; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 90px; }
+#chrono-target-name { max-width: 180px; }
+#chrono-startstop.running { background: var(--bad); color: #fff; }
 /* Graphique */
 #chart { width: 100%; min-height: 260px; }
 #chart svg { width: 100%; height: auto; }
