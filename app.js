@@ -73,9 +73,15 @@ const TESTS = [
     gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } } },
   { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min', unit: 'bpm', group: 'cardio', rev: true,
     hint: '3 min de montées (24/min), pouls 1 min après', good: 100, mid: 110, max: 200, min: 50 },
-  { id: 'cooper', name: 'Cooper — distance 12 min (m)', unit: 'm', group: 'cardio',
-    hint: 'Personnes actives uniquement', good: 2400, mid: 2200, max: 5000, min: 200,
-    gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } } },
+  { id: 'cooper', name: 'Cooper — distance (m, équiv. 12 min)', unit: 'm', group: 'cardio',
+    hint: '12 min à allure soutenue, ou 6 min (demi-Cooper ×2)', good: 2400, mid: 2200, max: 5000, min: 200,
+    gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } },
+    info: `<ul>
+      <li><b>Cooper complet (12 min)</b> : couvrez la plus grande distance possible en 12 minutes, à allure soutenue et régulière.</li>
+      <li><b>Demi-Cooper (6 min)</b> : même principe sur 6 minutes. La distance saisie est <b>automatiquement doublée</b> pour rester comparable aux repères 12 min.</li>
+      <li>Échauffez-vous 5–10 min avant, sur terrain plat et mesuré, chaussures adaptées.</li>
+      <li>Test maximal : arrêtez en cas de douleur thoracique, essoufflement excessif ou vertiges.</li>
+    </ul>` },
   { id: 'ipaq', name: 'IPAQ court — niveau d’activité', unit: 'MET-min/sem', group: 'activity',
     hint: 'Questionnaire sur les 7 derniers jours (score calculé automatiquement)',
     good: 3000, mid: 600, max: 30000, min: 0 },
@@ -535,6 +541,12 @@ function renderSessionFields() {
       const last = latestValues()[t.id]?.value;
       const lastInfo = last != null
         ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
+      // Sélecteur de durée pour le Cooper (12 min ou demi-Cooper 6 min, normalisé ×2)
+      const cooperSelect = t.id === 'cooper'
+        ? `<select id="cooper-duration" title="Durée du test">
+             <option value="12" selected>12 min (complet)</option>
+             <option value="6">6 min (demi-Cooper ×2)</option>
+           </select>` : '';
       row.innerHTML = `
         <label><span class="test-num">${testNum(t.id)}</span>${t.name}
           ${infoBtn}
@@ -543,6 +555,7 @@ function renderSessionFields() {
         </label>
         <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
                data-test="${t.id}" placeholder="${t.unit}">
+        ${cooperSelect}
         ${chronoBtn}`;
       block.appendChild(row);
       const inp = row.querySelector('input[data-test]');
@@ -586,7 +599,10 @@ document.addEventListener('keydown', e => {
 function updateFieldValidity(t, inp) {
   const raw = inp.value.trim();
   const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
-  const invalid = raw !== '' && (isNaN(num) || (t.min != null && num < t.min) || (t.max != null && num > t.max));
+  // Bornes effectives : attributs min/max du champ (le demi-Cooper les resserre à 100–2500)
+  const min = inp.min !== '' ? parseFloat(inp.min) : t.min;
+  const max = inp.max !== '' ? parseFloat(inp.max) : t.max;
+  const invalid = raw !== '' && (isNaN(num) || (min != null && num < min) || (max != null && num > max));
   inp.classList.toggle('invalid', invalid);
   updateSaveState();
 }
@@ -608,14 +624,27 @@ $$('.session-type-btn').forEach(b => b.addEventListener('click', () => {
   renderSessionFields();
 }));
 
+// Demi-Cooper (6 min) : le champ accepte 100–2500 m (×2 = 200–5000 m équiv. 12 min)
+document.addEventListener('change', e => {
+  if (e.target.id !== 'cooper-duration') return;
+  const inp = $('#session-fields input[data-test="cooper"]');
+  if (!inp) return;
+  if (e.target.value === '6') { inp.min = 100; inp.max = 2500; inp.placeholder = 'm en 6 min (×2)'; }
+  else { inp.min = 200; inp.max = 5000; inp.placeholder = 'm'; }
+  updateFieldValidity(byId('cooper'), inp);
+});
+
 $('#save-session').addEventListener('click', () => {
   const values = {};
   let any = false;
+  // Demi-Cooper : la distance 6 min est stockée en équivalent 12 min (×2)
+  const cooperDuration = $('#cooper-duration')?.value === '6' ? 2 : 1;
   $$('#session-fields input[data-test]').forEach(inp => {
     const v = inp.value.trim();
     if (v !== '' && !inp.classList.contains('invalid')) {
-      const num = parseFloat(v.replace(',', '.'));
+      let num = parseFloat(v.replace(',', '.'));
       if (isNaN(num)) return;
+      if (inp.dataset.test === 'cooper') num = Math.round(num * cooperDuration);
       values[inp.dataset.test] = num;
       any = true;
     }
