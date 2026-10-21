@@ -121,9 +121,36 @@
   <!-- ============ ANALYSE ============ -->
   <section id="view-analysis" class="view">
     <div class="card">
-      <h2>Analyse</h2>
-      <p>Cet onglet accueillera les analyses avancées de vos données (tendances long terme, corrélations entre indicateurs, projections).</p>
-      <p class="small">En cours de conception — disponible dans une prochaine version.</p>
+      <h2>Indice FitTrack Global</h2>
+      <div id="ifg-content"><p>Enregistrez des sessions de test pour calculer votre indice.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Dimensions</h2>
+        <div id="ifg-radar"></div>
+        <div id="ifg-radar-legend" class="small"></div>
+      </div>
+      <div class="card">
+        <h2>Points forts &amp; priorités</h2>
+        <ul id="ifg-strengths" class="list"></ul>
+        <div id="ifg-advice" class="warning" style="display:none"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Évolution de l'indice</h2>
+      <div id="ifg-chart"></div>
+      <div id="ifg-chart-stats" class="small"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>Tendances par dimension</h2>
+        <div id="ifg-trends" class="table-wrap"></div>
+      </div>
+      <div class="card">
+        <h2>Activité ↔ Forme</h2>
+        <p class="small">Niveau d'activité (IPAQ, MET-min/sem) en abscisse, indice en ordonnée — chaque point est une date de mesure.</p>
+        <div id="ifg-scatter"></div>
+      </div>
     </div>
   </section>
 

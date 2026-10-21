@@ -56,6 +56,11 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Statut automatique par mesure selon repères sexe/âge
 - Score global /100 : moyenne des 5 tests prédictifs
 - Historique du score global (1 valeur/jour) consultable dans les graphiques par indicateur
+- Onglet **Analyse** : Indice FitTrack Global (IFG, /100) = moyenne pondérée de
+  5 dimensions — cardio au repos & métabolisme (30 %), endurance (20 %),
+  force (20 %), équilibre & mobilité (15 %), habitudes d'activité (15 %) ;
+  historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
+  courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
 - Chronomètre intégré pour les tests chronométrés

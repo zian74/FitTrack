@@ -17,6 +17,8 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
 - Score global /100 basé sur les 5 mesures prédictives (poigne, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
+- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 5 dimensions,
+  radar, priorités, évolution et corrélation activité ↔ forme
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
 - Graphiques SVG par indicateur avec zones objectif
