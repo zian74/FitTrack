@@ -211,6 +211,85 @@ function latestValues() {
   return out;
 }
 
+// ---------- IMC (à partir de la taille du profil + dernière mesure de poids) ----------
+// IMC = poids (kg) / taille (m)² — seuils OMS : < 18,5 maigreur · 18,5–24,9 normal ·
+// 25–29,9 surpoids · 30–34,9 obésité modérée · 35–39,9 obésité sévère · ≥ 40 obésité morbide
+function computeIMC(profile) {
+  if (!profile || !profile.height) return null;
+  const w = latestValues().weight?.value;
+  if (!w) return null;
+  const imc = w / (profile.height / 100) ** 2;
+  return Math.round(imc * 10) / 10;
+}
+function imcBadge(imc) {
+  if (imc == null) return null;
+  if (imc < 18.5) return { cls: 'mid', label: 'Maigreur' };
+  if (imc < 25) return { cls: 'good', label: 'Normal' };
+  if (imc < 30) return { cls: 'mid', label: 'Surpoids' };
+  if (imc < 35) return { cls: 'low', label: 'Obésité modérée' };
+  if (imc < 40) return { cls: 'low', label: 'Obésité sévère' };
+  return { cls: 'low', label: 'Obésité morbide' };
+}
+function renderIMC() {
+  const el = $('#profile-imc');
+  if (!el) return;
+  const profile = getProfile();
+  const imc = computeIMC(profile);
+  const badge = imcBadge(imc);
+  const bEl = $('#profile-imc-badge');
+  if (imc == null) {
+    el.textContent = '— (aucune mesure de poids enregistrée)';
+    bEl.classList.add('hidden');
+    return;
+  }
+  el.textContent = imc.toFixed(1).replace('.', ',');
+  bEl.textContent = badge.label;
+  bEl.className = 'badge ' + badge.cls;
+  bEl.classList.remove('hidden');
+}
+
+// ---------- Facteurs de risque cardiovasculaire (onglet Profil) ----------
+// Liste des facteurs cochés/rénseignés + IMC dérivé. Sert au récapitulatif Profil
+// et à l'avertissement avant test maximal.
+function riskFactors(profile) {
+  const p = profile || getProfile() || {};
+  const out = [];
+  if (p.smoke) out.push({ key: 'smoke', label: 'Tabagisme', major: true });
+  if (p.cardiacHistory) out.push({ key: 'cardiacHistory', label: 'Antécédents cardiaques personnels', major: true });
+  if (p.familyHistory) out.push({ key: 'familyHistory', label: 'Antécédents familiaux précoces', major: false });
+  if (p.hypertension) out.push({ key: 'hypertension', label: 'Hypertension artérielle connue', major: true });
+  if (p.diabetes) out.push({ key: 'diabetes', label: 'Diabète connu', major: true });
+  if (p.dyslipidemia) out.push({ key: 'dyslipidemia', label: 'Dyslipidémie / statine', major: true });
+  const alcohol = Number(p.alcohol);
+  if (alcohol >= 14) out.push({ key: 'alcohol', label: `Alcool : ${alcohol} verres/semaine (≥ 14)`, major: true });
+  else if (alcohol > 0) out.push({ key: 'alcohol', label: `Alcool : ${alcohol} verre${alcohol > 1 ? 's' : ''}/semaine`, major: false });
+  if (p.stress === 'yes') out.push({ key: 'stress', label: 'Stress chronique / dépression', major: true });
+  const imc = computeIMC(p);
+  if (imc != null && imc >= 30) out.push({ key: 'imc', label: `IMC ${imc.toFixed(1).replace('.', ',')} (obésité)`, major: true });
+  else if (imc != null && imc >= 25) out.push({ key: 'imc', label: `IMC ${imc.toFixed(1).replace('.', ',')} (surpoids)`, major: false });
+  return out;
+}
+function hasMajorRisk(profile) {
+  return riskFactors(profile).some(r => r.major);
+}
+function renderRiskSummary() {
+  const el = $('#risk-summary');
+  if (!el) return;
+  const factors = riskFactors();
+  const majors = factors.filter(f => f.major);
+  if (!factors.length) {
+    el.innerHTML = 'Aucun facteur de risque déclaré. <span class="small">(Renseignez-les ci-dessus si votre situation a évolué.)</span>';
+    return;
+  }
+  const level = majors.length >= 3 ? { cls: 'low', txt: 'Risque élevé' }
+    : majors.length >= 1 ? { cls: 'mid', txt: 'Risque modéré' }
+    : { cls: 'good', txt: 'Risque faible' };
+  const items = factors.map(f => `<li>${f.label}${f.major ? ' <span class="badge low">majeur</span>' : ''}</li>`).join('');
+  el.innerHTML = `<b>${factors.length} facteur${factors.length > 1 ? 's' : ''} déclaré${factors.length > 1 ? 's' : ''}</b> · niveau : <span class="badge ${level.cls}">${level.txt}</span> (${majors.length} majeur${majors.length > 1 ? 's' : ''})
+    <ul class="list" style="margin:6px 0 0">${items}</ul>
+    <p class="small" style="margin-top:6px">Ce récapitulatif est indicatif et ne remplace pas une évaluation médicale (scores SCORE2 / Framingham).</p>`;
+}
+
 // ---------- Période de calcul de l'IFG (onglet Analyse) ----------
 // last = dernière valeur de chaque test · week/month/year = moyenne des valeurs
 // sur la période glissante (fenêtre calendaire) · all = moyenne de toutes les valeurs.
@@ -755,12 +834,13 @@ function renderSessionFields() {
     container.appendChild(block);
   }
   updateSaveState();
-  // Avertissement Cooper si facteurs de risque
+  // Avertissement Cooper si facteurs de risque majeurs
   const profile = getProfile();
-  if (type === 'cardio' && profile && (profile.smoke || profile.cardiacHistory)) {
+  if (type === 'cardio' && hasMajorRisk(profile)) {
+    const n = riskFactors(profile).filter(f => f.major).length;
     const w = document.createElement('div');
     w.className = 'warning';
-    w.innerHTML = '⚠️ <b>Test de Cooper déconseillé</b> : facteurs de risque cardio déclarés dans votre profil. Avis médical recommandé avant un test maximal.';
+    w.innerHTML = `⚠️ <b>Test de Cooper déconseillé</b> : ${n} facteur${n > 1 ? 's' : ''} de risque cardio majeur${n > 1 ? 's' : ''} déclaré${n > 1 ? 's' : ''} dans votre profil. Avis médical recommandé avant un test maximal (privilégiez le test de l'escalier, sous-maximal).`;
     container.prepend(w);
   }
 }
@@ -804,12 +884,24 @@ const STATIC_INFOS = {
       <li><b>Test de Cooper (endurance)</b> : Cooper KH, « A means of assessing maximal power output », <i>JAMA</i>, 1968 — distance maximale en 12 min, repères cardio-respiratoires adultes (H/F). Le demi-Cooper (6 min ×2) suit la même logique de normalisation.</li>
       <li><b>Tour de taille (risque métabolique)</b> : seuils OMS/IDF — ≥ 94 cm (H) / ≥ 80 cm (F) : risque accru ; ≥ 102 / ≥ 88 cm : risque substantiellement accru.</li>
       <li><b>Pression artérielle</b> : seuils de référence usuels (ESC/ESH) — normale &lt; 120/80 mmHg, élevée 130–139/85–89 mmHg.</li>
+      <li><b>Facteurs de risque cardiovasculaire</b> (tabagisme, antécédents personnels/familiaux, hypertension, diabète, dyslipidémie, alcool, stress, IMC) : cadre des recommandations <b>ESC 2021</b> sur la prévention cardiovasculaire et du score <b>SCORE2</b> (âge, sexe, tabagisme, pression artérielle systolique, cholestérol, antécédents familiaux).</li>
       <li><b>Force musculaire (poigne, pompes, chaise 30 s, gainage)</b> : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli &amp; Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).</li>
       <li><b>Équilibre unipodal &amp; Sit-and-reach</b> : protocoles standardisés de la littérature (test unipodal yeux ouverts/fermés, Senior Fitness Test pour la souplesse).</li>
       <li><b>Score global &amp; IFG (pondération des dimensions)</b> : pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
       <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
     </ul>
     <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,
+  },
+  __risk__: {
+    name: 'Facteurs de risque cardiovasculaire',
+    info: `<ul>
+      <li>Les <b>facteurs de risque cardiovasculaire</b> sont les éléments qui augmentent la probabilité d'un événement cardiaque (infarctus, AVC…). Les scores cliniques usuels (SCORE2, Framingham) en combinent plusieurs.</li>
+      <li><b>Non modifiables</b> : âge, sexe, <b>antécédents familiaux précoces</b> (parent/fratrie ayant eu un événement cardiaque avant 55 ans chez l'homme, 65 ans chez la femme).</li>
+      <li><b>Modifiables</b> : tabagisme, hypertension artérielle, dyslipidémie (cholestérol), diabète, obésité/surpoids (IMC), sédentarité, alimentation déséquilibrée, alcool, stress chronique.</li>
+      <li><b>Dans FitTrack</b> : ces facteurs servent à <b>adapter l'avertissement avant les tests maximaux</b> (Cooper) et à afficher un récapitulatif. Ils ne modifient pas votre score.</li>
+      <li>Le <b>nombre de facteurs « majeurs »</b> (tabagisme, antécédents personnels, hypertension, diabète, dyslipidémie, IMC ≥ 30, alcool ≥ 14 verres/sem, stress chronique) pilote le niveau de prudence affiché.</li>
+      <li>Sources : recommandations ESC 2021 sur la prévention cardiovasculaire, score SCORE2 (ESC 2021), OMS — facteurs de risque des maladies cardiovasculaires.</li>
+    </ul>`,
   },
 };
 document.addEventListener('click', e => {
@@ -907,6 +999,7 @@ $('#save-session').addEventListener('click', () => {
   renderLastSession();
   renderDashboard(); // met à jour l'historique du score global
   recordIFG(); // idem pour l'indice FitTrack Global
+  renderIMC(); renderRiskSummary(); // le poids saisi peut changer l'IMC et les facteurs de risque
 });
 
 // ---------- Chronomètre ----------
@@ -1365,6 +1458,12 @@ const PROFILE_CSV_KEYS = [
   ['height', 'Taille (cm)', p => p.height ?? ''],
   ['smoke', 'Tabagisme', p => p.smoke ? 'oui' : 'non'],
   ['cardiacHistory', 'Antécédents cardiaques', p => p.cardiacHistory ? 'oui' : 'non'],
+  ['familyHistory', 'Antécédents familiaux précoces', p => p.familyHistory ? 'oui' : 'non'],
+  ['hypertension', 'Hypertension artérielle connue', p => p.hypertension ? 'oui' : 'non'],
+  ['diabetes', 'Diabète connu', p => p.diabetes ? 'oui' : 'non'],
+  ['dyslipidemia', 'Dyslipidémie / statine', p => p.dyslipidemia ? 'oui' : 'non'],
+  ['alcohol', 'Alcool (verres/semaine)', p => p.alcohol ?? ''],
+  ['stress', 'Stress chronique / dépression', p => p.stress === 'yes' ? 'oui' : (p.stress === 'no' ? 'non' : '')],
 ];
 function profileCsvLines(profile) {
   if (!profile) return [];
@@ -1468,7 +1567,9 @@ function parseImportCsv(text) {
       if (!row) continue;
       const [key] = row;
       if (key === 'sex') data.profile.sex = value === 'Femme' ? 'F' : 'H';
-      else if (key === 'smoke' || key === 'cardiacHistory') data.profile[key] = value === 'oui';
+      else if (key === 'smoke' || key === 'cardiacHistory' || key === 'familyHistory'
+        || key === 'hypertension' || key === 'diabetes' || key === 'dyslipidemia') data.profile[key] = value === 'oui';
+      else if (key === 'stress') data.profile.stress = value === 'oui' ? 'yes' : (value === 'non' ? 'no' : null);
       else data.profile[key] = value === '' ? null : Number(value);
       continue;
     }
@@ -1516,6 +1617,14 @@ function renderProfileForm() {
   $('#p-height').value = p.height || '';
   $('#p-smoke').checked = !!p.smoke;
   $('#p-history').checked = !!p.cardiacHistory;
+  $('#p-family').checked = !!p.familyHistory;
+  $('#p-hypertension').checked = !!p.hypertension;
+  $('#p-diabetes').checked = !!p.diabetes;
+  $('#p-dyslipidemia').checked = !!p.dyslipidemia;
+  $('#p-alcohol').value = p.alcohol ?? '';
+  $('#p-stress').value = p.stress || '';
+  renderIMC();
+  renderRiskSummary();
 }
 
 $('#save-profile').addEventListener('click', () => {
@@ -1525,11 +1634,19 @@ $('#save-profile').addEventListener('click', () => {
     height: parseFloat($('#p-height').value) || null,
     smoke: $('#p-smoke').checked,
     cardiacHistory: $('#p-history').checked,
+    familyHistory: $('#p-family').checked,
+    hypertension: $('#p-hypertension').checked,
+    diabetes: $('#p-diabetes').checked,
+    dyslipidemia: $('#p-dyslipidemia').checked,
+    alcohol: parseInt($('#p-alcohol').value) || 0,
+    stress: $('#p-stress').value || null,
   };
   store.set('profile', p);
   const msg = $('#profile-saved-msg');
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2500);
+  renderIMC();
+  renderRiskSummary();
   renderReferenceTable();
 });
 
