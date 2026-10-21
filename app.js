@@ -208,6 +208,7 @@ $$('nav button').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.view === 'dashboard') renderDashboard();
   if (b.dataset.view === 'session') renderLastSession();
   if (b.dataset.view === 'history') renderHistory();
+  if (b.dataset.view === 'analysis') renderAnalysis();
 }));
 
 function showView(name) {
@@ -247,6 +248,58 @@ function recordGlobalScore() {
 
 function scoreSeries() {
   return store.get('scoreHistory', [])
+    .filter(h => h.value != null)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+}
+
+// ---------- Indice FitTrack Global (IFG) ----------
+// Score /100 par dimension à partir des 16 mesures, pondéré selon la littérature
+// (mortalité cardiovasculaire et toutes causes). Mêmes statuts/repères que l'app.
+const IFG_DIMENSIONS = [
+  { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.30, icon: '🫀',
+    tests: ['fc', 'pa_sys', 'pa_dia', 'waist'] },
+  { key: 'endurance', label: 'Endurance cardio', weight: 0.20, icon: '🫁',
+    tests: ['stair_pulse', 'cooper'] },
+  { key: 'strength', label: 'Force musculaire', weight: 0.20, icon: '💪',
+    tests: ['grip', 'pushups', 'plank', 'chair'] },
+  { key: 'balance', label: 'Équilibre & mobilité', weight: 0.15, icon: '⚖️',
+    tests: ['balance_open', 'balance_closed', 'reach'] },
+  { key: 'activity', label: "Habitudes d'activité", weight: 0.15, icon: '🏃',
+    tests: ['ipaq', 'sit'] },
+];
+
+function computeIFG(profile) {
+  const lv = latestValues();
+  const dims = [];
+  let total = 0, totalWeight = 0;
+  for (const d of IFG_DIMENSIONS) {
+    const scored = d.tests.filter(id => lv[id]);
+    if (!scored.length) continue; // dimension sans donnée : exclue du calcul
+    const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
+    const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+    dims.push({ ...d, score: avg, count: scored.length });
+    total += avg * d.weight;
+    totalWeight += d.weight;
+  }
+  if (!dims.length) return null;
+  return { score: Math.round(total / totalWeight), dims };
+}
+
+// Persiste l'IFG du jour (1 valeur par date, la dernière écrase)
+function recordIFG() {
+  const result = computeIFG(getProfile());
+  if (!result) return;
+  const history = store.get('ifgHistory', []);
+  const today = todayStr();
+  const existing = history.find(h => h.date === today);
+  if (existing) existing.value = result.score;
+  else history.push({ date: today, value: result.score });
+  history.sort((a, b) => a.date < b.date ? -1 : 1);
+  store.set('ifgHistory', history);
+}
+
+function ifgSeries() {
+  return store.get('ifgHistory', [])
     .filter(h => h.value != null)
     .sort((a, b) => a.date < b.date ? -1 : 1);
 }
@@ -694,6 +747,7 @@ $('#save-session').addEventListener('click', () => {
   updateSaveState();
   renderLastSession();
   renderDashboard(); // met à jour l'historique du score global
+  recordIFG(); // idem pour l'indice FitTrack Global
 });
 
 // ---------- Chronomètre ----------
@@ -750,6 +804,238 @@ document.addEventListener('click', e => {
   const b = e.target.closest('.chrono-btn');
   if (b) openChrono(b.dataset.chronoTarget);
 });
+
+// ---------- Onglet Analyse (IFG) ----------
+const IFG_PALIERS = [
+  { max: 20, color: '#b71c1c', label: 'Faible' },
+  { max: 40, color: '#e65100', label: 'En dessous' },
+  { max: 60, color: '#f9a825', label: 'En progrès' },
+  { max: 80, color: '#9e9d24', label: 'Bon' },
+  { max: 100, color: '#2e7d32', label: 'Excellent' },
+];
+
+function ifgPalier(score) {
+  return IFG_PALIERS.find(p => score <= p.max);
+}
+
+function ifgBarHtml(score) {
+  const palier = ifgPalier(score);
+  const fill = `linear-gradient(to right, #b71c1c 0%, #b71c1c 20%, #e65100 20%, #e65100 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, #2e7d32 80%, #2e7d32 100%)`;
+  return `<div class="score-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="100" title="${score}/100">
+    <div class="score-bar-track"><div class="score-bar-fill" style="width:${score}%;background:${fill}"></div></div>
+    <div class="score-bar-labels small"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+  </div>`;
+}
+
+function renderAnalysis() {
+  recordIFG();
+  const profile = getProfile();
+  const result = computeIFG(profile);
+  if (!result) {
+    $('#ifg-content').innerHTML = '<p>Enregistrez des sessions de test pour calculer votre indice.</p>';
+    $('#ifg-radar').innerHTML = '';
+    $('#ifg-radar-legend').textContent = '';
+    $('#ifg-strengths').innerHTML = '';
+    $('#ifg-advice').style.display = 'none';
+    $('#ifg-chart').innerHTML = '';
+    $('#ifg-chart-stats').textContent = '';
+    $('#ifg-trends').innerHTML = '';
+    $('#ifg-scatter').innerHTML = '';
+    return;
+  }
+
+  // 1. IFG + barre + delta vs mois dernier
+  const series = ifgSeries();
+  const prev = series.length >= 2 ? series[series.length - 2].value : null;
+  const delta = prev != null ? result.score - prev : null;
+  const palier = ifgPalier(result.score);
+  const deltaHtml = delta == null ? ''
+    : delta > 0 ? `<span class="badge good">▲ +${delta} pts depuis la dernière mesure</span>`
+    : delta < 0 ? `<span class="badge low">▼ ${delta} pts depuis la dernière mesure</span>`
+    : `<span class="badge mid">= stable depuis la dernière mesure</span>`;
+  $('#ifg-content').innerHTML = `
+    <p style="font-size:2em;font-weight:700;color:${palier.color}">${result.score}<span style="font-size:.6em"> /100</span>
+      <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span></p>
+    ${ifgBarHtml(result.score)}
+    ${deltaHtml}
+    <p class="small">Moyenne pondérée de 5 dimensions : cardio au repos &amp; métabolisme (30 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (15 %).</p>`;
+
+  // 2. Radar des 5 dimensions (SVG)
+  renderIfgRadar(result.dims);
+
+  // 3. Points forts / faibles + conseil
+  const sorted = result.dims.slice().sort((a, b) => b.score - a.score);
+  const best = sorted[0], worst = sorted[sorted.length - 1];
+  $('#ifg-strengths').innerHTML = `
+    <li>💪 <b>Point fort</b> : ${best.icon} ${best.label} — <b>${best.score}/100</b></li>
+    <li>🎯 <b>À travailler</b> : ${worst.icon} ${worst.label} — <b>${worst.score}/100</b></li>`;
+  const advice = $('#ifg-advice');
+  if (worst.score < 60) {
+    const tips = {
+      cardio_rest: 'Priorisez la FC de repos et la tension artérielle : marchez 30 min/jour, limitez le sel, consultez si la tension reste élevée.',
+      endurance: '2 séances de 20–30 min d\'endurance modérée par semaine (vélo, marche rapide, natation) font progresser vite.',
+      strength: '2 séances de renforcement par semaine : pompes, gainage et chaise 30 s suffisent à démarrer.',
+      balance: 'Travaillez l\'équilibre 5 min/jour (unipodal, yeux ouverts puis fermés) et la souplesse des jambes.',
+      activity: 'Levez-vous toutes les heures et visez 150 min d\'activité modérée par semaine (marche comprise).',
+    };
+    advice.innerHTML = `💡 <b>Conseil</b> : ${tips[worst.key] || 'Travaillez cette dimension en priorité.'}`;
+    advice.style.display = '';
+  } else advice.style.display = 'none';
+
+  // 4. Courbe d'évolution de l'IFG
+  renderIfgChart(series);
+
+  // 5. Tendances par dimension (vs 30 jours avant)
+  renderIfgTrends(profile);
+
+  // 6. Nuage de points IPAQ ↔ IFG
+  renderIfgScatter();
+}
+
+function renderIfgRadar(dims) {
+  const W = 320, H = 280, CX = W / 2, CY = H / 2 + 6, R = 100;
+  const n = IFG_DIMENSIONS.length;
+  const angle = i => -Math.PI / 2 + i * 2 * Math.PI / n;
+  const pt = (i, ratio) => `${CX + Math.cos(angle(i)) * R * ratio},${CY + Math.sin(angle(i)) * R * ratio}`;
+  const dimByKey = Object.fromEntries(dims.map(d => [d.key, d]));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:340px">`;
+  // anneaux de fond 25/50/75/100
+  for (const r of [0.25, 0.5, 0.75, 1]) {
+    svg += `<polygon points="${IFG_DIMENSIONS.map((_, i) => pt(i, r)).join(' ')}" fill="none" stroke="#dde5ec" stroke-width="1"/>`;
+  }
+  // axes + labels
+  IFG_DIMENSIONS.forEach((d, i) => {
+    svg += `<line x1="${CX}" y1="${CY}" x2="${pt(i, 1).split(',')[0]}" y2="${pt(i, 1).split(',')[1]}" stroke="#dde5ec"/>`;
+    const lx = CX + Math.cos(angle(i)) * (R + 26), ly = CY + Math.sin(angle(i)) * (R + 26);
+    svg += `<text x="${lx}" y="${ly}" text-anchor="middle" font-size="11" fill="#444">${d.icon} ${d.label.split(' ')[0]}</text>`;
+  });
+  // polygone des scores (dimensions manquantes ignorées : on trace sur les présentes)
+  const present = IFG_DIMENSIONS.map((d, i) => ({ i, score: dimByKey[d.key]?.score })).filter(x => x.score != null);
+  if (present.length >= 3) {
+    const poly = present.map(x => pt(x.i, x.score / 100)).join(' ');
+    svg += `<polygon points="${poly}" fill="rgba(31,78,121,.25)" stroke="#1F4E79" stroke-width="2"/>`;
+    present.forEach(x => {
+      const [px, py] = pt(x.i, x.score / 100).split(',');
+      svg += `<circle cx="${px}" cy="${py}" r="4" fill="#1F4E79"/>`;
+    });
+  }
+  svg += '</svg>';
+  $('#ifg-radar').innerHTML = svg;
+  $('#ifg-radar-legend').innerHTML = dims.map(d =>
+    `<span style="margin-right:10px">${d.icon} ${d.label} : <b>${d.score}</b></span>`).join('');
+}
+
+function renderIfgChart(series) {
+  const data = series;
+  if (!data.length) { $('#ifg-chart').innerHTML = '<p class="small">Pas encore d\'historique.</p>'; $('#ifg-chart-stats').textContent = ''; return; }
+  const W = 700, H = 220, PAD = 40;
+  const xs = data.map(d => new Date(d.date).getTime());
+  const minT = Math.min(...xs), maxT = Math.max(...xs);
+  const rangeT = Math.max(maxT - minT, 86400000);
+  const X = tm => PAD + (tm - minT) / rangeT * (W - 2 * PAD);
+  const Y = v => H - PAD - v / 100 * (H - 2 * PAD);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // zones 60 et 80
+  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="#e5f3e5" opacity="0.7"/>`;
+  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="#fff1e0" opacity="0.7"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="#2e7d32" stroke-dasharray="4 4"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="#e65100" stroke-dasharray="2 4"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  data.forEach(d => {
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+    if (data.length <= 8 || d === data[0] || d === data[data.length - 1])
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+  });
+  svg += '</svg>';
+  $('#ifg-chart').innerHTML = svg;
+  const first = data[0].value, lastV = data[data.length - 1].value;
+  const delta = lastV - first;
+  $('#ifg-chart-stats').innerHTML = `Dernière valeur : <b>${lastV}/100</b> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta} pts</b>`;
+}
+
+// Tendance d'une dimension : compare la moyenne des sessions des 30 derniers jours
+// à celle de la période précédente (mêmes mesures présentes dans les deux périodes)
+function renderIfgTrends(profile) {
+  const sessions = getSessions();
+  if (!sessions.length) { $('#ifg-trends').innerHTML = '<p class="small">Aucune donnée.</p>'; return; }
+  const today = new Date();
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().slice(0, 10); // « 30 derniers jours » = date >= J-30
+  const recent = sessions.filter(s => s.date >= cutoffStr);
+  const previous = sessions.filter(s => s.date < cutoffStr);
+  const avgDim = (sessList, dim) => {
+    const vals = [];
+    for (const s of sessList) {
+      for (const id of dim.tests) {
+        const v = s.values?.[id];
+        if (v != null && v !== '') vals.push(SCORE_PTS[statusOf(byId(id), v, profile)]);
+      }
+    }
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  };
+  let html = '<table><tr><th>Dimension</th><th>30 derniers jours</th><th>Avant</th><th>Tendance</th></tr>';
+  for (const d of IFG_DIMENSIONS) {
+    const r = avgDim(recent, d), p = avgDim(previous, d);
+    if (r == null && p == null) continue;
+    let trend;
+    if (r == null) trend = '<td class="muted">—</td>';
+    else if (p == null) trend = '<td class="muted">nouveau</td>';
+    else if (r > p + 2) trend = '<td class="up">▲ en hausse</td>';
+    else if (r < p - 2) trend = '<td class="down">▼ en baisse</td>';
+    else trend = '<td class="muted">= stable</td>';
+    html += `<tr><td>${d.icon} ${d.label}</td><td><b>${r ?? '—'}</b></td><td>${p ?? '—'}</td>${trend}</tr>`;
+  }
+  $('#ifg-trends').innerHTML = html + '</table>';
+}
+
+// Nuage de points : IPAQ (X) ↔ IFG au moment de la mesure (Y)
+// On recalcule l'IFG à chaque date de session où IPAQ est présent
+function renderIfgScatter() {
+  const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
+  const ipaqDates = sessions.filter(s => s.values?.ipaq != null && s.values.ipaq !== '');
+  if (ipaqDates.length < 2) { $('#ifg-scatter').innerHTML = '<p class="small">Effectuez au moins 2 questionnaires IPAQ pour voir la corrélation.</p>'; return; }
+  const points = [];
+  for (const s of ipaqDates) {
+    // IFG recalculé avec les données disponibles à cette date
+    const upTo = sessions.filter(x => x.date <= s.date);
+    const lv = {};
+    for (const sess of upTo) for (const [k, v] of Object.entries(sess.values || {})) {
+      if (v != null && v !== '') lv[k] = { value: v, date: sess.date };
+    }
+    const snapshotSessions = store.get('sessions', []);
+    store.set('sessions', upTo);
+    const res = computeIFG(getProfile());
+    store.set('sessions', snapshotSessions);
+    if (res) points.push({ date: s.date, ipaq: s.values.ipaq, ifg: res.score });
+  }
+  if (points.length < 2) { $('#ifg-scatter').innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+
+  const W = 420, H = 260, PAD = 44;
+  const xs = points.map(p => p.ipaq), ys = points.map(p => p.ifg);
+  let xLo = Math.min(...xs), xHi = Math.max(...xs);
+  let yLo = Math.min(...ys), yHi = Math.max(...ys);
+  const xPad = (xHi - xLo) * 0.1 || 500, yPad = (yHi - yLo) * 0.1 || 5;
+  xLo -= xPad; xHi += xPad; yLo -= yPad; yHi += yPad;
+  const X = v => PAD + (v - xLo) / (xHi - xLo) * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - yLo) / (yHi - yLo) * (H - 2 * PAD);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // repère OMS 600 MET-min
+  if (xLo <= 600 && 600 <= xHi)
+    svg += `<line x1="${X(600)}" x2="${X(600)}" y1="${PAD}" y2="${H - PAD}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${X(600)}" y="${PAD - 4}" text-anchor="middle" font-size="10" fill="#2e7d32">600 (OMS)</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  // axes labels
+  svg += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#555">IPAQ (MET-min/sem)</text>`;
+  svg += `<text x="12" y="${H / 2}" text-anchor="middle" font-size="11" fill="#555" transform="rotate(-90 12 ${H / 2})">IFG /100</text>`;
+  points.forEach(p => {
+    svg += `<circle cx="${X(p.ipaq)}" cy="${Y(p.ifg)}" r="5" fill="#1F4E79"><title>${p.date.split('-').reverse().join('/')} : IPAQ ${p.ipaq} · IFG ${p.ifg}</title></circle>`;
+  });
+  svg += '</svg>';
+  $('#ifg-scatter').innerHTML = svg;
+}
 
 // ---------- Historique & graphiques ----------
 function renderHistory() {
@@ -913,8 +1199,12 @@ $('#export-csv').addEventListener('click', () => {
   download([head, ...lines].join('\n'), 'fittrack_export.csv', 'text/csv');
 });
 $('#export-json').addEventListener('click', () => {
-  download(JSON.stringify({ profile: getProfile(), sessions: getSessions(), scoreHistory: store.get('scoreHistory', []) }, null, 2),
-    'fittrack_export.json', 'application/json');
+  download(JSON.stringify({
+    profile: getProfile(),
+    sessions: getSessions(),
+    scoreHistory: store.get('scoreHistory', []),
+    ifgHistory: store.get('ifgHistory', []),
+  }, null, 2), 'fittrack_export.json', 'application/json');
 });
 
 // ---------- Profil ----------
