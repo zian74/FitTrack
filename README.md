@@ -21,7 +21,8 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
   radar, priorités, évolution et corrélation activité ↔ forme
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
-- ⏳ Timer compte à rebours 30 s pour le test « Chaise 30 s » (compte les répétitions, bip de fin, panneau flottant)
+- ⏳ Timer compte à rebours générique (panneau flottant, bip de fin) : chaise 30 s, escalier 3 min (durée réglable), Cooper 12/6 min
+- 🫁 Test Cooper : estimations croisées **VMA / VO2max** affichées en direct (VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73 — formules ACSM / Léger & Mercier citées dans les sources)
 - Graphiques SVG par indicateur avec zones objectif
 - Export CSV / JSON, données 100 % locales (localStorage)
 - Avertissement médical avant test maximal si facteurs de risque déclarés
