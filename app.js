@@ -974,7 +974,7 @@ function ifgBarHtml(score) {
 function renderAnalysis() {
   recordIFG();
   const profile = getProfile();
-  const periodKey = $('#ifg-period')?.value || 'last';
+  const periodKey = (document.querySelector('input[name="ifg-period"]:checked') || {}).value || 'last';
   $('#ifg-period-label').textContent = ifgPeriodDesc(periodKey);
   const result = computeIFGPeriod(profile, periodKey);
   if (!result) {
@@ -1040,8 +1040,9 @@ function renderAnalysis() {
   renderIfgScatter();
 }
 
-// Changement de période de calcul de l'IFG → re-rendu complet de l'onglet Analyse
-$('#ifg-period').addEventListener('change', () => renderAnalysis());
+// Changement de période de calcul de l'IFG (boutons radio) → re-rendu complet de l'onglet Analyse
+document.querySelectorAll('input[name="ifg-period"]').forEach(r =>
+  r.addEventListener('change', () => renderAnalysis()));
 
 function renderIfgRadar(dims) {
   const W = 320, H = 280, CX = W / 2, CY = H / 2 + 6, R = 100;
