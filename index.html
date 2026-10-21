@@ -18,6 +18,7 @@
     <button data-view="dashboard" class="active">Tableau de bord</button>
     <button data-view="session">Session de test</button>
     <button data-view="history">Historique</button>
+    <button data-view="analysis">Analyse</button>
     <button data-view="profile">Profil</button>
   </nav>
 </header>
@@ -117,6 +118,15 @@
     </div>
   </section>
 
+  <!-- ============ ANALYSE ============ -->
+  <section id="view-analysis" class="view">
+    <div class="card">
+      <h2>Analyse</h2>
+      <p>Cet onglet accueillera les analyses avancées de vos données (tendances long terme, corrélations entre indicateurs, projections).</p>
+      <p class="small">En cours de conception — disponible dans une prochaine version.</p>
+    </div>
+  </section>
+
   <!-- ============ PROFILE ============ -->
   <section id="view-profile" class="view">
     <div class="card">
@@ -127,12 +137,10 @@
         </label>
         <label>Année de naissance : <input type="number" id="p-birth" placeholder="1985"></label>
         <label>Taille (cm) : <input type="number" id="p-height" placeholder="175"></label>
-        <label class="small">Niveau d'activité : évalué automatiquement via le questionnaire IPAQ (onglet Session de test)</label>
       </div>
       <h3>Facteurs de risque cardio</h3>
       <div class="row">
         <label><input type="checkbox" id="p-smoke"> Tabagisme</label>
-        <label><input type="checkbox" id="p-sedentaryrisk"> Sédentarité prolongée</label>
         <label><input type="checkbox" id="p-history"> Antécédents cardiaques</label>
       </div>
       <button id="save-profile" class="primary">Enregistrer le profil</button>

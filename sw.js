@@ -1,5 +1,5 @@
 /* Service worker FitTrack — network-first pour les fichiers de l'app, repli cache hors ligne */
-const CACHE = 'fittrack-v11';
+const CACHE = 'fittrack-v12';
 const ASSETS = [
   './',
   './index.html',

@@ -15,7 +15,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 ### Fonctionnalités
 
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
-- Score global /100 basé sur les 5 mesures prédictives (poigne, tour de taille, FC repos, cardio sous-max, équilibre)
+- Score global /100 basé sur les 5 mesures prédictives (poigne, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
