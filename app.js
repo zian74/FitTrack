@@ -264,7 +264,15 @@ function renderDashboard() {
   if (!result) {
     scoreEl.innerHTML = '<p>Aucune mesure enregistrée. Commencez par une <b>session de test</b>.</p>';
   } else {
+    // Barre de niveau : 5 paliers colorés, le remplissage correspond au score /100
+    const pct = Math.max(0, Math.min(100, result.score));
+    const fill = `linear-gradient(to right, #b71c1c 0%, #b71c1c 20%, #e65100 20%, #e65100 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, #2e7d32 80%, #2e7d32 100%)`;
     scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${result.score}<span style="font-size:.6em"> /100</span></p>
+      <div class="score-bar" role="progressbar" aria-valuenow="${result.score}" aria-valuemin="0" aria-valuemax="100" title="${result.score}/100">
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${fill}"></div></div>
+        <div class="score-bar-labels small"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
+      </div>
+      <p class="small">Basé sur les 5 mesures les plus prédictives selon la littérature scientifique.</p>
       <ul class="list">${result.rows.join('')}</ul>`;
   }
 
