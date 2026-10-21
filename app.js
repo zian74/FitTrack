@@ -144,9 +144,9 @@ const TESTS = [
     gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } },
     info: `<ul>
       <li><b>Cooper complet (12 min)</b> : couvrez la plus grande distance possible en 12 minutes, à allure soutenue et régulière.</li>
-      <li><b>Demi-Cooper (6 min)</b> : même principe sur 6 minutes. La distance saisie est <b>automatiquement doublée</b> pour rester comparable aux repères 12 min.</li>
+      <li><b>Demi-Cooper (6 min)</b> : même principe sur 6 minutes. La distance saisie est <b>automatiquement doublée (×2)</b> : elle est affichée en équivalent 12 min dans les estimations VMA/VO2max et stockée ×2 pour rester comparable aux repères 12 min.</li>
       <li>Le bouton <b>⏳</b> ouvre un <b>compte à rebours</b> (12 min, ou 6 min en demi-Cooper).</li>
-      <li><b>VMA &amp; VO2max</b> : renseignez au choix la distance, la VMA (km/h) ou la VO2max (ml/kg/min) — les deux autres valeurs sont <b>calculées et affichées</b> en dessous (VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73).</li>
+      <li><b>VMA &amp; VO2max</b> : renseignez au choix la distance, la VMA (km/h) ou la VO2max (ml/kg/min) — les deux autres valeurs sont <b>calculées et affichées</b> en dessous. En demi-Cooper, la distance saisie est d'abord ×2 (équiv. 12 min) avant calcul : VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73.</li>
       <li>Échauffez-vous 5–10 min avant, sur terrain plat et mesuré, chaussures adaptées.</li>
       <li>Test maximal : arrêtez en cas de douleur thoracique, essoufflement excessif ou vertiges.</li>
     </ul>` },
@@ -1077,10 +1077,17 @@ function updateCooperEstim() {
     lines.push(`<b>VMA estimée :</b> ${fmt1(vmaFromVo2(vo2))} km/h <span class="small">(VO2max ÷ 3,5)</span>`);
   }
   if (dist != null && !isNaN(dist)) {
-    const vmaD = cooperVMAFromDist(dist);
-    const vo2D = vo2FromCooperDist(dist);
-    lines.push(`<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist)} m`);
-    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h <span class="small">(distance ÷ 200)</span>`);
+    // En demi-Cooper (6 min), la distance saisie est automatiquement ×2
+    // pour obtenir l'équivalent 12 min avant tout calcul.
+    const isHalf = cooperSelectedDuration() === '6';
+    const dist12 = isHalf ? dist * 2 : dist;
+    const vmaD = cooperVMAFromDist(dist12);
+    const vo2D = vo2FromCooperDist(dist12);
+    const distLabel = isHalf
+      ? `<b>Distance saisie (6 min) :</b> ${Math.round(dist)} m → <b>équiv. 12 min : ${Math.round(dist12)} m</b> (×2 automatique)`
+      : `<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist12)} m`;
+    lines.push(distLabel);
+    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h <span class="small">(distance équiv. 12 min ÷ 200)</span>`);
     lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min <span class="small">((distance − 504,9) ÷ 44,73, ACSM)</span>`);
   }
   if (!lines.length) { out.classList.add('hidden'); out.innerHTML = ''; return; }
