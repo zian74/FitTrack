@@ -796,6 +796,21 @@ const STATIC_INFOS = {
       <li>Dans ce graphique, chaque point croise votre score IPAQ (activité déclarée) avec votre IFG (forme mesurée) à la même date — un écart important signale un déséquilibre à creuser.</li>
     </ul>`
   },
+  __sources__: {
+    name: 'Sources scientifiques',
+    info: `<ul>
+      <li><b>IPAQ court (activité physique)</b> : Craig CL et al., « International physical activity questionnaire: 12-country reliability and validity », <i>Med Sci Sports Exerc</i>, 2003 — cotation MET-min/sem (8×intense, 4×modéré, 3,3×marche) et seuils 600 / 3000.</li>
+      <li><b>Recommandations activité physique</b> : OMS, « Lignes directrices de l'OMS sur l'activité physique et la sédentarité », 2020 — ≥ 150 min d'activité modérée/semaine (≈ 600 MET-min/sem).</li>
+      <li><b>Test de Cooper (endurance)</b> : Cooper KH, « A means of assessing maximal power output », <i>JAMA</i>, 1968 — distance maximale en 12 min, repères cardio-respiratoires adultes (H/F). Le demi-Cooper (6 min ×2) suit la même logique de normalisation.</li>
+      <li><b>Tour de taille (risque métabolique)</b> : seuils OMS/IDF — ≥ 94 cm (H) / ≥ 80 cm (F) : risque accru ; ≥ 102 / ≥ 88 cm : risque substantiellement accru.</li>
+      <li><b>Pression artérielle</b> : seuils de référence usuels (ESC/ESH) — normale &lt; 120/80 mmHg, élevée 130–139/85–89 mmHg.</li>
+      <li><b>Force musculaire (poigne, pompes, chaise 30 s, gainage)</b> : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli &amp; Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).</li>
+      <li><b>Équilibre unipodal &amp; Sit-and-reach</b> : protocoles standardisés de la littérature (test unipodal yeux ouverts/fermés, Senior Fitness Test pour la souplesse).</li>
+      <li><b>Score global &amp; IFG (pondération des dimensions)</b> : pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
+      <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
+    </ul>
+    <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,
+  },
 };
 document.addEventListener('click', e => {
   const btn = e.target.closest('.info-btn');

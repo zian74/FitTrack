@@ -66,6 +66,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
 - Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)
+- Onglet **Profil** : lien ⓘ « Sources scientifiques » en bas de page listant les références utilisées (IPAQ court — Craig 2003 ; OMS 2020 ; Cooper 1968 ; seuils OMS/IDF tour de taille ; ESC/ESH pression artérielle ; Rikli & Jones Senior Fitness Test 1999 ; Kodama 2009 / Lee méta-analyses mortalité ; seuils sédentarité IPAQ/OMS), avec mention « repères indicatifs, pas d'avis médical »
 - Chronomètre intégré pour les tests chronométrés
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
