@@ -255,11 +255,13 @@ function renderLastSession() {
     col.sessions.push(s);
   }
   const cols = byDate.slice(0, 2); // les 2 dates les plus récentes
-  // tous les tests présents dans ces colonnes
+  // tous les tests présents dans ces colonnes, triés dans l'ordre de TESTS
+  // (= ordre de présentation dans les sessions : repos & mobilité, force, cardio, activité)
   const ids = [];
   for (const c of cols) for (const s of c.sessions) for (const id of Object.keys(s.values || {})) {
     if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
   }
+  ids.sort((a, b) => TESTS.findIndex(t => t.id === a) - TESTS.findIndex(t => t.id === b));
   let html = '<table class="last3-table">';
   html += '<tr><th>Test</th>' + cols.map(c => `<th>${frDate(c.date)} <button class="delete-session-btn" title="Supprimer les sessions de cette date" data-del-session="${c.sessions[0].id || ''}" data-del-date="${c.date}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
   for (const id of ids) {
