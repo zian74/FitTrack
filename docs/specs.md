@@ -83,6 +83,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Accessibilité : gros chiffres, contraste élevé (public senior possible)
 - Responsive mobile/desktop
 - i18n : FR en v1, architecture compatible multilingue
+- Thème : clair/sombre/système (`prefers-color-scheme`), persistant (localStorage `ft_theme`), sélecteur dans le Profil, `theme-color` et graphiques SVG adaptés
 
 ## 5. Jalons
 
@@ -95,4 +96,5 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 
 - PWA installable (manifest, service worker) ✅
 - Notifications de rappel des tests ✅ (checkbox + heure dans Profil ; setTimeout in-app + PeriodicSync SW app fermée ; rattrapage au démarrage ; clic → ouvre l'app)
+- Mode sombre ✅ (sélecteur 3 états dans le Profil : système / clair / sombre ; persistant ; respecte `prefers-color-scheme` ; `theme-color` mis à jour)
 - Intégration HealthKit / Google Fit

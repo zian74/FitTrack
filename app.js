@@ -13,6 +13,38 @@ const store = {
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
+// ---------- Thème (mode sombre) ----------
+// 3 états : 'system' (suit prefers-color-scheme), 'light', 'dark'.
+// Persisté dans localStorage (ft_theme). Appliqué sur <html> (classe .dark)
+// + meta theme-color mise à jour pour la barre d'adresse mobile.
+const THEME_KEY = 'theme';
+const THEME_META_LIGHT = '#1F4E79';
+const THEME_META_DARK = '#12181f';
+function getTheme() { return store.get(THEME_KEY, 'system'); }
+function isDarkTheme() {
+  const t = getTheme();
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function applyTheme() {
+  const dark = isDarkTheme();
+  document.documentElement.classList.toggle('dark', dark);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? THEME_META_DARK : THEME_META_LIGHT);
+}
+function setTheme(mode) {
+  store.set(THEME_KEY, mode);
+  applyTheme();
+}
+// Changement de préférence système (mode « system » uniquement)
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+    if (getTheme() === 'system') applyTheme();
+  });
+}
+applyTheme(); // appliqué avant le 1er rendu (évite le flash de thème clair)
+
 // ---------- Définition des tests ----------
 // type : lower-is-better si rev : true (plus bas = mieux)
 const TESTS = [
@@ -508,7 +540,7 @@ function renderDashboard() {
   } else {
     // Barre de niveau : 5 paliers colorés, le remplissage correspond au score /100
     const pct = Math.max(0, Math.min(100, result.score));
-    const fill = `linear-gradient(to right, #b71c1c 0%, #b71c1c 20%, #e65100 20%, #e65100 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, #2e7d32 80%, #2e7d32 100%)`;
+    const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
     scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${result.score}<span style="font-size:.6em"> /100</span></p>
       <div class="score-bar" role="progressbar" aria-valuenow="${result.score}" aria-valuemin="0" aria-valuemax="100" title="${result.score}/100">
         <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${fill}"></div></div>
@@ -1059,11 +1091,11 @@ document.addEventListener('click', e => {
 
 // ---------- Onglet Analyse (IFG) ----------
 const IFG_PALIERS = [
-  { max: 20, color: '#b71c1c', label: 'Faible' },
-  { max: 40, color: '#e65100', label: 'En dessous' },
+  { max: 20, color: 'var(--bad)', label: 'Faible' },
+  { max: 40, color: 'var(--warn)', label: 'En dessous' },
   { max: 60, color: '#f9a825', label: 'En progrès' },
   { max: 80, color: '#9e9d24', label: 'Bon' },
-  { max: 100, color: '#2e7d32', label: 'Excellent' },
+  { max: 100, color: 'var(--ok)', label: 'Excellent' },
 ];
 
 function ifgPalier(score) {
@@ -1072,7 +1104,7 @@ function ifgPalier(score) {
 
 function ifgBarHtml(score) {
   const palier = ifgPalier(score);
-  const fill = `linear-gradient(to right, #b71c1c 0%, #b71c1c 20%, #e65100 20%, #e65100 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, #2e7d32 80%, #2e7d32 100%)`;
+  const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
   return `<div class="score-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="100" title="${score}/100">
     <div class="score-bar-track"><div class="score-bar-fill" style="width:${score}%;background:${fill}"></div></div>
     <div class="score-bar-labels small"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
@@ -1161,22 +1193,22 @@ function renderIfgRadar(dims) {
   let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:340px">`;
   // anneaux de fond 25/50/75/100
   for (const r of [0.25, 0.5, 0.75, 1]) {
-    svg += `<polygon points="${IFG_DIMENSIONS.map((_, i) => pt(i, r)).join(' ')}" fill="none" stroke="#dde5ec" stroke-width="1"/>`;
+    svg += `<polygon points="${IFG_DIMENSIONS.map((_, i) => pt(i, r)).join(' ')}" fill="none" stroke="var(--border)" stroke-width="1"/>`;
   }
   // axes + labels
   IFG_DIMENSIONS.forEach((d, i) => {
-    svg += `<line x1="${CX}" y1="${CY}" x2="${pt(i, 1).split(',')[0]}" y2="${pt(i, 1).split(',')[1]}" stroke="#dde5ec"/>`;
+    svg += `<line x1="${CX}" y1="${CY}" x2="${pt(i, 1).split(',')[0]}" y2="${pt(i, 1).split(',')[1]}" stroke="var(--border)"/>`;
     const lx = CX + Math.cos(angle(i)) * (R + 26), ly = CY + Math.sin(angle(i)) * (R + 26);
-    svg += `<text x="${lx}" y="${ly}" text-anchor="middle" font-size="11" fill="#444">${d.icon} ${d.label.split(' ')[0]}</text>`;
+    svg += `<text x="${lx}" y="${ly}" text-anchor="middle" font-size="11" fill="var(--text)">${d.icon} ${d.label.split(' ')[0]}</text>`;
   });
   // polygone des scores (dimensions manquantes ignorées : on trace sur les présentes)
   const present = IFG_DIMENSIONS.map((d, i) => ({ i, score: dimByKey[d.key]?.score })).filter(x => x.score != null);
   if (present.length >= 3) {
     const poly = present.map(x => pt(x.i, x.score / 100)).join(' ');
-    svg += `<polygon points="${poly}" fill="rgba(31,78,121,.25)" stroke="#1F4E79" stroke-width="2"/>`;
+    svg += `<polygon points="${poly}" fill="var(--accent)" opacity="0.25" stroke="var(--accent)" stroke-width="2"/>`;
     present.forEach(x => {
       const [px, py] = pt(x.i, x.score / 100).split(',');
-      svg += `<circle cx="${px}" cy="${py}" r="4" fill="#1F4E79"/>`;
+      svg += `<circle cx="${px}" cy="${py}" r="4" fill="var(--accent)"/>`;
     });
   }
   svg += '</svg>';
@@ -1196,18 +1228,18 @@ function renderIfgChart(series) {
   const Y = v => H - PAD - v / 100 * (H - 2 * PAD);
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
   // zones 60 et 80
-  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="#e5f3e5" opacity="0.7"/>`;
-  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="#fff1e0" opacity="0.7"/>`;
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="#2e7d32" stroke-dasharray="4 4"/>`;
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="#e65100" stroke-dasharray="2 4"/>`;
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
-  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="var(--ok-bg)" opacity="0.7"/>`;
+  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="var(--mid-bg)" opacity="0.7"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="var(--ok)" stroke-dasharray="4 4"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="var(--warn)" stroke-dasharray="2 4"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
   const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
-  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   data.forEach(d => {
-    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="var(--accent)"/>`;
     if (data.length <= 8 || d === data[0] || d === data[data.length - 1])
-      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
   $('#ifg-chart').innerHTML = svg;
@@ -1284,14 +1316,14 @@ function renderIfgScatter() {
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
   // repère OMS 600 MET-min
   if (xLo <= 600 && 600 <= xHi)
-    svg += `<line x1="${X(600)}" x2="${X(600)}" y1="${PAD}" y2="${H - PAD}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${X(600)}" y="${PAD - 4}" text-anchor="middle" font-size="10" fill="#2e7d32">600 (OMS)</text>`;
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
-  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+    svg += `<line x1="${X(600)}" x2="${X(600)}" y1="${PAD}" y2="${H - PAD}" stroke="var(--ok)" stroke-dasharray="4 4"/><text x="${X(600)}" y="${PAD - 4}" text-anchor="middle" font-size="10" fill="var(--ok)">600 (OMS)</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
   // axes labels
-  svg += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#555">IPAQ (MET-min/sem)</text>`;
-  svg += `<text x="12" y="${H / 2}" text-anchor="middle" font-size="11" fill="#555" transform="rotate(-90 12 ${H / 2})">IFG /100</text>`;
+  svg += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">IPAQ (MET-min/sem)</text>`;
+  svg += `<text x="12" y="${H / 2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${H / 2})">IFG /100</text>`;
   points.forEach(p => {
-    svg += `<circle cx="${X(p.ipaq)}" cy="${Y(p.ifg)}" r="5" fill="#1F4E79"><title>${p.date.split('-').reverse().join('/')} : IPAQ ${p.ipaq} · IFG ${p.ifg}</title></circle>`;
+    svg += `<circle cx="${X(p.ipaq)}" cy="${Y(p.ifg)}" r="5" fill="var(--accent)"><title>${p.date.split('-').reverse().join('/')} : IPAQ ${p.ipaq} · IFG ${p.ifg}</title></circle>`;
   });
   svg += '</svg>';
   $('#ifg-scatter').innerHTML = svg;
@@ -1344,27 +1376,27 @@ function drawChart(testId) {
   // zones de repère
   if (good != null && mid != null) {
     const a = Y(Math.max(good, mid)), b = Y(Math.min(good, mid));
-    svg += `<rect x="${PAD}" y="${a}" width="${W - 2 * PAD}" height="${Math.max(b - a, 0)}" fill="#fff1e0" opacity="0.7"/>`;
+    svg += `<rect x="${PAD}" y="${a}" width="${W - 2 * PAD}" height="${Math.max(b - a, 0)}" fill="var(--mid-bg)" opacity="0.7"/>`;
     const yGood = rev ? Y(good) : Y(good);
     const yEdge = rev ? lo : hi;
-    svg += `<rect x="${PAD}" y="${rev ? Y(hi) : Y(hi)}" width="${W - 2 * PAD}" height="${Math.max(Y(good) - (rev ? Y(hi) : Y(hi)), 0)}" fill="#e5f3e5" opacity="0.7"/>`;
+    svg += `<rect x="${PAD}" y="${rev ? Y(hi) : Y(hi)}" width="${W - 2 * PAD}" height="${Math.max(Y(good) - (rev ? Y(hi) : Y(hi)), 0)}" fill="var(--ok-bg)" opacity="0.7"/>`;
   }
   // lignes repères
-  if (good != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(good)}" y2="${Y(good)}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(good) - 4}" text-anchor="end" font-size="11" fill="#2e7d32">objectif ${good}${t.unit}</text>`;
-  if (mid != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(mid)}" y2="${Y(mid)}" stroke="#e65100" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(mid) - 4}" text-anchor="end" font-size="11" fill="#e65100">seuil ${mid}${t.unit}</text>`;
+  if (good != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(good)}" y2="${Y(good)}" stroke="var(--ok)" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(good) - 4}" text-anchor="end" font-size="11" fill="var(--ok)">objectif ${good}${t.unit}</text>`;
+  if (mid != null) svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(mid)}" y2="${Y(mid)}" stroke="var(--warn)" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(mid) - 4}" text-anchor="end" font-size="11" fill="var(--warn)">seuil ${mid}${t.unit}</text>`;
   // axes
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
-  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
   // points + segments
   const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
-  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   data.forEach(d => {
-    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="var(--accent)"/>`;
   });
   // labels date
   data.forEach((d, i) => {
     if (data.length <= 8 || i === 0 || i === data.length - 1)
-      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
   $('#chart').innerHTML = svg;
@@ -1392,24 +1424,24 @@ function drawScoreChart() {
 
   let svg = `<svg viewBox="0 0 ${W} ${H}">`;
   // zones de repère : ≥ 80 bon, 60–79 moyen, < 60 faible
-  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="#e5f3e5" opacity="0.7"/>`;
-  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="#fff1e0" opacity="0.7"/>`;
+  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="var(--ok-bg)" opacity="0.7"/>`;
+  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="var(--mid-bg)" opacity="0.7"/>`;
   // lignes repères
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(80) - 4}" text-anchor="end" font-size="11" fill="#2e7d32">80 — bon</text>`;
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="#e65100" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(60) - 4}" text-anchor="end" font-size="11" fill="#e65100">60 — seuil</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="var(--ok)" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(80) - 4}" text-anchor="end" font-size="11" fill="var(--ok)">80 — bon</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="var(--warn)" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(60) - 4}" text-anchor="end" font-size="11" fill="var(--warn)">60 — seuil</text>`;
   // axes
-  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
-  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
   // points + segments
   const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
-  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   data.forEach(d => {
-    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="var(--accent)"/>`;
   });
   // labels date
   data.forEach((d, i) => {
     if (data.length <= 8 || i === 0 || i === data.length - 1)
-      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
   $('#chart').innerHTML = svg;
@@ -1610,6 +1642,9 @@ $('#import-file').addEventListener('change', e => {
 
 // ---------- Profil ----------
 function renderProfileForm() {
+  // Le sélecteur de thème s'initialise même sans profil (le thème est indépendant)
+  const themeRadio = document.querySelector(`input[name="theme"][value="${getTheme()}"]`);
+  if (themeRadio) themeRadio.checked = true;
   const p = getProfile();
   if (!p) return;
   $('#p-sex').value = p.sex || 'H';
@@ -1626,6 +1661,12 @@ function renderProfileForm() {
   renderIMC();
   renderRiskSummary();
 }
+
+// Sélecteur de thème (Système / Clair / Sombre)
+document.addEventListener('change', e => {
+  if (e.target.name !== 'theme') return;
+  setTheme(e.target.value);
+});
 
 $('#save-profile').addEventListener('click', () => {
   const p = {
