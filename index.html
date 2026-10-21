@@ -17,8 +17,8 @@
   <nav>
     <button data-view="dashboard" class="active">Tableau de bord</button>
     <button data-view="session">Session de test</button>
-    <button data-view="history">Historique</button>
     <button data-view="analysis">Analyse</button>
+    <button data-view="history">Historique</button>
     <button data-view="profile">Profil</button>
   </nav>
 </header>
@@ -99,25 +99,6 @@
     </div>
   </section>
 
-  <!-- ============ HISTORY ============ -->
-  <section id="view-history" class="view">
-    <div class="card">
-      <h2>Graphiques par indicateur</h2>
-      <select id="chart-metric"></select>
-      <div id="chart"></div>
-      <div id="chart-stats" class="small"></div>
-    </div>
-    <div class="card">
-      <h2>Toutes les mesures</h2>
-      <div class="row">
-        <button id="export-csv">⬇️ Export CSV</button>
-        <button id="export-json">⬇️ Export JSON</button>
-        <button id="export-pdf">🖨️ Fiche de score PDF</button>
-      </div>
-      <div id="history-table" class="table-wrap"></div>
-    </div>
-  </section>
-
   <!-- ============ ANALYSE ============ -->
   <section id="view-analysis" class="view">
     <div class="card">
@@ -151,6 +132,25 @@
         <p class="small">Niveau d'activité (IPAQ, MET-min/sem) en abscisse, indice en ordonnée — chaque point est une date de mesure.</p>
         <div id="ifg-scatter"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section id="view-history" class="view">
+    <div class="card">
+      <h2>Graphiques par indicateur</h2>
+      <select id="chart-metric"></select>
+      <div id="chart"></div>
+      <div id="chart-stats" class="small"></div>
+    </div>
+    <div class="card">
+      <h2>Toutes les mesures</h2>
+      <div class="row">
+        <button id="export-csv">⬇️ Export CSV</button>
+        <button id="export-json">⬇️ Export JSON</button>
+        <button id="export-pdf">🖨️ Fiche de score PDF</button>
+      </div>
+      <div id="history-table" class="table-wrap"></div>
     </div>
   </section>
 
