@@ -85,9 +85,9 @@ function ipaqScore(a) {
 }
 
 function ipaqLevel(met) {
-  if (met >= 3000) return { key: 'high', label: '🟢 Niveau élevé (actif)' };
-  if (met >= 600) return { key: 'mid', label: '🟠 Niveau modéré' };
-  return { key: 'low', label: '🔴 Niveau faible (sédentaire)' };
+  if (met >= 3000) return { key: 'high', short: 'Élevé', label: '🟢 Niveau élevé (actif)' };
+  if (met >= 600) return { key: 'mid', short: 'Modéré', label: '🟠 Niveau modéré' };
+  return { key: 'low', short: 'Faible', label: '🔴 Niveau faible (sédentaire)' };
 }
 
 const byId = id => TESTS.find(t => t.id === id);
@@ -287,12 +287,16 @@ function renderLastSession() {
       deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
     }
     html += `<tr><td class="test-name">${t.name}</td>`;
-    html += hasCur
-      ? `<td class="num">${cur} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${curS.id || ''}" data-edit-date="${curS.date}" data-edit-test="${id}">✏️</button></td>`
-      : '<td class="num muted">—</td>';
-    html += hasPrv
-      ? `<td class="num">${prv} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${prvS.id || ''}" data-edit-date="${prvS.date}" data-edit-test="${id}">✏️</button></td>`
-      : '<td class="num muted">—</td>';
+    // IPAQ : la valeur est complétée du badge de niveau (élevé/modéré/faible)
+    const valueCell = (v, s) => {
+      if (v == null || v === '') return '<td class="num muted">—</td>';
+      const badge = id === 'ipaq'
+        ? ` <span class="badge ${ipaqLevel(v).key === 'high' ? 'good' : ipaqLevel(v).key === 'mid' ? 'mid' : 'low'}">${ipaqLevel(v).short}</span>`
+        : '';
+      return `<td class="num">${v}${badge} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button></td>`;
+    };
+    html += valueCell(cur, curS);
+    html += valueCell(prv, prvS);
     html += deltaCell + '</tr>';
   }
   html += '</table>';
