@@ -46,7 +46,8 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   - **gris** si la variation reste dans la zone saine, si l'IMC ne change pas de distance,
     ou si la taille n'est pas renseignée dans le profil (pas d'interprétation possible).
 
-- Profil : sexe, année de naissance, taille, activité, facteurs de risque cardio
+- Profil : sexe, année de naissance, taille, facteurs de risque cardio
+  (le niveau d'activité est évalué par le questionnaire IPAQ, pas déclaré dans le profil)
 - Saisie des mesures par session datée (4 types : repos, force, cardio, activité)
 - Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau

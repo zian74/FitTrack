@@ -737,7 +737,6 @@ function renderProfileForm() {
   $('#p-sex').value = p.sex || 'H';
   $('#p-birth').value = p.birthYear || '';
   $('#p-height').value = p.height || '';
-  $('#p-activity').value = p.activity || 'sedentary';
   $('#p-smoke').checked = !!p.smoke;
   $('#p-sedentaryrisk').checked = !!p.sedentaryRisk;
   $('#p-history').checked = !!p.cardiacHistory;
@@ -748,7 +747,6 @@ $('#save-profile').addEventListener('click', () => {
     sex: $('#p-sex').value,
     birthYear: parseInt($('#p-birth').value) || null,
     height: parseFloat($('#p-height').value) || null,
-    activity: $('#p-activity').value,
     smoke: $('#p-smoke').checked,
     sedentaryRisk: $('#p-sedentaryrisk').checked,
     cardiacHistory: $('#p-history').checked,
