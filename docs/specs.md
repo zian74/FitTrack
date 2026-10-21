@@ -77,7 +77,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   - test 13 « Escalier » : **3 min par défaut, durée réglable** en minutes (montées à 24/min)
   - test 14 « Cooper » : 12 min, ou 6 min en demi-Cooper (choix par **boutons radio** pilules, synchronisé avec le timer ⏳ et les estimations VMA/VO2max)
 - ⓘ instructions du test chaise (position mur, bras croisés, cuisses parallèles au sol)
-- **Test 14 Cooper — estimations VMA / VO2max** : 3 champs optionnels (distance m équiv. 12 min, VMA km/h, VO2max ml/kg/min) avec calculs croisés affichés en direct sous le bloc : VMA = distance ÷ 200 (Cooper 1968) ; VO2max = 3,5 × VMA (Léger & Mercier 1983) ; VO2max = (distance − 504,9) ÷ 44,73 (ACSM) ; VMA = VO2max ÷ 3,5. Formules citées dans la pop-up « Sources scientifiques »
+- **Test 14 Cooper — estimations VMA / VO2max** : 3 champs optionnels (distance m, VMA km/h, VO2max ml/kg/min) avec calculs croisés affichés en direct sous le bloc : VMA = distance ÷ 200 (Cooper 1968) ; VO2max = 3,5 × VMA (Léger & Mercier 1983) ; VO2max = (distance − 504,9) ÷ 44,73 (ACSM) ; VMA = VO2max ÷ 3,5. En demi-Cooper (6 min), la distance saisie est **automatiquement ×2** (équiv. 12 min) avant calcul et affichage (« 1200 m → équiv. 12 min : 2400 m (×2 automatique) »), et le stockage applique le même ×2. Formules citées dans la pop-up « Sources scientifiques »
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
 - Avertissement médical avant test maximal si facteurs de risque
