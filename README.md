@@ -48,5 +48,6 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] Rappels de re-test 🔔 (notification quotidienne à heure choisie, fonctionne app fermée via PeriodicSync)
 - [x] ⓘ Sources scientifiques accessibles en bas de l'onglet Profil (références IPAQ, OMS, Cooper, Rikli & Jones, Kodama…)
 - [x] Facteurs de risque cardio complets dans le Profil (tabagisme, antécédents personnels/familiaux, HTA, diabète, dyslipidémie, alcool, stress) + IMC calculé depuis la dernière mesure de poids + récapitulatif du niveau de risque + avertissement renforcé avant test maximal
+- [x] 🌙 Mode sombre (sélecteur Système / Clair / Sombre dans le Profil, persistant, respecte `prefers-color-scheme`, thème des graphiques SVG et `theme-color` mobile adaptés)
 - [x] CI GitHub Actions (syntaxe + validation JSON)
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
