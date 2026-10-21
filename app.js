@@ -29,12 +29,35 @@ const TESTS = [
   { id: 'weight', name: 'Poids (kg)', unit: 'kg', group: 'rest', rev: null,
     hint: 'Le matin à jeun', max: 300, min: 25 },
   { id: 'balance_open', name: 'Équilibre unipodal yeux ouverts (s)', unit: 's', group: 'rest',
-    hint: 'Sur un pied jusqu\u2019à échec (2 essais/pied)', good: 40, mid: 20, max: 300, min: 0 },
+    hint: 'Sur un pied jusqu\u2019à échec (2 essais/pied)', good: 40, mid: 20, max: 300, min: 0,
+    info: `<ul>
+      <li>Debout, mains sur les hanches, pieds joints.</li>
+      <li>Décollez un pied du sol (talon contre la cheville de l'autre jambe) et tenez en équilibre.</li>
+      <li>Regardez droit devant vous ; le pied levé ne doit pas toucher le sol.</li>
+      <li><b>2 essais par pied</b> : faites les deux côtés, on retient le <b>meilleur temps</b>.</li>
+      <li>Arrêtez dès que vous perdez l'équilibre (pied au sol ou appui des mains).</li>
+      <li>Prévoyez un appui à proximité en cas de déséquilibre.</li>
+    </ul>` },
   { id: 'balance_closed', name: 'Équilibre yeux fermés (s)', unit: 's', group: 'rest',
-    hint: '', good: 10, mid: 5, max: 120, min: 0 },
+    hint: '', good: 10, mid: 5, max: 120, min: 0,
+    info: `<ul>
+      <li>Même position que le test yeux ouverts : debout, mains sur les hanches, un pied décollé.</li>
+      <li><b>Fermez les yeux</b> et tenez le plus longtemps possible sans les rouvrir.</li>
+      <li><b>2 essais</b> : on retient le <b>meilleur temps</b>.</li>
+      <li>Ce test est nettement plus difficile : restez à proximité d'un mur ou d'une chaise et arrêtez au moindre déséquilibre pour éviter la chute.</li>
+      <li>Ne rouvrez les yeux qu'après avoir posé le pied au sol.</li>
+    </ul>` },
   { id: 'reach', name: 'Sit-and-reach (cm atteints)', unit: 'cm', group: 'rest',
     hint: '0 = orteils, négatif = avant, positif = au-delà',
-    good: 0, mid: -10, max: 40, min: -40 },
+    good: 0, mid: -10, max: 40, min: -40,
+    info: `<ul>
+      <li>Assis au sol, <b>jambes tendues</b>, pieds à plat contre un repère vertical (mur ou boîte).</li>
+      <li>Avancez les deux mains le long d'une règle posée au sol, <b>sans plier les genoux</b>, jusqu'au maximum confortable.</li>
+      <li>Maintenez la position 2 secondes.</li>
+      <li><b>2 essais</b> : on retient la <b>meilleure distance</b>.</li>
+      <li>Cotation : <b>0</b> = bout des orteils, <b>négatif</b> = orteils non atteints, <b>positif</b> = au-delà des orteils.</li>
+      <li>Échauffez le dos (flexions douces) avant de commencer.</li>
+    </ul>` },
   { id: 'grip', name: 'Poigne — meilleure main (kg)', unit: 'kg', group: 'strength',
     hint: '2–3 essais par main, 30 s de repos entre essais',
     good: 45, mid: 35, max: 100, min: 5,
@@ -502,11 +525,14 @@ function renderSessionFields() {
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+      const infoBtn = t.info
+        ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
       const last = latestValues()[t.id]?.value;
       const lastInfo = last != null
         ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
       row.innerHTML = `
         <label>${t.name}
+          ${infoBtn}
           <div class="field-hint">${t.hint || ''}</div>
           ${lastInfo}
         </label>
@@ -529,6 +555,28 @@ function renderSessionFields() {
     container.prepend(w);
   }
 }
+
+// ---------- Pop-up d'aide à la réalisation d'un test (icône ⓘ) ----------
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.info-btn');
+  if (!btn) return;
+  const t = byId(btn.dataset.infoTest);
+  if (!t || !t.info) return;
+  $('#info-modal-title').textContent = t.name;
+  $('#info-modal-body').innerHTML = t.info;
+  $('#info-modal').classList.remove('hidden');
+});
+
+function closeInfoModal() {
+  $('#info-modal').classList.add('hidden');
+}
+$('#info-modal-close').addEventListener('click', closeInfoModal);
+$('#info-modal').addEventListener('click', e => {
+  if (e.target === $('#info-modal')) closeInfoModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeInfoModal();
+});
 
 function updateFieldValidity(t, inp) {
   const raw = inp.value.trim();
