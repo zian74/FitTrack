@@ -23,6 +23,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - Chronomètre intégré (planche, équilibre)
 - ⏳ Timer compte à rebours générique (panneau flottant, bip de fin) : chaise 30 s, escalier 3 min (durée réglable), Cooper 12/6 min
 - 🫁 Test Cooper : estimations croisées **VMA / VO2max** affichées en direct (VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73 — formules ACSM / Léger & Mercier citées dans les sources)
+- **Session Cardio flexible** : enregistrement possible avec **uniquement** la VMA, la VO2max ou la distance Cooper (au moins un des 3 champs suffit)
 - **VMA / VO2max dans les repères du Profil** : lignes dédiées (n°17-18) avec seuils sexe (H/F) et valeur courante affichée (« estimé Cooper » ou saisie directe)
 - **Dimension Endurance (IFG)** : priorité **VMA saisie > VO2max saisie > Cooper/demi-Cooper (VMA/VO2max dérivées) > test escalier** — un seul indicateur retenu par session
 - Graphiques SVG par indicateur avec zones objectif
@@ -56,4 +57,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] CI GitHub Actions (syntaxe + validation JSON)
 - [x] ⏳ Timers compte à rebours : chaise 30 s, escalier 3 min (réglable), Cooper 12/6 min (radios)
 - [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (priorité VMA > VO2max > Cooper > escalier)
+- [x] 💾 Session Cardio : enregistrement avec VMA seule, VO2max seule ou distance Cooper (au moins un des 3 champs)
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

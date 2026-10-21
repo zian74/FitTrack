@@ -966,6 +966,7 @@ function renderSessionFields() {
       // Bloc d'estimation VMA / VO2max pour le Cooper (champs optionnels + calculs croisés)
       const cooperEstim = t.id === 'cooper'
         ? `<div class="cooper-estim">
+             <div class="field-hint">Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.</div>
              <div class="row" style="margin:6px 0">
                <label>VMA (km/h) : <input type="number" id="cooper-vma" step="0.1" min="4" max="30" placeholder="ex. 12,5" style="width:90px"></label>
                <label>VO2max (ml/kg/min) : <input type="number" id="cooper-vo2" step="0.1" min="10" max="90" placeholder="ex. 44" style="width:90px"></label>
@@ -1105,14 +1106,35 @@ function updateFieldValidity(t, inp) {
   updateSaveState();
 }
 
+// VMA / VO2max saisis dans le bloc Cooper (session cardio uniquement) :
+// valides si remplis et dans les bornes (VMA 4–30 km/h, VO2max 10–90 ml/kg/min).
+function cooperEstimValid() {
+  if (currentSessionType !== 'cardio') return { filled: false, invalid: false, count: 0 };
+  let filled = false, invalid = false, count = 0;
+  for (const sel of ['#cooper-vma', '#cooper-vo2']) {
+    const el = $(sel);
+    if (!el) continue;
+    const raw = el.value.trim();
+    if (raw === '') continue;
+    const num = parseFloat(raw.replace(',', '.'));
+    const min = el.min !== '' ? parseFloat(el.min) : null;
+    const max = el.max !== '' ? parseFloat(el.max) : null;
+    if (isNaN(num) || (min != null && num < min) || (max != null && num > max)) { invalid = true; continue; }
+    filled = true; count++;
+  }
+  return { filled, invalid, count };
+}
+
 function updateSaveState() {
   const btn = $('#save-session');
   const filled = $$('#session-fields input[data-test]').some(i => i.value.trim() !== '' && !i.classList.contains('invalid'));
   const invalid = $$('#session-fields input[data-test]').some(i => i.classList.contains('invalid'));
-  btn.disabled = !filled;
-  const count = $$('#session-fields input[data-test]').filter(i => i.value.trim() !== '' && !i.classList.contains('invalid')).length;
+  // Bloc Cooper : VMA ou VO2max seul suffit à enregistrer la session cardio
+  const estim = cooperEstimValid();
+  btn.disabled = !(filled || estim.filled);
+  const count = $$('#session-fields input[data-test]').filter(i => i.value.trim() !== '' && !i.classList.contains('invalid')).length + estim.count;
   $('#session-progress').textContent = count > 0 ? `${count} mesure${count > 1 ? 's' : ''} saisie${count > 1 ? 's' : ''}` : '';
-  btn.title = invalid ? 'Corrigez les valeurs hors bornes' : '';
+  btn.title = (invalid || estim.invalid) ? 'Corrigez les valeurs hors bornes' : '';
 }
 
 $$('.session-type-btn').forEach(b => b.addEventListener('click', () => {
@@ -1199,6 +1221,7 @@ function initCooperEstim(distInput) {
   const timerBtn = document.querySelector('#cooper-timer-btn');
   const sync = () => {
     updateCooperEstim();
+    updateSaveState(); // VMA/VO2max seuls activent le bouton « Enregistrer »
     if (timerBtn) {
       const six = cooperSelectedDuration() === '6';
       timerBtn.dataset.timerMs = six ? '360000' : '720000';
@@ -1207,8 +1230,8 @@ function initCooperEstim(distInput) {
     }
   };
   distInput.addEventListener('input', updateCooperEstim);
-  vmaInp?.addEventListener('input', updateCooperEstim);
-  vo2Inp?.addEventListener('input', updateCooperEstim);
+  vmaInp?.addEventListener('input', sync);
+  vo2Inp?.addEventListener('input', sync);
   // Délégation : les radios sont re-rendus à chaque affichage de la session
   document.addEventListener('change', e => {
     if (e.target.name === 'cooper-duration') sync();
