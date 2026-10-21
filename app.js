@@ -628,36 +628,47 @@ $('#save-session').addEventListener('click', () => {
 });
 
 // ---------- Chronomètre ----------
-let chronoTimer = null, chronoStart = 0, chronoElapsed = 0;
+let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = null;
 function chronoFmt(ms) {
   const s = ms / 1000;
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 }
+// Chaque bouton ⏱ ouvre un chrono dédié à son test (cible mémorisée, plus de sélecteur)
 function openChrono(targetId) {
+  chronoTargetId = targetId;
+  const t = byId(targetId);
+  $('#chrono-target-name').textContent = t ? t.name : '';
   $('#chrono').classList.remove('hidden');
-  $('#chrono-target').innerHTML = TESTS.filter(t => chronoBtns.includes(t.id))
-    .map(t => `<option value="${t.id}" ${t.id === targetId ? 'selected' : ''}>${t.name}</option>`).join('');
 }
 function chronoUpdate() {
   chronoElapsed = Date.now() - chronoStart;
   $('#chrono-display').textContent = chronoFmt(chronoElapsed);
 }
-$('#chrono-start').addEventListener('click', () => {
-  if (chronoTimer) return;
-  chronoStart = Date.now() - chronoElapsed;
-  chronoTimer = setInterval(chronoUpdate, 100);
-});
-$('#chrono-stop').addEventListener('click', () => {
-  clearInterval(chronoTimer); chronoTimer = null;
-});
+function chronoSetToggleBtn(running) {
+  const b = $('#chrono-startstop');
+  b.textContent = running ? '⏹' : '▶';
+  b.title = running ? 'Arrêter' : 'Démarrer';
+  b.classList.toggle('running', running);
+}
+function chronoToggle() {
+  if (chronoTimer) {
+    clearInterval(chronoTimer); chronoTimer = null;
+    chronoSetToggleBtn(false);
+  } else {
+    chronoStart = Date.now() - chronoElapsed;
+    chronoTimer = setInterval(chronoUpdate, 100);
+    chronoSetToggleBtn(true);
+  }
+}
+$('#chrono-startstop').addEventListener('click', chronoToggle);
 $('#chrono-reset').addEventListener('click', () => {
   clearInterval(chronoTimer); chronoTimer = null; chronoElapsed = 0;
   $('#chrono-display').textContent = '00:00.0';
+  chronoSetToggleBtn(false);
 });
 $('#chrono-send').addEventListener('click', () => {
-  const target = $('#chrono-target').value;
-  const inp = $(`#session-fields input[data-test="${target}"]`);
+  const inp = $(`#session-fields input[data-test="${chronoTargetId}"]`);
   if (inp) {
     inp.value = Math.round(chronoElapsed / 100) / 10;
     inp.dispatchEvent(new Event('input', { bubbles: true }));

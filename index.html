@@ -171,12 +171,11 @@
 
 <!-- Chronomètre flottant -->
 <div id="chrono" class="hidden">
+  <span id="chrono-target-name" class="small"></span>
   <span id="chrono-display">00:00.0</span>
-  <button id="chrono-start">▶</button>
-  <button id="chrono-stop">⏸</button>
-  <button id="chrono-reset">↺</button>
+  <button id="chrono-startstop" class="primary" title="Démarrer">▶</button>
+  <button id="chrono-reset" title="Remettre à zéro">↺</button>
   <button id="chrono-send" class="primary">↳ Reporter</button>
-  <select id="chrono-target"></select>
 </div>
 
 <script src="app.js"></script>
