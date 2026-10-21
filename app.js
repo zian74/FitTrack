@@ -662,10 +662,32 @@ function renderSessionFields() {
 }
 
 // ---------- Pop-up d'aide à la réalisation d'un test (icône ⓘ) ----------
+// Contenu statique pour les explications hors tests (id commençant par « __ »)
+const STATIC_INFOS = {
+  __trends__: {
+    name: 'Tendances par dimension',
+    info: `<ul>
+      <li>Le <b>score moyen</b> est la moyenne des points de statut de chaque mesure de la dimension : 🟢 bon = 100, 🟠 moyen = 60, 🔴 faible = 25.</li>
+      <li>Il va de <b>25</b> (tout est faible) à <b>100</b> (tout est bon).</li>
+      <li><b>Score moyen (30 j)</b> = mesures des 30 derniers jours ; <b>Avant</b> = mesures antérieures à cette période.</li>
+      <li><b>▲ en hausse</b> : +3 points ou plus · <b>▼ en baisse</b> : −3 points ou plus · <b>= stable</b> : entre −2 et +2 · <b>nouveau</b> : pas de mesure avant.</li>
+      <li>Ce score est propre à chaque dimension — il n'est pas l'IFG (qui pondère les 5 dimensions entre elles).</li>
+    </ul>`
+  },
+};
 document.addEventListener('click', e => {
   const btn = e.target.closest('.info-btn');
   if (!btn) return;
-  const t = byId(btn.dataset.infoTest);
+  const key = btn.dataset.infoTest;
+  if (key.startsWith('__')) {
+    const s = STATIC_INFOS[key];
+    if (!s) return;
+    $('#info-modal-title').textContent = s.name;
+    $('#info-modal-body').innerHTML = s.info;
+    $('#info-modal').classList.remove('hidden');
+    return;
+  }
+  const t = byId(key);
   if (!t || !t.info) return;
   $('#info-modal-title').textContent = t.name;
   $('#info-modal-body').innerHTML = t.info;
@@ -976,7 +998,7 @@ function renderIfgTrends(profile) {
     }
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   };
-  let html = '<table><tr><th>Dimension</th><th>30 derniers jours</th><th>Avant</th><th>Tendance</th></tr>';
+  let html = '<table><tr><th>Dimension</th><th>Score moyen (30 j)</th><th>Avant</th><th>Tendance</th></tr>';
   for (const d of IFG_DIMENSIONS) {
     const r = avgDim(recent, d), p = avgDim(previous, d);
     if (r == null && p == null) continue;
