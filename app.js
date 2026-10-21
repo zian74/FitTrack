@@ -1213,12 +1213,27 @@ function download(content, filename, mime) {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+// En-tête profil (métadonnées) : lignes préfixées « # » avant les sessions
+const PROFILE_CSV_KEYS = [
+  ['sex', 'Sexe', p => p.sex === 'F' ? 'Femme' : 'Homme'],
+  ['birthYear', 'Année de naissance', p => p.birthYear ?? ''],
+  ['height', 'Taille (cm)', p => p.height ?? ''],
+  ['smoke', 'Tabagisme', p => p.smoke ? 'oui' : 'non'],
+  ['cardiacHistory', 'Antécédents cardiaques', p => p.cardiacHistory ? 'oui' : 'non'],
+];
+function profileCsvLines(profile) {
+  if (!profile) return [];
+  return PROFILE_CSV_KEYS
+    .filter(([key]) => profile[key] != null && profile[key] !== '')
+    .map(([key, label, fmt]) => `# profil;${label};${fmt(profile)}`);
+}
+
 $('#export-csv').addEventListener('click', () => {
   const ids = TESTS.map(t => t.id);
   const head = ['date', 'type', ...ids.map(id => byId(id).name)].join(';');
   const lines = getSessions().map(s =>
     [s.date, GROUP_LABELS[s.type], ...ids.map(id => s.values?.[id] ?? '')].join(';'));
-  download([head, ...lines].join('\n'), 'fittrack_export.csv', 'text/csv');
+  download([...profileCsvLines(getProfile()), head, ...lines].join('\n'), 'fittrack_export.csv', 'text/csv');
 });
 $('#export-json').addEventListener('click', () => {
   download(JSON.stringify({
@@ -1227,6 +1242,124 @@ $('#export-json').addEventListener('click', () => {
     scoreHistory: store.get('scoreHistory', []),
     ifgHistory: store.get('ifgHistory', []),
   }, null, 2), 'fittrack_export.json', 'application/json');
+});
+
+// ---------- Import (JSON / CSV) ----------
+// Fusionne le fichier avec les données actuelles : profil écrasé si présent dans
+// le fichier, sessions fusionnées par (date, type) — la valeur du fichier l'emporte.
+function showImportMsg(text, ok = true) {
+  const el = $('#import-msg');
+  el.textContent = text;
+  el.className = ok ? 'ok' : 'err';
+  el.classList.remove('hidden');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+function applyImportedData(data) {
+  if (!data || typeof data !== 'object') throw new Error('Fichier invalide.');
+
+  let imported = 0;
+  if (data.profile && typeof data.profile === 'object') {
+    const cur = getProfile() || {};
+    store.set('profile', { ...cur, ...data.profile });
+    imported++;
+  }
+  if (Array.isArray(data.sessions)) {
+    const sessions = getSessions();
+    const index = new Map(sessions.map((s, i) => [s.date + '|' + s.type, i]));
+    for (const s of data.sessions) {
+      if (!s || !s.date || !s.type) continue;
+      const key = s.date + '|' + s.type;
+      if (index.has(key)) {
+        const i = index.get(key);
+        sessions[i] = { ...sessions[i], ...s, values: { ...sessions[i].values, ...s.values } };
+      } else {
+        if (!s.id) s.id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        sessions.push(s);
+        index.set(key, sessions.length - 1);
+      }
+    }
+    sessions.sort((a, b) => a.date < b.date ? -1 : 1);
+    store.set('sessions', sessions);
+    imported += data.sessions.length;
+  }
+  if (Array.isArray(data.scoreHistory)) {
+    store.set('scoreHistory', mergeHistory(store.get('scoreHistory', []), data.scoreHistory));
+    imported += data.scoreHistory.length;
+  }
+  if (Array.isArray(data.ifgHistory)) {
+    store.set('ifgHistory', mergeHistory(store.get('ifgHistory', []), data.ifgHistory));
+    imported += data.ifgHistory.length;
+  }
+  if (!imported) throw new Error('Aucune donnée reconnue (profil, sessions, historiques).');
+
+  // Rafraîchit l'affichage
+  renderProfileForm(); renderReferenceTable();
+  if ($('#view-dashboard').classList.contains('active')) renderDashboard();
+  if ($('#view-history').classList.contains('active')) renderHistory();
+  if ($('#view-analysis').classList.contains('active')) renderAnalysis();
+  return imported;
+}
+
+function mergeHistory(cur, inc) {
+  const byDate = new Map(cur.map(h => [h.date, h]));
+  for (const h of inc) { if (h && h.date) byDate.set(h.date, h); }
+  return Array.from(byDate.values()).sort((a, b) => a.date < b.date ? -1 : 1);
+}
+
+function parseImportCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const data = { sessions: [] };
+  let head = null;
+  for (const line of lines) {
+    if (line.startsWith('#')) {
+      // Métadonnée profil : « # profil;Champ;valeur »
+      const parts = line.slice(1).split(';');
+      if (parts[0].trim() !== 'profil' || parts.length < 3) continue;
+      if (!data.profile) data.profile = {};
+      const label = parts[1].trim(), value = parts.slice(2).join(';').trim();
+      const row = PROFILE_CSV_KEYS.find(([, l]) => l === label);
+      if (!row) continue;
+      const [key] = row;
+      if (key === 'sex') data.profile.sex = value === 'Femme' ? 'F' : 'H';
+      else if (key === 'smoke' || key === 'cardiacHistory') data.profile[key] = value === 'oui';
+      else data.profile[key] = value === '' ? null : Number(value);
+      continue;
+    }
+    const cols = line.split(';');
+    if (!head) { head = cols; continue; }
+    const typeLabel = cols[1];
+    const type = Object.keys(GROUP_LABELS).find(k => GROUP_LABELS[k] === typeLabel) || typeLabel;
+    const values = {};
+    head.slice(2).forEach((name, i) => {
+      const id = TESTS.find(t => t.name === name)?.id;
+      const raw = (cols[i + 2] ?? '').trim();
+      if (id && raw !== '') values[id] = Number(raw);
+    });
+    data.sessions.push({ date: cols[0], type, values });
+  }
+  return data;
+}
+
+$('#import-btn').addEventListener('click', () => $('#import-file').click());
+$('#import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = String(reader.result);
+      const data = file.name.toLowerCase().endsWith('.csv') ? parseImportCsv(text) : JSON.parse(text);
+      const n = applyImportedData(data);
+      showImportMsg(`✅ Import réussi : ${n} élément(s) fusionné(s).`);
+    } catch (err) {
+      showImportMsg(`❌ Import impossible : ${err.message || 'fichier illisible'}`, false);
+    }
+  };
+  reader.onerror = () => showImportMsg('❌ Lecture du fichier impossible.', false);
+  reader.readAsText(file);
 });
 
 // ---------- Profil ----------
