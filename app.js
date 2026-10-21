@@ -859,12 +859,12 @@ function renderSessionFields() {
       const last = latestValues()[t.id]?.value;
       const lastInfo = last != null
         ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
-      // Sélecteur de durée pour le Cooper (12 min ou demi-Cooper 6 min, normalisé ×2)
+      // Choix de durée pour le Cooper en boutons radio (12 min ou demi-Cooper 6 min, normalisé ×2)
       const cooperSelect = t.id === 'cooper'
-        ? `<select id="cooper-duration" title="Durée du test">
-             <option value="12" selected>12 min (complet)</option>
-             <option value="6">6 min (demi-Cooper ×2)</option>
-           </select>` : '';
+        ? `<span class="row ifg-period-group" id="cooper-duration" title="Durée du test" style="margin:0">
+             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="12" checked> 12 min (complet)</label>
+             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="6"> 6 min (demi-Cooper ×2)</label>
+           </span>` : '';
       // Timer compte à rebours 12 min (ou 6 min selon le sélecteur) pour le Cooper
       const cooperTimerBtn = t.id === 'cooper'
         ? `<button class="timer-btn" id="cooper-timer-btn" data-timer-ms="720000" data-timer-label="Cooper — 12 min" title="Compte à rebours 12 min">⏳</button>` : '';
@@ -1028,8 +1028,12 @@ $$('.session-type-btn').forEach(b => b.addEventListener('click', () => {
 }));
 
 // Demi-Cooper (6 min) : le champ accepte 100–2500 m (×2 = 200–5000 m équiv. 12 min)
+// Le choix de durée est un groupe de radios name="cooper-duration" (12 / 6).
+function cooperSelectedDuration() {
+  return (document.querySelector('input[name="cooper-duration"]:checked') || {}).value || '12';
+}
 document.addEventListener('change', e => {
-  if (e.target.id !== 'cooper-duration') return;
+  if (e.target.name !== 'cooper-duration') return;
   const inp = $('#session-fields input[data-test="cooper"]');
   if (!inp) return;
   if (e.target.value === '6') { inp.min = 100; inp.max = 2500; inp.placeholder = 'm en 6 min (×2)'; }
@@ -1090,12 +1094,11 @@ function initCooperEstim(distInput) {
   // Le row est déjà dans le DOM (appendChild ci-dessus) : querySelector global OK.
   const vmaInp = document.querySelector('#cooper-vma');
   const vo2Inp = document.querySelector('#cooper-vo2');
-  const durSel = document.querySelector('#cooper-duration');
   const timerBtn = document.querySelector('#cooper-timer-btn');
   const sync = () => {
     updateCooperEstim();
-    if (timerBtn && durSel) {
-      const six = durSel.value === '6';
+    if (timerBtn) {
+      const six = cooperSelectedDuration() === '6';
       timerBtn.dataset.timerMs = six ? '360000' : '720000';
       timerBtn.dataset.timerLabel = six ? 'Demi-Cooper — 6 min' : 'Cooper — 12 min';
       timerBtn.title = six ? 'Compte à rebours 6 min' : 'Compte à rebours 12 min';
@@ -1104,7 +1107,10 @@ function initCooperEstim(distInput) {
   distInput.addEventListener('input', updateCooperEstim);
   vmaInp?.addEventListener('input', updateCooperEstim);
   vo2Inp?.addEventListener('input', updateCooperEstim);
-  durSel?.addEventListener('change', sync);
+  // Délégation : les radios sont re-rendus à chaque affichage de la session
+  document.addEventListener('change', e => {
+    if (e.target.name === 'cooper-duration') sync();
+  });
   sync();
 }
 
@@ -1112,7 +1118,7 @@ $('#save-session').addEventListener('click', () => {
   const values = {};
   let any = false;
   // Demi-Cooper : la distance 6 min est stockée en équivalent 12 min (×2)
-  const cooperDuration = $('#cooper-duration')?.value === '6' ? 2 : 1;
+  const cooperDuration = cooperSelectedDuration() === '6' ? 2 : 1;
   $$('#session-fields input[data-test]').forEach(inp => {
     const v = inp.value.trim();
     if (v !== '' && !inp.classList.contains('invalid')) {
