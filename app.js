@@ -214,31 +214,58 @@ function showView(name) {
   $$('nav button').find?.(x => x.dataset.view === name)?.click?.();
 }
 
+// ---------- Score global ----------
+// Score /100 : moyenne des statuts des 5 tests prédictifs (ordre fixe : FC, taille, poigne, escalier, équilibre)
+const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open'];
+const SCORE_PTS = { good: 100, mid: 60, low: 25 };
+
+function computeGlobalScore(profile) {
+  const lv = latestValues();
+  const scored = PREDICTIVE.filter(id => lv[id]);
+  if (!scored.length) return null;
+  const avg = Math.round(scored.reduce((a, id) => a + SCORE_PTS[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length);
+  const rows = scored.map(id => {
+    const t = byId(id);
+    const st = statusOf(t, lv[id].value, profile);
+    return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
+  });
+  return { score: avg, rows };
+}
+
+// Persiste le score global du jour (1 valeur par date, la dernière écrase)
+function recordGlobalScore() {
+  const result = computeGlobalScore(getProfile());
+  if (!result) return;
+  const history = store.get('scoreHistory', []);
+  const today = todayStr();
+  const existing = history.find(h => h.date === today);
+  if (existing) existing.value = result.score;
+  else history.push({ date: today, value: result.score });
+  history.sort((a, b) => a.date < b.date ? -1 : 1);
+  store.set('scoreHistory', history);
+}
+
+function scoreSeries() {
+  return store.get('scoreHistory', [])
+    .filter(h => h.value != null)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+}
+
 // ---------- Dashboard ----------
 function renderDashboard() {
   const profile = getProfile();
   $('#no-profile-warning').classList.toggle('hidden', !!profile);
 
-  // Score global : moyenne des statuts des 5 tests prédictifs
-  const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open']; // ordre fixe: FC, taille, poigne, escalier, équilibre
+  recordGlobalScore();
+
   const lv = latestValues();
   const scoreEl = $('#score-global-content');
-  const scored = PREDICTIVE.filter(id => lv[id]);
-  if (!scored.length) {
+  const result = computeGlobalScore(profile);
+  if (!result) {
     scoreEl.innerHTML = '<p>Aucune mesure enregistrée. Commencez par une <b>session de test</b>.</p>';
   } else {
-    const pts = { good: 100, mid: 60, low: 25 };
-    const rows = scored.map(id => {
-      const t = byId(id);
-      const st = statusOf(t, lv[id].value, profile);
-      return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
-    });
-    const avg = Math.round(scored.reduce((a, id) => {
-      const t = byId(id);
-      return a + pts[statusOf(t, lv[id].value, profile)];
-    }, 0) / scored.length);
-    scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${avg}<span style="font-size:.6em"> /100</span></p>
-      <ul class="list">${rows.join('')}</ul>
+    scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${result.score}<span style="font-size:.6em"> /100</span></p>
+      <ul class="list">${result.rows.join('')}</ul>
       <p class="small">Basé sur les 5 mesures les plus prédictives (littérature) : poigne, tour de taille, FC repos, cardio sous-max, équilibre.</p>`;
   }
 
@@ -566,7 +593,7 @@ function renderSessionFields() {
   updateSaveState();
   // Avertissement Cooper si facteurs de risque
   const profile = getProfile();
-  if (type === 'cardio' && profile && (profile.smoke || profile.cardiacHistory || profile.sedentaryRisk)) {
+  if (type === 'cardio' && profile && (profile.smoke || profile.cardiacHistory)) {
     const w = document.createElement('div');
     w.className = 'warning';
     w.innerHTML = '⚠️ <b>Test de Cooper déconseillé</b> : facteurs de risque cardio déclarés dans votre profil. Avis médical recommandé avant un test maximal.';
@@ -659,6 +686,7 @@ $('#save-session').addEventListener('click', () => {
   $$('#session-fields input').forEach(i => { i.value = ''; i.classList.remove('invalid'); });
   updateSaveState();
   renderLastSession();
+  renderDashboard(); // met à jour l'historique du score global
 });
 
 // ---------- Chronomètre ----------
@@ -718,11 +746,15 @@ document.addEventListener('click', e => {
 
 // ---------- Historique & graphiques ----------
 function renderHistory() {
-  // sélecteur de métrique
+  // sélecteur de métrique : score global en haut de liste s'il a un historique
   const sel = $('#chart-metric');
+  const scores = scoreSeries();
   const withData = TESTS.filter(t => seriesOf(t.id).length > 0);
-  if (withData.length) {
-    sel.innerHTML = withData.map(t => `<option value="${t.id}">${testNum(t.id)}${t.name}</option>`).join('');
+  const options = [];
+  if (scores.length) options.push('<option value="__score__">★ Score global (/100)</option>');
+  options.push(...withData.map(t => `<option value="${t.id}">${testNum(t.id)}${t.name}</option>`));
+  if (options.length) {
+    sel.innerHTML = options.join('');
     drawChart(sel.value);
   } else {
     sel.innerHTML = '<option value="">— aucune donnée —</option>';
@@ -735,6 +767,8 @@ function renderHistory() {
 $('#chart-metric').addEventListener('change', () => drawChart($('#chart-metric').value));
 
 function drawChart(testId) {
+  // Le score global n'est pas un test : rendu dédié (échelle 0–100, pas de statut)
+  if (testId === '__score__') return drawScoreChart();
   const t = byId(testId);
   const data = seriesOf(testId);
   if (!t || data.length === 0) return;
@@ -790,6 +824,51 @@ function drawChart(testId) {
   $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} ${t.unit}</b> ${st ? STATUS_LABEL[st] : ''} · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${t.unit} (${pct} %)</b>`;
 }
 
+// Graphique dédié au score global : échelle fixe 0–100, repères 60/80, pas de statut individuel
+function drawScoreChart() {
+  const data = scoreSeries();
+  if (data.length === 0) return;
+
+  const W = 700, H = 260, PAD = 40;
+  const xs = data.map(d => new Date(d.date).getTime());
+  const minT = Math.min(...xs), maxT = Math.max(...xs);
+  const rangeT = Math.max(maxT - minT, 86400000);
+  const lo = 0, hi = 100; // échelle fixe
+  const X = tm => PAD + (tm - minT) / rangeT * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - lo) / (hi - lo) * (H - 2 * PAD);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // zones de repère : ≥ 80 bon, 60–79 moyen, < 60 faible
+  svg += `<rect x="${PAD}" y="${Y(100)}" width="${W - 2 * PAD}" height="${Y(80) - Y(100)}" fill="#e5f3e5" opacity="0.7"/>`;
+  svg += `<rect x="${PAD}" y="${Y(80)}" width="${W - 2 * PAD}" height="${Y(60) - Y(80)}" fill="#fff1e0" opacity="0.7"/>`;
+  // lignes repères
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(80)}" y2="${Y(80)}" stroke="#2e7d32" stroke-dasharray="4 4"/><text x="${W - PAD}" y="${Y(80) - 4}" text-anchor="end" font-size="11" fill="#2e7d32">80 — bon</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${Y(60)}" y2="${Y(60)}" stroke="#e65100" stroke-dasharray="2 4"/><text x="${W - PAD}" y="${Y(60) - 4}" text-anchor="end" font-size="11" fill="#e65100">60 — seuil</text>`;
+  // axes
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="#999"/>`;
+  // points + segments
+  const pts = data.map(d => `${X(new Date(d.date).getTime())},${Y(d.value)}`).join(' ');
+  if (data.length > 1) svg += `<polyline points="${pts}" fill="none" stroke="#1F4E79" stroke-width="2"/>`;
+  data.forEach(d => {
+    svg += `<circle cx="${X(new Date(d.date).getTime())}" cy="${Y(d.value)}" r="4" fill="#1F4E79"/>`;
+  });
+  // labels date
+  data.forEach((d, i) => {
+    if (data.length <= 8 || i === 0 || i === data.length - 1)
+      svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="#555">${d.date.slice(5)}</text>`;
+  });
+  svg += '</svg>';
+  $('#chart').innerHTML = svg;
+
+  // stats
+  const first = data[0].value, lastV = data[data.length - 1].value;
+  const delta = lastV - first;
+  const pct = (delta / Math.max(first, 1) * 100).toFixed(1);
+  const st = lastV >= 80 ? 'good' : lastV >= 60 ? 'mid' : 'low';
+  $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} /100</b> <span class="badge ${st}">${STATUS_LABEL[st]}</span> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} pts (${pct} %)</b>`;
+}
+
 function renderHistoryTable() {
   const sessions = getSessions().slice().reverse();
   const el = $('#history-table');
@@ -827,7 +906,7 @@ $('#export-csv').addEventListener('click', () => {
   download([head, ...lines].join('\n'), 'fittrack_export.csv', 'text/csv');
 });
 $('#export-json').addEventListener('click', () => {
-  download(JSON.stringify({ profile: getProfile(), sessions: getSessions() }, null, 2),
+  download(JSON.stringify({ profile: getProfile(), sessions: getSessions(), scoreHistory: store.get('scoreHistory', []) }, null, 2),
     'fittrack_export.json', 'application/json');
 });
 
@@ -839,7 +918,6 @@ function renderProfileForm() {
   $('#p-birth').value = p.birthYear || '';
   $('#p-height').value = p.height || '';
   $('#p-smoke').checked = !!p.smoke;
-  $('#p-sedentaryrisk').checked = !!p.sedentaryRisk;
   $('#p-history').checked = !!p.cardiacHistory;
 }
 
@@ -849,7 +927,6 @@ $('#save-profile').addEventListener('click', () => {
     birthYear: parseInt($('#p-birth').value) || null,
     height: parseFloat($('#p-height').value) || null,
     smoke: $('#p-smoke').checked,
-    sedentaryRisk: $('#p-sedentaryrisk').checked,
     cardiacHistory: $('#p-history').checked,
   };
   store.set('profile', p);
@@ -875,6 +952,7 @@ $('#wipe-data').addEventListener('click', () => {
   if (confirm('Effacer TOUTES les données (profil + mesures) ? Action irréversible.')) {
     Object.keys(localStorage).filter(k => k.startsWith('ft_')).forEach(k => localStorage.removeItem(k));
     renderProfileForm(); renderReferenceTable();
+    if ($('#view-history').classList.contains('active')) renderHistory();
     alert('Données effacées.');
   }
 });
@@ -894,12 +972,8 @@ $('#export-pdf').addEventListener('click', () => {
     rows += `<tr><td>${t.name}</td><td>${v.value} ${t.unit}</td><td>${v.date}</td><td>${st ? STATUS_LABEL[st] : '—'}</td></tr>`;
   }
 
-  const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open']; // ordre fixe: FC, taille, poigne, escalier, équilibre
-  const pts = { good: 100, mid: 60, low: 25 };
-  const scored = PREDICTIVE.filter(id => lv[id]);
-  const score = scored.length
-    ? Math.round(scored.reduce((a, id) => a + pts[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length)
-    : null;
+  const result = computeGlobalScore(profile);
+  const score = result ? result.score : null;
 
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
   <title>FitTrack — Fiche de score</title>

@@ -47,13 +47,15 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
     ou si la taille n'est pas renseignée dans le profil (pas d'interprétation possible).
 
 - Profil : sexe, année de naissance, taille, facteurs de risque cardio
-  (le niveau d'activité est évalué par le questionnaire IPAQ, pas déclaré dans le profil)
+  (tabagisme, antécédents cardiaques — le niveau d'activité est évalué par le
+  questionnaire IPAQ, pas de champ déclaratif dans le profil)
 - Saisie des mesures par session datée (4 types : repos, force, cardio, activité)
 - Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
   faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
 - Statut automatique par mesure selon repères sexe/âge
 - Score global /100 : moyenne des 5 tests prédictifs
+- Historique du score global (1 valeur/jour) consultable dans les graphiques par indicateur
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
 - Chronomètre intégré pour les tests chronométrés
