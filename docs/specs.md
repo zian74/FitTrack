@@ -67,6 +67,10 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Calendrier de re-test : badges « à jour / à refaire »
 - Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)
 - Onglet **Profil** : lien ⓘ « Sources scientifiques » en bas de page listant les références utilisées (IPAQ court — Craig 2003 ; OMS 2020 ; Cooper 1968 ; seuils OMS/IDF tour de taille ; ESC/ESH pression artérielle ; Rikli & Jones Senior Fitness Test 1999 ; Kodama 2009 / Lee méta-analyses mortalité ; seuils sédentarité IPAQ/OMS), avec mention « repères indicatifs, pas d'avis médical »
+- Onglet **Profil** : facteurs de risque cardiovasculaire — tabagisme, antécédents cardiaques personnels, antécédents familiaux précoces (1ᵉʳ degré < 55/65 ans), hypertension connue, diabète connu, dyslipidémie/statine, alcool (verres/semaine), stress chronique/dépression ; ⓘ explicatif (cadre ESC 2021 / SCORE2)
+- **IMC** affiché dans le Profil (taille du profil + dernière mesure de poids des sessions) avec badge OMS (maigreur/surpoids/obésité) ; IMC ≥ 30 = facteur de risque majeur
+- **Récapitulatif des facteurs de risque** dans le Profil : liste, badges « majeur », niveau global (faible/modéré/élevé selon le nombre de facteurs majeurs)
+- **Avertissement avant test maximal (Cooper)** déclenché par tout facteur majeur (déclaré ou IMC ≥ 30), avec conseil de privilégier le test de l'escalier (sous-maximal) ; les facteurs non majeurs (antécédents familiaux, alcool < 14, surpoids, IMC 25–29,9) n'affichent pas l'avertissement
 - Chronomètre intégré pour les tests chronométrés
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données

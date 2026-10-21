@@ -178,11 +178,30 @@
         <label>Année de naissance : <input type="number" id="p-birth" placeholder="1985"></label>
         <label>Taille (cm) : <input type="number" id="p-height" placeholder="175"></label>
       </div>
-      <h3>Facteurs de risque cardio</h3>
+      <p class="small">IMC : <span id="profile-imc">—</span> <span id="profile-imc-badge" class="badge hidden"></span>
+        <span class="small">(calculé avec la dernière mesure de poids)</span></p>
+      <h3>Facteurs de risque cardio
+        <button class="info-btn" data-info-test="__risk__" title="En savoir plus sur les facteurs de risque" aria-label="Informations sur les facteurs de risque cardiovasculaire">ⓘ</button>
+      </h3>
       <div class="row">
         <label><input type="checkbox" id="p-smoke"> Tabagisme</label>
-        <label><input type="checkbox" id="p-history"> Antécédents cardiaques</label>
+        <label><input type="checkbox" id="p-history"> Antécédents cardiaques personnels</label>
+        <label><input type="checkbox" id="p-family"> Antécédents familiaux précoces (1ᵉʳ degré &lt; 55/65 ans)</label>
       </div>
+      <div class="row">
+        <label><input type="checkbox" id="p-hypertension"> Hypertension artérielle connue / sous traitement</label>
+        <label><input type="checkbox" id="p-diabetes"> Diabète connu (type 1, type 2 ou prédiabète)</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="p-dyslipidemia"> Dyslipidémie connue / statine</label>
+        <label>Alcool : <input type="number" id="p-alcohol" min="0" max="60" placeholder="0"> verres/semaine</label>
+      </div>
+      <div class="row">
+        <label>Stress chronique / dépression :
+          <select id="p-stress"><option value="">—</option><option value="no">Non</option><option value="yes">Oui</option></select>
+        </label>
+      </div>
+      <div id="risk-summary" class="small" style="margin-top:8px"></div>
       <button id="save-profile" class="primary">Enregistrer le profil</button>
       <span id="profile-saved-msg" class="ok hidden">✅ Profil enregistré</span>
     </div>
