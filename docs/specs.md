@@ -60,7 +60,9 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   5 dimensions — cardio au repos & métabolisme (30 %), endurance (20 %),
   force (20 %), équilibre & mobilité (15 %), habitudes d'activité (15 %) ;
   historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
-  courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG
+  courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG ;
+  **période de calcul au choix** (dernière session / 1 sem / 1 mois / 1 an / toutes
+  les valeurs) s'applique à l'IFG, aux dimensions et aux points forts/priorités
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
 - Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)

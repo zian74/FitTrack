@@ -211,6 +211,73 @@ function latestValues() {
   return out;
 }
 
+// ---------- Période de calcul de l'IFG (onglet Analyse) ----------
+// last = dernière valeur de chaque test · week/month/year = moyenne des valeurs
+// sur la période glissante (fenêtre calendaire) · all = moyenne de toutes les valeurs.
+const IFG_PERIODS = {
+  last:  { label: 'Dernière session', days: null, mode: 'last' },
+  week:  { label: '1 semaine',        days: 7,    mode: 'avg' },
+  month: { label: '1 mois',           days: 30,   mode: 'avg' },
+  year:  { label: '1 an',             days: 365,  mode: 'avg' },
+  all:   { label: 'Toutes les valeurs', days: null, mode: 'avg' },
+};
+
+// Valeurs agrégées par test pour une période donnée (pour computeIFGPeriod)
+function valuesForPeriod(periodKey) {
+  const p = IFG_PERIODS[periodKey] || IFG_PERIODS.last;
+  if (p.mode === 'last') return latestValues();
+  const sessions = getSessions();
+  const out = {};
+  // borne de début de la fenêtre (mode avg)
+  let cutoff = null;
+  if (p.days != null) {
+    const c = new Date(); c.setDate(c.getDate() - p.days);
+    cutoff = c.toISOString().slice(0, 10);
+  }
+  // collecte de toutes les valeurs par test dans la fenêtre
+  const byTest = {};
+  for (const s of sessions) {
+    if (cutoff && s.date < cutoff) continue;
+    for (const [k, v] of Object.entries(s.values || {})) {
+      if (v == null || v === '') continue;
+      (byTest[k] = byTest[k] || []).push({ value: v, date: s.date });
+    }
+  }
+  for (const [k, arr] of Object.entries(byTest)) {
+    const vals = arr.map(x => x.value);
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const lastDate = arr.map(x => x.date).sort().pop();
+    out[k] = { value: Math.round(avg * 100) / 100, date: lastDate, count: arr.length };
+  }
+  return out;
+}
+
+// IFG calculé sur une période donnée (même pondération que computeIFG)
+function computeIFGPeriod(profile, periodKey) {
+  const lv = valuesForPeriod(periodKey);
+  const dims = [];
+  let total = 0, totalWeight = 0;
+  for (const d of IFG_DIMENSIONS) {
+    const scored = d.tests.filter(id => lv[id]);
+    if (!scored.length) continue;
+    const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
+    const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+    dims.push({ ...d, score: avg, count: scored.length });
+    total += avg * d.weight;
+    totalWeight += d.weight;
+  }
+  if (!dims.length) return null;
+  return { score: Math.round(total / totalWeight), dims };
+}
+
+// Libellé de la période affichée à côté du sélecteur
+function ifgPeriodDesc(periodKey) {
+  const p = IFG_PERIODS[periodKey] || IFG_PERIODS.last;
+  if (p.mode === 'last') return 'Dernière valeur de chaque test';
+  if (p.days == null) return 'Moyenne de toutes les valeurs enregistrées';
+  return `Moyenne des ${p.days === 7 ? '7 derniers jours' : p.days === 30 ? '30 derniers jours' : '12 derniers mois'}`;
+}
+
 // valeurs par test, ordonnées par date
 function seriesOf(testId) {
   return getSessions()
@@ -907,7 +974,9 @@ function ifgBarHtml(score) {
 function renderAnalysis() {
   recordIFG();
   const profile = getProfile();
-  const result = computeIFG(profile);
+  const periodKey = $('#ifg-period')?.value || 'last';
+  $('#ifg-period-label').textContent = ifgPeriodDesc(periodKey);
+  const result = computeIFGPeriod(profile, periodKey);
   if (!result) {
     $('#ifg-content').innerHTML = '<p>Enregistrez des sessions de test pour calculer votre indice.</p>';
     $('#ifg-radar').innerHTML = '';
@@ -921,7 +990,7 @@ function renderAnalysis() {
     return;
   }
 
-  // 1. IFG + barre + delta vs mois dernier
+  // 1. IFG + barre + delta vs mesure précédente (historique IFG, indépendant de la période choisie)
   const series = ifgSeries();
   const prev = series.length >= 2 ? series[series.length - 2].value : null;
   const delta = prev != null ? result.score - prev : null;
@@ -930,9 +999,11 @@ function renderAnalysis() {
     : delta > 0 ? `<span class="badge good">▲ +${delta} pts depuis la dernière mesure</span>`
     : delta < 0 ? `<span class="badge low">▼ ${delta} pts depuis la dernière mesure</span>`
     : `<span class="badge mid">= stable depuis la dernière mesure</span>`;
+  const periodBadge = periodKey === 'last' ? ''
+    : ` <span class="badge mid">${IFG_PERIODS[periodKey].label}</span>`;
   $('#ifg-content').innerHTML = `
     <p style="font-size:2em;font-weight:700;color:${palier.color}">${result.score}<span style="font-size:.6em"> /100</span>
-      <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span></p>
+      <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span>${periodBadge}</p>
     ${ifgBarHtml(result.score)}
     ${deltaHtml}
     <p class="small">Moyenne pondérée de 5 dimensions : cardio au repos &amp; métabolisme (30 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (15 %).</p>`;
@@ -968,6 +1039,9 @@ function renderAnalysis() {
   // 6. Nuage de points IPAQ ↔ IFG
   renderIfgScatter();
 }
+
+// Changement de période de calcul de l'IFG → re-rendu complet de l'onglet Analyse
+$('#ifg-period').addEventListener('change', () => renderAnalysis());
 
 function renderIfgRadar(dims) {
   const W = 320, H = 280, CX = W / 2, CY = H / 2 + 6, R = 100;
