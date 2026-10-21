@@ -661,12 +661,13 @@ function chronoToggle() {
     chronoSetToggleBtn(true);
   }
 }
-$('#chrono-startstop').addEventListener('click', chronoToggle);
-$('#chrono-reset').addEventListener('click', () => {
+function chronoReset() {
   clearInterval(chronoTimer); chronoTimer = null; chronoElapsed = 0;
   $('#chrono-display').textContent = '00:00.0';
   chronoSetToggleBtn(false);
-});
+}
+$('#chrono-startstop').addEventListener('click', chronoToggle);
+$('#chrono-reset').addEventListener('click', chronoReset);
 $('#chrono-send').addEventListener('click', () => {
   const inp = $(`#session-fields input[data-test="${chronoTargetId}"]`);
   if (inp) {
@@ -674,6 +675,7 @@ $('#chrono-send').addEventListener('click', () => {
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }
   $('#chrono').classList.add('hidden');
+  chronoReset(); // le temps reporté est consommé : le chrono repart à zéro
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('.chrono-btn');
