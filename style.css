@@ -144,6 +144,9 @@ tr:nth-child(even) td { background: var(--accent-light); }
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- Légende du radar (onglet Analyse) ---------- */
+.ifg-legend-item { padding: 2px 0; }
+
 /* ---------- Barre de niveau du score global ---------- */
 .score-bar { margin: 6px 0 10px; }
 .score-bar-track {
