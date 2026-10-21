@@ -134,6 +134,18 @@ tr:nth-child(even) td { background: var(--accent-light); }
 
 /* ---------- Saisie session (statut en direct) ---------- */
 .field-last { font-size: .82em; color: #666; margin-top: 2px; }
+
+/* ---------- Icône info ⓘ et pop-up d'aide ---------- */
+.info-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 1em; padding: 0 4px; line-height: 1;
+  color: var(--accent); opacity: .6; vertical-align: middle;
+  transition: opacity .15s;
+}
+.info-btn:hover { opacity: 1; }
+.info-body { text-align: left; line-height: 1.55; }
+.info-body ul { margin: 0; padding-left: 20px; }
+.info-body li { margin: 6px 0; }
 input.invalid { border-color: var(--bad); background: #fff5f5; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 #session-progress { margin-left: 10px; color: var(--accent); font-weight: 600; }
