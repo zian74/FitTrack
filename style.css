@@ -137,6 +137,13 @@ tr:nth-child(even) td { background: var(--accent-light); }
 /* ---------- Saisie session (statut en direct) ---------- */
 .field-last { font-size: .82em; color: #666; margin-top: 2px; }
 
+/* ---------- Numérotation des tests ---------- */
+.test-num {
+  display: inline-block; min-width: 2.2em;
+  color: var(--accent); font-weight: 700; opacity: .75;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Icône info ⓘ et pop-up d'aide ---------- */
 .info-btn {
   background: none; border: none; cursor: pointer;

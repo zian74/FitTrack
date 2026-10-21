@@ -114,6 +114,11 @@ function ipaqLevel(met) {
 }
 
 const byId = id => TESTS.find(t => t.id === id);
+// Numéro du test dans l'ordre de réalisation (1-based), ex. « 1. FC de repos (bpm) »
+const testNum = id => {
+  const i = TESTS.findIndex(t => t.id === id);
+  return i >= 0 ? `${i + 1}. ` : '';
+};
 const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité' };
 // Groups présents par type de session
 const SESSION_GROUPS = {
@@ -311,7 +316,7 @@ function renderLastSession() {
         : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
       deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
     }
-    html += `<tr><td class="test-name">${t.name}</td>`;
+    html += `<tr><td class="test-name"><span class="test-num">${testNum(id)}</span>${t.name}</td>`;
     // IPAQ : la valeur est complétée du badge de niveau (élevé/modéré/faible)
     const valueCell = (v, s) => {
       if (v == null || v === '') return '<td class="num muted">—</td>';
@@ -531,7 +536,7 @@ function renderSessionFields() {
       const lastInfo = last != null
         ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
       row.innerHTML = `
-        <label>${t.name}
+        <label><span class="test-num">${testNum(t.id)}</span>${t.name}
           ${infoBtn}
           <div class="field-hint">${t.hint || ''}</div>
           ${lastInfo}
@@ -688,7 +693,7 @@ function renderHistory() {
   const sel = $('#chart-metric');
   const withData = TESTS.filter(t => seriesOf(t.id).length > 0);
   if (withData.length) {
-    sel.innerHTML = withData.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    sel.innerHTML = withData.map(t => `<option value="${t.id}">${testNum(t.id)}${t.name}</option>`).join('');
     drawChart(sel.value);
   } else {
     sel.innerHTML = '<option value="">— aucune donnée —</option>';
@@ -831,7 +836,7 @@ function renderReferenceTable() {
   for (const t of TESTS) {
     if (t.good == null) continue;
     const { good, mid, rev } = thresholds(t, profile);
-    html += `<tr><td>${t.name}</td><td>${rev ? '≤ ' : '≥ '}${good}</td><td>${rev ? '≤ ' : '≥ '}${mid}</td><td>${rev ? '> ' : '< '}${mid} ${t.unit}</td></tr>`;
+    html += `<tr><td><span class="test-num">${testNum(t.id)}</span>${t.name}</td><td>${rev ? '≤ ' : '≥ '}${good}</td><td>${rev ? '≤ ' : '≥ '}${mid}</td><td>${rev ? '> ' : '< '}${mid} ${t.unit}</td></tr>`;
   }
   html += '</table>';
   $('#reference-table').innerHTML = html;
