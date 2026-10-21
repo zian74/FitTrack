@@ -65,7 +65,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Calendrier de re-test : badges « à jour / à refaire »
 - Chronomètre intégré pour les tests chronométrés
 - Historique, graphique par indicateur avec zones objectif/seuil
-- Export CSV / JSON ; effacement complet des données
+- Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
 - Avertissement médical avant test maximal si facteurs de risque
 
 ## 4. Exigences non fonctionnelles

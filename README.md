@@ -44,6 +44,7 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] Onboarding guidé
 - [x] PWA installable (manifest + service worker)
 - [x] Export PDF de la fiche de score
+- [x] Export CSV/JSON avec le profil · import JSON/CSV (restauration, fusion)
 - [x] CI GitHub Actions (syntaxe + validation JSON)
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
 - [ ] Intégration GPS pour le Cooper

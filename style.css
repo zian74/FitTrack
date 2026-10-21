@@ -59,6 +59,7 @@ button.primary { background: var(--accent); color: #fff; }
 button.big { font-size: 1.1em; padding: 12px 20px; }
 button.danger { background: #fdecea; color: var(--bad); }
 .ok { color: var(--ok); font-weight: 600; margin-left: 10px; }
+.err { color: var(--bad); font-weight: 600; margin-left: 10px; }
 .hidden { display: none !important; }
 .warning {
   background: #fff3cd; border: 1px solid #ffe08a;

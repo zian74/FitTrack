@@ -149,7 +149,11 @@
         <button id="export-csv">⬇️ Export CSV</button>
         <button id="export-json">⬇️ Export JSON</button>
         <button id="export-pdf">🖨️ Fiche de score PDF</button>
+        <button id="import-btn">⬆️ Importer un fichier</button>
+        <input type="file" id="import-file" accept=".json,.csv" class="hidden">
+        <span id="import-msg" class="ok hidden"></span>
       </div>
+      <p class="small">L'import fusionne le profil et les mesures du fichier (JSON ou CSV) avec vos données actuelles — utile pour restaurer après un plantage ou changer d'appareil.</p>
       <div id="history-table" class="table-wrap"></div>
     </div>
   </section>
