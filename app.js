@@ -133,7 +133,7 @@ const TESTS = [
     info: `<ul>
       <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
       <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b> (comptez-vous ou suivez un métronome à 96 bpm = 24 cycles montée+descente/min).</li>
-      <li>Durée totale : <b>3 minutes</b> de montée/descente continue.</li>
+      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider.</li>
       <li>Dès la fin, <b>asseyez-vous immédiatement</b> et prenez votre pouls pendant 60 s, <b>1 minute après l'arrêt</b> (comptez 15 s × 4 et multipliez par 4, ou 60 s complet).</li>
       <li>Notez ce pouls à 1 min : c'est votre résultat. Plus il est bas, meilleure est votre récupération cardiaque.</li>
       <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif — consultez un médecin avant de recommencer.</li>
@@ -145,6 +145,8 @@ const TESTS = [
     info: `<ul>
       <li><b>Cooper complet (12 min)</b> : couvrez la plus grande distance possible en 12 minutes, à allure soutenue et régulière.</li>
       <li><b>Demi-Cooper (6 min)</b> : même principe sur 6 minutes. La distance saisie est <b>automatiquement doublée</b> pour rester comparable aux repères 12 min.</li>
+      <li>Le bouton <b>⏳</b> ouvre un <b>compte à rebours</b> (12 min, ou 6 min en demi-Cooper).</li>
+      <li><b>VMA &amp; VO2max</b> : renseignez au choix la distance, la VMA (km/h) ou la VO2max (ml/kg/min) — les deux autres valeurs sont <b>calculées et affichées</b> en dessous (VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73).</li>
       <li>Échauffez-vous 5–10 min avant, sur terrain plat et mesuré, chaussures adaptées.</li>
       <li>Test maximal : arrêtez en cas de douleur thoracique, essoufflement excessif ou vertiges.</li>
     </ul>` },
@@ -840,14 +842,18 @@ function renderSessionFields() {
       updateSaveState();
       return;
     }
+    container.appendChild(block); // dans le DOM avant les rows (initCooperEstim fait des querySelector globaux)
     for (const t of TESTS.filter(x => x.group === g)) {
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
-      // Timer compte à rebours 30 s dédié au test de la chaise (on compte les répétitions)
+      // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
-        ? `<button class="chair-timer-btn" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
+        ? `<button class="timer-btn" data-timer-ms="30000" data-timer-label="Chaise 30 s — répétitions" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
+      // Timer compte à rebours 3 min par défaut (durée réglable) pour le test escalier
+      const stairTimerBtn = t.id === 'stair_pulse'
+        ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable)">⏳</button>` : '';
       const infoBtn = t.info
         ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
       const last = latestValues()[t.id]?.value;
@@ -859,6 +865,18 @@ function renderSessionFields() {
              <option value="12" selected>12 min (complet)</option>
              <option value="6">6 min (demi-Cooper ×2)</option>
            </select>` : '';
+      // Timer compte à rebours 12 min (ou 6 min selon le sélecteur) pour le Cooper
+      const cooperTimerBtn = t.id === 'cooper'
+        ? `<button class="timer-btn" id="cooper-timer-btn" data-timer-ms="720000" data-timer-label="Cooper — 12 min" title="Compte à rebours 12 min">⏳</button>` : '';
+      // Bloc d'estimation VMA / VO2max pour le Cooper (champs optionnels + calculs croisés)
+      const cooperEstim = t.id === 'cooper'
+        ? `<div class="cooper-estim">
+             <div class="row" style="margin:6px 0">
+               <label>VMA (km/h) : <input type="number" id="cooper-vma" step="0.1" min="4" max="30" placeholder="ex. 12,5" style="width:90px"></label>
+               <label>VO2max (ml/kg/min) : <input type="number" id="cooper-vo2" step="0.1" min="10" max="90" placeholder="ex. 44" style="width:90px"></label>
+             </div>
+             <div id="cooper-estim-result" class="estimation-box hidden"></div>
+           </div>` : '';
       row.innerHTML = `
         <label><span class="test-num">${testNum(t.id)}</span>${t.name}
           ${infoBtn}
@@ -869,12 +887,15 @@ function renderSessionFields() {
                data-test="${t.id}" placeholder="${t.unit}">
         ${cooperSelect}
         ${chronoBtn}
-        ${chairTimerBtn}`;
-      block.appendChild(row);
+        ${chairTimerBtn}
+        ${stairTimerBtn}
+        ${cooperTimerBtn}
+        ${cooperEstim}`;
+      block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
       inp.addEventListener('input', () => updateFieldValidity(t, inp));
+      if (t.id === 'cooper') initCooperEstim(inp);
     }
-    container.appendChild(block);
   }
   updateSaveState();
   // Avertissement Cooper si facteurs de risque majeurs
@@ -925,6 +946,7 @@ const STATIC_INFOS = {
       <li><b>IPAQ court (activité physique)</b> : Craig CL et al., « International physical activity questionnaire: 12-country reliability and validity », <i>Med Sci Sports Exerc</i>, 2003 — cotation MET-min/sem (8×intense, 4×modéré, 3,3×marche) et seuils 600 / 3000.</li>
       <li><b>Recommandations activité physique</b> : OMS, « Lignes directrices de l'OMS sur l'activité physique et la sédentarité », 2020 — ≥ 150 min d'activité modérée/semaine (≈ 600 MET-min/sem).</li>
       <li><b>Test de Cooper (endurance)</b> : Cooper KH, « A means of assessing maximal power output », <i>JAMA</i>, 1968 — distance maximale en 12 min, repères cardio-respiratoires adultes (H/F). Le demi-Cooper (6 min ×2) suit la même logique de normalisation.</li>
+      <li><b>VMA &amp; VO2max estimées</b> : VMA = distance Cooper (m) ÷ 200 (Cooper 1968, relation distance/vitesse) ; VO2max = 3,5 × VMA (Léger &amp; Mercier, 1983) ; VO2max = (distance − 504,9) ÷ 44,73 (ACSM, <i>Guidelines for Exercise Testing and Prescription</i>) ; inverse : VMA = VO2max ÷ 3,5.</li>
       <li><b>Tour de taille (risque métabolique)</b> : seuils OMS/IDF — ≥ 94 cm (H) / ≥ 80 cm (F) : risque accru ; ≥ 102 / ≥ 88 cm : risque substantiellement accru.</li>
       <li><b>Pression artérielle</b> : seuils de référence usuels (ESC/ESH) — normale &lt; 120/80 mmHg, élevée 130–139/85–89 mmHg.</li>
       <li><b>Facteurs de risque cardiovasculaire</b> (tabagisme, antécédents personnels/familiaux, hypertension, diabète, dyslipidémie, alcool, stress, IMC) : cadre des recommandations <b>ESC 2021</b> sur la prévention cardiovasculaire et du score <b>SCORE2</b> (âge, sexe, tabagisme, pression artérielle systolique, cholestérol, antécédents familiaux).</li>
@@ -1015,6 +1037,77 @@ document.addEventListener('change', e => {
   updateFieldValidity(byId('cooper'), inp);
 });
 
+// ---------- Estimations VMA / VO2max (test Cooper, onglet Session) ----------
+// Formules usuelles :
+//   VMA (km/h) depuis la distance Cooper 12 min :  VMA = distance(m) / 200
+//   VO2max estimée depuis la VMA (Léger & Mercier) :  VO2max = 3,5 × VMA
+//   VO2max estimée directement depuis la distance Cooper (ACSM) :
+//     VO2max = (distance(m) − 504,9) / 44,73   (équivalent à 3,5 × VMA − 3,5)
+//   VMA depuis la VO2max :  VMA = VO2max / 3,5
+// Le champ distance du Cooper stocke déjà l'équivalent 12 min (demi-Cooper ×2),
+// donc les formules s'appliquent telles quelles quelle que soit la durée choisie.
+function cooperVMAFromDist(distM) { return distM / 200; }
+function vo2FromVMA(vma) { return 3.5 * vma; }
+function vo2FromCooperDist(distM) { return (distM - 504.9) / 44.73; }
+function vmaFromVo2(vo2) { return vo2 / 3.5; }
+const fmt1 = n => (Math.round(n * 10) / 10).toFixed(1).replace('.', ',');
+
+// Met à jour le bloc d'estimation selon les 3 saisies possibles :
+// distance (m, équiv. 12 min), VMA (km/h), VO2max (ml/kg/min).
+function updateCooperEstim() {
+  const out = $('#cooper-estim-result');
+  if (!out) return;
+  const distRaw = $('#session-fields input[data-test="cooper"]')?.value.trim();
+  const vmaRaw = $('#cooper-vma')?.value.trim();
+  const vo2Raw = $('#cooper-vo2')?.value.trim();
+  const dist = distRaw ? parseFloat(distRaw.replace(',', '.')) : null;
+  const vma = vmaRaw ? parseFloat(vmaRaw.replace(',', '.')) : null;
+  const vo2 = vo2Raw ? parseFloat(vo2Raw.replace(',', '.')) : null;
+  const lines = [];
+  if (vma != null && !isNaN(vma)) {
+    lines.push(`<b>VMA renseignée :</b> ${fmt1(vma)} km/h`);
+    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2FromVMA(vma))} ml/kg/min <span class="small">(3,5 × VMA, Léger &amp; Mercier)</span>`);
+  }
+  if (vo2 != null && !isNaN(vo2)) {
+    lines.push(`<b>VO2max renseignée :</b> ${fmt1(vo2)} ml/kg/min`);
+    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaFromVo2(vo2))} km/h <span class="small">(VO2max ÷ 3,5)</span>`);
+  }
+  if (dist != null && !isNaN(dist)) {
+    const vmaD = cooperVMAFromDist(dist);
+    const vo2D = vo2FromCooperDist(dist);
+    lines.push(`<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist)} m`);
+    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h <span class="small">(distance ÷ 200)</span>`);
+    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min <span class="small">((distance − 504,9) ÷ 44,73, ACSM)</span>`);
+  }
+  if (!lines.length) { out.classList.add('hidden'); out.innerHTML = ''; return; }
+  out.innerHTML = lines.join('<br>');
+  out.classList.remove('hidden');
+}
+
+// À l'ouverture du bloc Cooper : branche les 3 champs + le sélecteur de durée
+// sur le recalcul, et synchronise le timer 12 min / 6 min.
+function initCooperEstim(distInput) {
+  // Le row est déjà dans le DOM (appendChild ci-dessus) : querySelector global OK.
+  const vmaInp = document.querySelector('#cooper-vma');
+  const vo2Inp = document.querySelector('#cooper-vo2');
+  const durSel = document.querySelector('#cooper-duration');
+  const timerBtn = document.querySelector('#cooper-timer-btn');
+  const sync = () => {
+    updateCooperEstim();
+    if (timerBtn && durSel) {
+      const six = durSel.value === '6';
+      timerBtn.dataset.timerMs = six ? '360000' : '720000';
+      timerBtn.dataset.timerLabel = six ? 'Demi-Cooper — 6 min' : 'Cooper — 12 min';
+      timerBtn.title = six ? 'Compte à rebours 6 min' : 'Compte à rebours 12 min';
+    }
+  };
+  distInput.addEventListener('input', updateCooperEstim);
+  vmaInp?.addEventListener('input', updateCooperEstim);
+  vo2Inp?.addEventListener('input', updateCooperEstim);
+  durSel?.addEventListener('change', sync);
+  sync();
+}
+
 $('#save-session').addEventListener('click', () => {
   const values = {};
   let any = false;
@@ -1048,15 +1141,22 @@ $('#save-session').addEventListener('click', () => {
 // ---------- Chronomètre ----------
 let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = null;
 
-// ---------- Timer compte à rebours 30 s (test de la chaise) ----------
-// Le test « Chaise 30 s » dure exactement 30 s : on compte les répétitions.
-// Le timer démarre/pause/reset manuellement, s'arrête seul à 00:00.0 avec un bip.
-const CHAIR_TIMER_MS = 30000;
-let chairTimer = null, chairRemaining = CHAIR_TIMER_MS, chairRunning = false;
-function chairFmt(ms) {
-  return (ms / 1000).toFixed(1).replace('.', ',');
+// ---------- Timer compte à rebours générique ----------
+// Utilisé par les tests à durée fixe : chaise 30 s (compter les répétitions),
+// escalier 3 min (montées à 24/min), Cooper 12 min (ou 6 min demi-Cooper).
+// Le timer démarre/pause/reset manuellement, s'arrête seul à 00:00 avec un bip.
+const DEFAULT_TIMER_MS = 30000; // 30 s (chaise)
+let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, timerDuration = DEFAULT_TIMER_MS;
+let timerLabel = 'Compte à rebours';
+function timerFmt(ms) {
+  const total = Math.max(0, ms);
+  const m = Math.floor(total / 60000);
+  const s = (total % 60000) / 1000;
+  return m > 0
+    ? `${m}:${String(Math.floor(s)).padStart(2, '0')},${Math.floor((s % 1) * 10)}`
+    : `${s.toFixed(1).replace('.', ',')} s`;
 }
-function chairBeep() {
+function timerBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const o = ctx.createOscillator(), g = ctx.createGain();
@@ -1068,68 +1168,91 @@ function chairBeep() {
     setTimeout(() => ctx.close(), 600);
   } catch { /* audio indisponible : pas de bip */ }
 }
-function chairTimerUpdate() {
-  chairRemaining -= 100;
-  if (chairRemaining <= 0) {
-    chairRemaining = 0;
-    chairTimerStop(true);
+function timerUpdate() {
+  timerRemaining -= 100;
+  if (timerRemaining <= 0) {
+    timerRemaining = 0;
+    timerStop(true);
   }
-  $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
+  $('#timer-display').textContent = timerFmt(timerRemaining);
 }
-function chairTimerSetBtn(running) {
-  const b = $('#chair-timer-startstop');
+function timerSetBtn(running) {
+  const b = $('#timer-startstop');
   b.textContent = running ? '⏸' : '▶';
   b.title = running ? 'Pause' : 'Démarrer le compte à rebours';
   b.classList.toggle('running', running);
 }
-function chairTimerStop(finished = false) {
-  clearInterval(chairTimer);
-  chairTimer = null;
-  chairRunning = false;
-  chairTimerSetBtn(false);
-  $('#chair-timer').classList.toggle('finished', finished);
-  if (finished) chairBeep();
+function timerStop(finished = false) {
+  clearInterval(timerId);
+  timerId = null;
+  timerRunning = false;
+  timerSetBtn(false);
+  $('#timer').classList.toggle('finished', finished);
+  if (finished) timerBeep();
 }
-function chairTimerToggle() {
-  if (chairTimer) {
-    clearInterval(chairTimer); chairTimer = null; chairRunning = false;
-    chairTimerSetBtn(false);
-    $('#chair-timer').classList.remove('finished');
+function timerToggle() {
+  if (timerId) {
+    clearInterval(timerId); timerId = null; timerRunning = false;
+    timerSetBtn(false);
+    $('#timer').classList.remove('finished');
   } else {
-    chairRunning = true;
-    chairTimerSetBtn(true);
-    $('#chair-timer').classList.remove('finished');
-    chairTimer = setInterval(chairTimerUpdate, 100);
+    timerRunning = true;
+    timerSetBtn(true);
+    $('#timer').classList.remove('finished');
+    timerId = setInterval(timerUpdate, 100);
   }
 }
-function chairTimerReset() {
-  clearInterval(chairTimer); chairTimer = null; chairRunning = false;
-  chairRemaining = CHAIR_TIMER_MS;
-  $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
-  chairTimerSetBtn(false);
-  $('#chair-timer').classList.remove('finished');
+function timerReset() {
+  clearInterval(timerId); timerId = null; timerRunning = false;
+  timerRemaining = timerDuration;
+  $('#timer-display').textContent = timerFmt(timerRemaining);
+  timerSetBtn(false);
+  $('#timer').classList.remove('finished');
 }
-function openChairTimer() {
-  const el = $('#chair-timer');
+// Ouvre le timer pour un test donné : durée en ms, libellé, et mode de saisie de la durée.
+// durationEditable=true → l'utilisateur peut régler la durée (en minutes) avant de lancer.
+function openTimer(durationMs, label, durationEditable = false) {
+  const el = $('#timer');
   if (!el) return;
+  timerDuration = durationMs;
+  timerLabel = label;
+  $('#timer-label').textContent = label;
+  $('#timer-duration-wrap').classList.toggle('hidden', !durationEditable);
+  const durInput = $('#timer-duration-min');
+  if (durationEditable) durInput.value = Math.round(durationMs / 60000);
   el.classList.remove('hidden');
   // Si le chrono est aussi ouvert, on décale le timer au-dessus
   if (!$('#chrono').classList.contains('hidden')) el.classList.add('above-chrono');
-  if (!chairRunning && chairRemaining === CHAIR_TIMER_MS) {
-    $('#chair-timer-display').textContent = chairFmt(chairRemaining) + ' s';
+  if (!timerRunning) {
+    timerRemaining = timerDuration;
+    $('#timer-display').textContent = timerFmt(timerRemaining);
   }
 }
-$('#chair-timer-startstop').addEventListener('click', chairTimerToggle);
-$('#chair-timer-reset').addEventListener('click', chairTimerReset);
-$('#chair-timer-close').addEventListener('click', () => {
-  chairTimerStop();
-  const el = $('#chair-timer');
+$('#timer-startstop').addEventListener('click', timerToggle);
+$('#timer-reset').addEventListener('click', timerReset);
+$('#timer-close').addEventListener('click', () => {
+  timerStop();
+  const el = $('#timer');
   el.classList.add('hidden');
   el.classList.remove('above-chrono');
 });
+// Changement de la durée (tests à durée réglable, ex. escalier 3 min par défaut)
+document.addEventListener('change', e => {
+  if (e.target.id !== 'timer-duration-min') return;
+  const min = parseFloat(e.target.value);
+  if (isNaN(min) || min <= 0) return;
+  timerDuration = Math.round(min * 60000);
+  if (!timerRunning) {
+    timerRemaining = timerDuration;
+    $('#timer-display').textContent = timerFmt(timerRemaining);
+  }
+});
 document.addEventListener('click', e => {
-  const b = e.target.closest('.chair-timer-btn');
-  if (b) openChairTimer();
+  const b = e.target.closest('.timer-btn');
+  if (!b) return;
+  const dur = parseInt(b.dataset.timerMs || '30000', 10);
+  const editable = b.dataset.timerEditable === '1';
+  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable);
 });
 function chronoFmt(ms) {
   const s = ms / 1000;
@@ -1142,8 +1265,8 @@ function openChrono(targetId) {
   const t = byId(targetId);
   $('#chrono-target-name').textContent = t ? t.name : '';
   $('#chrono').classList.remove('hidden');
-  // Si le timer 30 s est aussi ouvert, on le décale au-dessus du chrono
-  if (!$('#chair-timer').classList.contains('hidden')) $('#chair-timer').classList.add('above-chrono');
+  // Si le timer est aussi ouvert, on le décale au-dessus du chrono
+  if (!$('#timer').classList.contains('hidden')) $('#timer').classList.add('above-chrono');
 }
 function chronoUpdate() {
   chronoElapsed = Date.now() - chronoStart;
@@ -1179,7 +1302,7 @@ $('#chrono-send').addEventListener('click', () => {
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }
   $('#chrono').classList.add('hidden');
-  $('#chair-timer').classList.remove('above-chrono');
+  $('#timer').classList.remove('above-chrono');
   chronoReset(); // le temps reporté est consommé : le chrono repart à zéro
 });
 document.addEventListener('click', e => {

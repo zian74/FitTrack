@@ -272,13 +272,16 @@
   <button id="chrono-send" class="primary">↳ Reporter</button>
 </div>
 
-<!-- Timer compte à rebours 30 s (test de la chaise : compter les répétitions) -->
-<div id="chair-timer" class="hidden">
-  <span class="small"><b>Chaise 30 s</b> — répétitions</span>
-  <span id="chair-timer-display">30,0 s</span>
-  <button id="chair-timer-startstop" class="primary" title="Démarrer le compte à rebours">▶</button>
-  <button id="chair-timer-reset" title="Remettre à 30 s">↺</button>
-  <button id="chair-timer-close" title="Fermer">✕</button>
+<!-- Timer compte à rebours générique (chaise 30 s, escalier 3 min, Cooper 12 min) -->
+<div id="timer" class="hidden">
+  <span class="small"><b id="timer-label">Compte à rebours</b></span>
+  <span id="timer-duration-wrap" class="hidden">
+    <input type="number" id="timer-duration-min" min="0.5" max="60" step="0.5" value="3" style="width:70px" title="Durée en minutes"> min
+  </span>
+  <span id="timer-display">30,0 s</span>
+  <button id="timer-startstop" class="primary" title="Démarrer le compte à rebours">▶</button>
+  <button id="timer-reset" title="Remettre à zéro">↺</button>
+  <button id="timer-close" title="Fermer">✕</button>
 </div>
 
 <script src="app.js"></script>
