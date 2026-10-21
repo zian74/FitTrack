@@ -65,9 +65,27 @@ const TESTS = [
   { id: 'pushups', name: 'Pompes maximales', unit: 'rép.', group: 'strength',
     hint: 'Sans pause, technique correcte',
     good: 35, mid: 20, max: 200, min: 0,
-    gender: { H: { good: 35, mid: 20 }, F: { good: 20, mid: 10 } } },
+    gender: { H: { good: 35, mid: 20 }, F: { good: 20, mid: 10 } },
+    info: `<ul>
+      <li>Position de départ : <b>planche haute</b>, mains à plat au sol à la largeur des épaules, bras tendus, corps bien aligné (tête, hanches, talons).</li>
+      <li><b>Descendez</b> en pliant les coudes jusqu'à ce que la poitrine frôle presque le sol, coudes près du corps (pas écartés à 90°).</li>
+      <li><b>Remontez</b> en poussant dans les mains, bras tendus en haut. Ne verrouillez pas les coudes.</li>
+      <li>Gardez le <b>dos plat</b> et les <b>fessiers serrés</b> : ne creusez pas les lombaires, ne cambrez pas.</li>
+      <li>Enchaînez <b>sans pause</b> jusqu'à échec musculaire (dernière répétition propre). Comptez uniquement les répétitions <b>techniquement correctes</b>.</li>
+      <li>Échauffez les épaules et les poignets 2–3 min avant. Variante si besoin : pompes sur les genoux ou mains surélevé (comptoir).</li>
+      <li>Respirez : inspirez en descendant, expirez en montant.</li>
+    </ul>` },
   { id: 'plank', name: 'Gainage planche (s)', unit: 's', group: 'strength',
-    hint: 'Dos plat, tenue maximale', good: 120, mid: 60, max: 600, min: 0 },
+    hint: 'Dos plat, tenue maximale', good: 120, mid: 60, max: 600, min: 0,
+    info: `<ul>
+      <li>Position : <b>appui sur les avant-bras</b> (coudes sous les épaules), pointes de pieds au sol, corps aligné de la tête aux talons.</li>
+      <li>Contractez les <b>abdominaux</b> (rentrez l'ombilic vers la colonne) et serrez les <b>fessiers</b> : le dos doit rester <b>plat</b>, ni creusé ni cambré.</li>
+      <li>Regardez le sol devant vous, nuque neutre (ne levez pas la tête).</li>
+      <li>Tenez <b>le plus longtemps possible</b> en gardant la position correcte. Le chronomètre ⏱ à côté du champ vous assiste.</li>
+      <li>Arrêtez dès que la forme se dégrade (hanches qui tombent ou remontent) : notez le temps jusqu'à ce moment-là.</li>
+      <li>Respirez normalement, ne retenez pas votre souffle. Variante : genoux au sol si besoin.</li>
+      <li>Échauffez le core 2–3 min avant (gainage ventral léger, mobilité du bassin).</li>
+    </ul>` },
   { id: 'chair', name: 'Chaise 30 s (répétitions)', unit: 'rép.', group: 'strength',
     hint: 'Bras croisés, se lever/asseoir pendant 30 s', good: 17, mid: 12, max: 40, min: 0,
     gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } } },
