@@ -63,7 +63,6 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
-- Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)
 - Chronomètre intégré pour les tests chronométrés
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
@@ -86,6 +85,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 
 ## 6. Backlog
 
-- PWA installable (manifest, service worker) ✅
-- Notifications de rappel des tests ✅ (checkbox + heure dans Profil ; setTimeout in-app + PeriodicSync SW app fermée ; rattrapage au démarrage ; clic → ouvre l'app)
+- PWA installable (manifest, service worker)
+- Notifications de rappel des tests
+- Intégration GPS pour le Cooper
 - Intégration HealthKit / Google Fit
