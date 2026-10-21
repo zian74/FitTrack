@@ -103,18 +103,15 @@
   <section id="view-analysis" class="view">
     <div class="card">
       <h2>Indice FitTrack Global</h2>
-      <div class="row">
-        <label>Période de calcul :
-          <select id="ifg-period" title="Période prise en compte pour l'indice, les dimensions et les points forts">
-            <option value="last" selected>Dernière session</option>
-            <option value="week">1 semaine</option>
-            <option value="month">1 mois</option>
-            <option value="year">1 an</option>
-            <option value="all">Toutes les valeurs</option>
-          </select>
-        </label>
-        <span id="ifg-period-label" class="small"></span>
+      <div class="row ifg-period-group" role="radiogroup" aria-label="Période de calcul" title="Période prise en compte pour l'indice, les dimensions et les points forts">
+        <span class="ifg-period-title">Période :</span>
+        <label class="ifg-period-opt"><input type="radio" name="ifg-period" value="last" checked> Dernière session</label>
+        <label class="ifg-period-opt"><input type="radio" name="ifg-period" value="week"> 1 sem</label>
+        <label class="ifg-period-opt"><input type="radio" name="ifg-period" value="month"> 1 mois</label>
+        <label class="ifg-period-opt"><input type="radio" name="ifg-period" value="year"> 1 an</label>
+        <label class="ifg-period-opt"><input type="radio" name="ifg-period" value="all"> Toutes</label>
       </div>
+      <p id="ifg-period-label" class="small"></p>
       <div id="ifg-content"><p>Enregistrez des sessions de test pour calculer votre indice.</p></div>
     </div>
     <div class="grid2">

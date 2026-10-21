@@ -50,6 +50,21 @@ input, select {
 }
 input[type="number"] { width: 110px; }
 input[type="checkbox"] { width: auto; }
+input[type="radio"] { width: auto; accent-color: var(--accent); }
+/* Groupe de boutons radio « Période de calcul » (onglet Analyse) */
+.ifg-period-group { gap: 8px; }
+.ifg-period-title { font-weight: 600; color: var(--accent); }
+.ifg-period-opt {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px;
+  background: #fff; cursor: pointer; font-size: .9em;
+  transition: background .15s, border-color .15s;
+}
+.ifg-period-opt:hover { background: var(--accent-light); }
+.ifg-period-opt:has(input:checked) {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.ifg-period-opt input { padding: 0; }
 button {
   padding: 9px 14px; border: none; border-radius: 6px;
   cursor: pointer; font-size: .95em; background: var(--accent-light);
