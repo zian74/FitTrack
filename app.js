@@ -265,8 +265,7 @@ function renderDashboard() {
     scoreEl.innerHTML = '<p>Aucune mesure enregistrée. Commencez par une <b>session de test</b>.</p>';
   } else {
     scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${result.score}<span style="font-size:.6em"> /100</span></p>
-      <ul class="list">${result.rows.join('')}</ul>
-      <p class="small">Basé sur les 5 mesures les plus prédictives (littérature) : poigne, tour de taille, FC repos, cardio sous-max, équilibre.</p>`;
+      <ul class="list">${result.rows.join('')}</ul>`;
   }
 
   // Tests dus
