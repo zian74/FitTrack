@@ -9,7 +9,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Tests au repos** (mensuel) : FC de repos, pression artérielle, tour de taille, poids/IMC, ratio taille/hauteur
 - **Mobilité & équilibre** : unipodal yeux ouverts/fermés, sit-and-reach
 - **Force** (trimestriel) : poigne, pompes, gainage planche, chaise 30 s
-- **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper
+- **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 
 ### Fonctionnalités

@@ -27,7 +27,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 11 | Gainage planche | force | trimestriel | 2 min |
 | 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
 | 13 | Test escalier (pouls 1 min) | cardio | trimestriel | < 90–100 |
-| 14 | Cooper (12 min) | cardio | trimestriel | H > 2400 / F > 2000 m |
+| 14 | Cooper (12 min) ou demi-Cooper (6 min, distance ×2) | cardio | trimestriel | H > 2400 / F > 2000 m (équiv. 12 min) |
 | 15 | IPAQ court — score activité (MET-min/sem) | activité | trimestriel | ≥ 600 (OMS) / ≥ 3000 (élevé) |
 | 16 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
 
