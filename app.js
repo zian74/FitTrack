@@ -1733,10 +1733,7 @@ if (!store.get('profile', null) && !store.get('onboarded', false)) {
 $('#onboarding-go').addEventListener('click', () => {
   $('#onboarding').classList.add('hidden');
   store.set('onboarded', true);
-  $$('#view-profile').classList.add('active');
-  $$('#view-dashboard').classList.remove('active');
-  $$('nav button').forEach(x => x.classList.remove('active'));
-  $$('nav button').find(x => x.dataset.view === 'profile')?.classList.add('active');
+  showView('profile');
 });
 $('#onboarding-skip').addEventListener('click', () => {
   $('#onboarding').classList.add('hidden');
