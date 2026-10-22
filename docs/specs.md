@@ -50,7 +50,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   (tabagisme, antécédents cardiaques — le niveau d'activité est évalué par le
   questionnaire IPAQ, pas de champ déclaratif dans le profil)
 - Saisie des mesures par session datée (4 types : repos, force, cardio, activité)
-- Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours, textes entre parenthèses en petit italique) : intro « Pensez aux 7 derniers jours et répondez aux 7 questions. » ; score calculé
+- Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
   faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
 - Statut automatique par mesure selon repères sexe/âge

@@ -167,7 +167,6 @@ th, td { padding: 7px 10px; border: 1px solid var(--border); text-align: left; }
 th { background: var(--accent); color: #fff; }
 tr:nth-child(even) td { background: var(--surface-alt); }
 .small { font-size: .85em; color: var(--muted); }
-.small i, i.small { font-style: italic; }
 /* Chrono flottant */
 #chrono {
   position: fixed; bottom: 12px; right: 12px;
