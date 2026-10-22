@@ -75,4 +75,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
 - [x] ⌚ **Import montre connectée** : parseur CSV Garmin Connect/générique + TCX + GPX, mapping FC repos / sommeil / IPAQ, drag & drop, 100 % local
 - [x] 📊 **Corrélation Sommeil ↔ IFG** : nuage de points (score sommeil/100 ↔ IFG recalculé à chaque date de sommeil, repères 80/60) + coefficient de Pearson r avec libellé (forte/modérée/faible/négligeable), ⓘ explicatif
+- [x] ⌚ **Badge provenance dans l'historique** : les mesures importées d'une montre connectée portent un badge « ⌚ montre » (avec le sport si connu, ex. Running pour un TCX) dans la colonne Type
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

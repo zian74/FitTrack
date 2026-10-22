@@ -2345,6 +2345,14 @@ function drawScoreChart() {
   $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} /100</b> <span class="badge ${st}">${STATUS_LABEL[st]}</span> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} pts (${pct} %)</b>`;
 }
 
+// Badge de provenance d'une session : montre connectée importée (⌚),
+// avec le sport si connu (TCX). Sessions manuelles : pas de badge.
+function sessionSourceBadge(s) {
+  if (!s || s.source !== 'import') return '';
+  const sport = s._sport ? ` <span class="src-sport">${s._sport}</span>` : '';
+  return ` <span class="src-badge" title="Données importées d'une montre connectée">⌚ montre${sport}</span>`;
+}
+
 function renderHistoryTable() {
   const sessions = getSessions().slice().reverse();
   const el = $('#history-table');
@@ -2359,7 +2367,7 @@ function renderHistoryTable() {
           <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button>`;
       })
       .join(' · ');
-    html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}</td><td>${results}</td></tr>`;
+    html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}${sessionSourceBadge(s)}</td><td>${results}</td></tr>`;
   }
   html += '</table>';
   el.innerHTML = html;
