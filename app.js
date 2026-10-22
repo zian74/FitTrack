@@ -1203,7 +1203,7 @@ function updateCooperEstim() {
     const vmaD = cooperVMAFromDist(dist12);
     const vo2D = vo2FromCooperDist(dist12);
     const distLabel = isHalf
-      ? `<b>Distance saisie (6 min) :</b> ${Math.round(dist)} m → <b>équiv. 12 min : ${Math.round(dist12)} m</b> (×2 automatique)`
+      ? `<b>Distance saisie (6 min) :</b> ${Math.round(dist)} m → <b>équiv. 12 min : ${Math.round(dist12)} m</b>`
       : `<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist12)} m`;
     lines.push(distLabel);
     lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h`);

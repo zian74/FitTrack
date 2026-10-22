@@ -83,7 +83,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   - **Formules supprimées du bloc d'estimation** : les formules (VMA = distance ÷ 200, VO2max = 3,5 × VMA, VO2max = (distance − 504,9) ÷ 44,73, VMA = VO2max ÷ 3,5) ne sont plus affichées à côté des valeurs estimées — elles restent disponibles dans la pop-up « Sources scientifiques » (onglet Paramètres)
   - **Distance masquée quand VMA/VO2max saisie** : si VMA ou VO2max est renseignée, la ligne « Distance Cooper » n'apparaît plus dans le bloc d'estimation (évite la redondance — seules les estimations croisées VMA↔VO2max sont affichées). La distance réapparaît si VMA et VO2max sont effacées
   - **Renommage** : « 6 min (demi-Cooper ×2) » → « 6 min (demi-Cooper) » (radio, hint du test, placeholder du champ en 6 min « m en 6 min »)
-  - En demi-Cooper (6 min), la distance saisie est **automatiquement ×2** (équiv. 12 min) avant calcul et affichage (« 1200 m → équiv. 12 min : 2400 m (×2 automatique) »), et le stockage applique le même ×2
+  - En demi-Cooper (6 min), la distance saisie est **automatiquement ×2** (équiv. 12 min) avant calcul et affichage (« 1200 m → équiv. 12 min : 2400 m »), et le stockage applique le même ×2
 - **Onglet Paramètres (⚙️)** : 6e et dernier onglet de la nav (après Profil), icône roue crantée seule (aria-label « Paramètres »). Regroupe 3 cartes déplacées depuis l'onglet Profil :
   - **Thème** : radios Système / Clair / Sombre (persistant `ft_theme`, `prefers-color-scheme`, `theme-color` adaptatif)
   - **Rappels de re-test** 🔔 : activation + heure de notification quotidienne (in-app setTimeout + PeriodicSync SW)
