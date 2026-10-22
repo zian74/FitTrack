@@ -34,6 +34,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 18 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
 | 19 | Score de sommeil (questionnaire 5 items) | sommeil | hebdomadaire | ≥ 80 bon / 60–79 moyen / < 60 perturbé |
 | 20 | Durée moyenne de sommeil (h) | sommeil | hebdomadaire | 7–9 h (NSF) |
+| 21 | Score alimentaire (questionnaire 6 items) | alimentation | hebdomadaire | ≥ 80 équilibré / 60–79 moyen / < 60 à améliorer |
 
 ## 3. Exigences fonctionnelles
 
@@ -53,30 +54,40 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Profil : sexe, année de naissance, taille, facteurs de risque cardio
   (tabagisme, antécédents cardiaques — le niveau d'activité est évalué par le
   questionnaire IPAQ, pas de champ déclaratif dans le profil)
-- Saisie des mesures par session datée (4 types : repos, force, cardio, activité)
+- Saisie des mesures par session datée (6 types : repos, force, cardio, activité, sommeil, alimentation)
 - Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
   faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
+- Questionnaire **Alimentation** (6 questions sur les 7 derniers jours) : score /100
+  calculé automatiquement (fruits & légumes 25 %, boissons sucrées 20 %,
+  ultra-transformés 20 %, petit-déjeuner 10 %, repas maison 15 %, hydratation 10 %),
+  niveau équilibré/moyen/à améliorer selon seuils 80/60 ; repères OMS (≥ 5 portions
+  de fruits & légumes/jour, limiter les boissons sucrées et les ultra-transformés NOVA)
 - Statut automatique par mesure selon repères sexe/âge
 - Score global /100 : moyenne des 5 tests prédictifs
 - Historique du score global (1 valeur/jour) consultable dans les graphiques par indicateur
 - Onglet **Analyse** : Indice FitTrack Global (IFG, /100) = moyenne pondérée de
-  6 dimensions — cardio au repos & métabolisme (25 %), endurance (20 %),
+  7 dimensions — cardio au repos & métabolisme (20 %), endurance (20 %),
   force (20 %), équilibre & mobilité (15 %), habitudes d'activité (10 %),
-  sommeil & récupération (10 %) ;
+  sommeil & récupération (10 %), alimentation (5 %) ;
   historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
   courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG,
   nuage Sommeil ↔ IFG (score sommeil/100 en X, IFG recalculé à chaque date
   de sommeil en Y, repères 80/60) + coefficient de corrélation de Pearson r
   avec libellé qualitatif (forte ≥ 0,70 / modérée ≥ 0,40 / faible ≥ 0,20) ;
+  nuage Alimentation ↔ IFG (même principe : score alimentaire/100 en X, IFG en Y,
+  repères 80/60 + Pearson r) ;
   **période de calcul au choix** (dernière session / 1 sem / 1 mois / 1 an / toutes
   les valeurs) s'applique à l'IFG, aux dimensions et aux points forts/priorités
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions
 - Calendrier de re-test : badges « à jour / à refaire »
 - Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)
-- Onglet **Paramètres** (⚙️) : carte « Sources scientifiques » avec lien ⓘ listant les références utilisées (IPAQ court — Craig 2003 ; OMS 2020 ; Cooper 1968 ; seuils OMS/IDF tour de taille ; ESC/ESH pression artérielle ; Rikli & Jones Senior Fitness Test 1999 ; Kodama 2009 / Lee méta-analyses mortalité ; seuils sédentarité IPAQ/OMS), avec mention « repères indicatifs, pas d'avis médical »
+- Onglet **Paramètres** (⚙️) : carte « Sources scientifiques » avec lien ⓘ listant les références utilisées (IPAQ court — Craig 2003 ; OMS 2020 ; Cooper 1968 ; seuils OMS/IDF tour de taille ; ESC/ESH pression artérielle ; Rikli & Jones Senior Fitness Test 1999 ; Kodama 2009 / Lee méta-analyses mortalité ; seuils sédentarité IPAQ/OMS ; alimentation — OMS fruits & légumes ≥ 400 g/j, NOVA Monteiro 2019, Sofi 2010 / Widmer 2015 régime méditerranéen), avec mention « repères indicatifs, pas d'avis médical »
 - Onglet **Profil** : facteurs de risque cardiovasculaire — tabagisme, antécédents cardiaques personnels, antécédents familiaux précoces (1ᵉʳ degré < 55/65 ans), hypertension connue, diabète connu, dyslipidémie/statine, alcool (verres/semaine), stress chronique/dépression ; ⓘ explicatif (cadre ESC 2021 / SCORE2)
 - **IMC** affiché dans le Profil (taille du profil + dernière mesure de poids des sessions) avec badge OMS (maigreur/surpoids/obésité) ; IMC ≥ 30 = facteur de risque majeur
+- **Habitudes alimentaires** dans le Profil (déclaratives, contextuelles) : régime
+  particulier (végétarien/végétalien/sans gluten), nombre de repas/jour, grignotage
+  fréquent — exportées dans le CSV, importées en retour
 - **Récapitulatif des facteurs de risque** dans le Profil : liste, badges « majeur », niveau global (faible/modéré/élevé selon le nombre de facteurs majeurs)
 - **Avertissement avant test maximal (Cooper)** déclenché par tout facteur majeur (déclaré ou IMC ≥ 30), avec conseil de privilégier le test de l'escalier (sous-maximal) ; les facteurs non majeurs (antécédents familiaux, alcool < 14, surpoids, IMC 25–29,9) n'affichent pas l'avertissement
 - Chronomètre intégré pour les tests chronométrés

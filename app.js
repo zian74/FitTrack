@@ -199,6 +199,15 @@ const TESTS = [
     hint: 'Moyenne sur les 7 derniers jours',
     good: 8, mid: 7, max: 14, min: 1,
     gender: { H: { good: 8, mid: 7 }, F: { good: 8, mid: 7 } } },
+  // --- Groupe Alimentation (questionnaire 7 derniers jours, score calculé) ---
+  { id: 'nutrition_score', name: 'Score alimentaire', unit: '/100', group: 'nutrition',
+    hint: 'Score calculé automatiquement depuis le questionnaire (6 questions sur les 7 derniers jours)',
+    good: 80, mid: 60, max: 100, min: 0,
+    info: `<ul>
+      <li>Le <b>score alimentaire</b> (/100) est calculé automatiquement à partir de 6 questions sur vos 7 derniers jours : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation.</li>
+      <li><b>Interprétation</b> : ≥ 80 alimentation équilibrée · 60–79 moyenne, marge d'amélioration · &lt; 60 alimentation à améliorer.</li>
+      <li><b>Repères OMS</b> : au moins 400 g de fruits et légumes par jour (5 portions), limiter les boissons sucrées et les aliments ultra-transformés.</li>
+    </ul>` },
   // --- Indicateurs dérivés (non saisis directement) ---
   // VMA et VO2max estimées : calculées depuis la dernière session Cooper/demi-Cooper
   // (champs VMA/VO2max du bloc d'estimation). Utilisées pour les repères du Profil
@@ -345,13 +354,89 @@ function sleepLevel(score) {
   return { key: 'low', short: 'Faible', label: '🔴 Sommeil perturbé' };
 }
 
+// ---------- Questionnaire Alimentation (évaluation des habitudes alimentaires) ----------
+// 6 questions sur les 7 derniers jours. Score /100 pondéré :
+//   fruits & légumes 25 % · boissons sucrées 20 % · ultra-transformés 20 %
+//   petit-déjeuner 10 % · repas maison 15 % · hydratation 10 %
+// Repères OMS : ≥ 400 g/j de fruits & légumes (5 portions), limiter les boissons
+// sucrées et les aliments ultra-transformés (classification NOVA, Monteiro 2019).
+const NUTRITION_QUESTIONS = [
+  { id: 'veg', label: 'N1 — En moyenne, combien de portions de fruits & légumes par jour ?', unit: 'portions', type: 'number', min: 0, max: 15, step: 0.5, weight: 25 },
+  { id: 'sugary', label: 'N2 — Combien de boissons sucrées (sodas, jus, boissons énergisantes) par jour ?', unit: 'verres', type: 'number', min: 0, max: 15, step: 0.5, weight: 20 },
+  { id: 'ultra', label: 'N3 — Combien de fois par semaine consommez-vous des produits ultra-transformés (snacks, fast-food, plats industriels) ?', unit: 'fois/sem', type: 'number', min: 0, max: 21, step: 1, weight: 20 },
+  { id: 'breakfast', label: 'N4 — Prenez-vous un petit-déjeuner régulièrement ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 10 },
+  { id: 'homecooked', label: 'N5 — Vos repas sont-ils majoritairement préparés maison ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 15 },
+  { id: 'water', label: 'N6 — Combien de verres d’eau buvez-vous par jour ?', unit: 'verres', type: 'number', min: 0, max: 20, step: 1, weight: 10 },
+];
+
+// Score d'un item individuel (0–100) puis pondération pour le score global /100.
+function nutritionItemScore(q, value) {
+  switch (q.id) {
+    case 'veg':
+      // ≥ 5 portions = 100 · 3–4 = 80 · 2 = 60 · 1 = 40 · 0 = 20 (repère OMS : 5/jour)
+      if (value >= 5) return 100;
+      if (value >= 3) return 80;
+      if (value >= 2) return 60;
+      if (value >= 1) return 40;
+      return 20;
+    case 'sugary':
+      // 0 = 100 · ≤ 0,5 = 80 · ≤ 1 = 60 · ≤ 2 = 40 · ≥ 3 = 20 (à limiter, OMS)
+      if (value === 0) return 100;
+      if (value <= 0.5) return 80;
+      if (value <= 1) return 60;
+      if (value <= 2) return 40;
+      return 20;
+    case 'ultra':
+      // 0–1 fois/sem = 100 · 2–3 = 80 · 4–6 = 60 · 7–10 = 40 · > 10 = 20
+      if (value <= 1) return 100;
+      if (value <= 3) return 80;
+      if (value <= 6) return 60;
+      if (value <= 10) return 40;
+      return 20;
+    case 'breakfast':
+      // Échelle 1–5 → 0–100
+      return Math.round(((value - 1) / 4) * 100);
+    case 'homecooked':
+      // Échelle 1–5 → 0–100
+      return Math.round(((value - 1) / 4) * 100);
+    case 'water':
+      // 8 verres (≈ 1,5–2 L) = 100 · 5–7 = 80 · 3–4 = 60 · 1–2 = 40 · 0 = 20
+      if (value >= 8) return 100;
+      if (value >= 5) return 80;
+      if (value >= 3) return 60;
+      if (value >= 1) return 40;
+      return 20;
+    default:
+      return 0;
+  }
+}
+
+// Score alimentaire /100 (moyenne pondérée des 6 items, poids total = 100).
+function nutritionScore(a) {
+  let total = 0, weight = 0;
+  for (const q of NUTRITION_QUESTIONS) {
+    const v = a[q.id];
+    if (v == null) continue;
+    total += nutritionItemScore(q, v) * q.weight;
+    weight += q.weight;
+  }
+  if (!weight) return null;
+  return Math.round(total / weight);
+}
+
+function nutritionLevel(score) {
+  if (score >= 80) return { key: 'good', short: 'Bon', label: '🟢 Alimentation équilibrée' };
+  if (score >= 60) return { key: 'mid', short: 'Moyen', label: '🟠 Alimentation moyenne' };
+  return { key: 'low', short: 'Faible', label: '🔴 Alimentation à améliorer' };
+}
+
 const byId = id => TESTS.find(t => t.id === id);
 // Numéro du test dans l'ordre de réalisation (1-based), ex. « 1. FC de repos (bpm) »
 const testNum = id => {
   const i = TESTS.findIndex(t => t.id === id);
   return i >= 0 ? `${i + 1}. ` : '';
 };
-const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité', sleep: 'Sommeil & récupération' };
+const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité', sleep: 'Sommeil & récupération', nutrition: 'Alimentation' };
 // Groups présents par type de session
 const SESSION_GROUPS = {
   rest: ['rest'],
@@ -359,6 +444,7 @@ const SESSION_GROUPS = {
   cardio: ['cardio'],
   activity: ['activity'],
   sleep: ['sleep'],
+  nutrition: ['nutrition'],
 };
 
 // ---------- Interprétation ----------
@@ -630,7 +716,7 @@ function seriesOf(testId) {
 // via RETEST_DAYS ci-dessous, pas en mois).
 const RETEST = { rest: 1, strength: 3, cardio: 3, activity: 3 };
 // Groupes à cadence journalière (en jours) — sommeil : bilan hebdomadaire
-const RETEST_DAYS = { sleep: 7 };
+const RETEST_DAYS = { sleep: 7, nutrition: 7 };
 
 // Groupes de tests dus (réutilisé par le dashboard et les rappels de notification)
 // Retourne [{ group, label, due, last, monthsDue }] — due=true si à refaire ou jamais fait
@@ -723,7 +809,7 @@ function scoreSeries() {
 // Score /100 par dimension à partir des 16 mesures, pondéré selon la littérature
 // (mortalité cardiovasculaire et toutes causes). Mêmes statuts/repères que l'app.
 const IFG_DIMENSIONS = [
-  { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.25, icon: '🪀',
+  { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.20, icon: '🪀',
     tests: ['fc', 'pa_sys', 'pa_dia', 'waist'] },
   { key: 'endurance', label: 'Endurance cardio', weight: 0.20, icon: '🏃',
     tests: ['stair_pulse', 'stair_steps', 'stair_4floors', 'cooper'] },
@@ -735,6 +821,8 @@ const IFG_DIMENSIONS = [
     tests: ['ipaq', 'sit'] },
   { key: 'sleep', label: 'Sommeil & récupération', weight: 0.10, icon: '🌙',
     tests: ['sleep_score', 'sleep_hours'] },
+  { key: 'nutrition', label: 'Alimentation', weight: 0.05, icon: '🍽',
+    tests: ['nutrition_score'] },
 ];
 
 function computeIFG(profile) {
@@ -811,7 +899,7 @@ function renderDashboard() {
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
   const alerts = [];
-  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05, activity: 0.10, sleep: 0.10 };
+  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05, activity: 0.10, sleep: 0.10, nutrition: 0.10 };
   for (const t of TESTS) {
     if (t.good == null) continue;
     const series = seriesOf(t.id);
@@ -879,7 +967,11 @@ function renderLastSession() {
       if (v == null || v === '') return '<td class="num muted">—</td>';
       const badge = id === 'ipaq'
         ? ` <span class="badge ${ipaqLevel(v).key === 'high' ? 'good' : ipaqLevel(v).key === 'mid' ? 'mid' : 'low'}">${ipaqLevel(v).short}</span>`
-        : '';
+        : id === 'sleep_score'
+          ? ` <span class="badge ${sleepLevel(v).key}">${sleepLevel(v).short}</span>`
+          : id === 'nutrition_score'
+            ? ` <span class="badge ${nutritionLevel(v).key}">${nutritionLevel(v).short}</span>`
+            : '';
       return `<td class="num">${v}${badge} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button></td>`;
     };
     html += valueCell(cur, curS);
@@ -1168,6 +1260,89 @@ function renderSleepBlock(block) {
   }
 }
 
+// Bloc questionnaire Alimentation : 6 questions, score /100 calculé en direct.
+// Le score est persisté dans un input hidden data-test="nutrition_score".
+function renderNutritionBlock(block) {
+  const last = latestValues();
+  const lastScore = last['nutrition_score']?.value;
+  block.innerHTML += `
+    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 6 questions, le score se calcule automatiquement.</p>
+    <div id="nutrition-questions"></div>
+    <div id="nutrition-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
+    <input type="hidden" data-test="nutrition_score" id="nutrition-score-input">`;
+  const qWrap = block.querySelector('#nutrition-questions');
+  const answers = {};
+  NUTRITION_QUESTIONS.forEach(q => {
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    if (q.type === 'stars') {
+      row.innerHTML = `
+        <label>${q.label}
+          <div class="sleep-stars" data-nutrition-q="${q.id}">
+            ${[1, 2, 3, 4, 5].map(n =>
+              `<button type="button" class="sleep-star" data-star="${n}" title="${n}/5" aria-label="${n} sur 5">\u2606</button>`
+            ).join('')}
+          </div>
+        </label>`;
+      qWrap.appendChild(row);
+      row.querySelectorAll('.sleep-star').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const n = parseInt(btn.dataset.star, 10);
+          answers[q.id] = n;
+          row.querySelectorAll('.sleep-star').forEach(b => {
+            const v = parseInt(b.dataset.star, 10);
+            b.classList.toggle('active', v <= n);
+            b.textContent = v <= n ? '\u2605' : '\u2606';
+          });
+          updateNutritionResult(answers);
+          updateSaveState();
+        });
+      });
+    } else {
+      row.innerHTML = `
+        <label>${q.label}
+          <input type="number" step="${q.step}" min="${q.min}" max="${q.max}"
+                 data-nutrition="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
+        </label>`;
+      qWrap.appendChild(row);
+      const inp = row.querySelector('input[data-nutrition]');
+      inp.addEventListener('input', () => {
+        const raw = inp.value.trim();
+        const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
+        const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
+        inp.classList.toggle('invalid', invalid);
+        answers[q.id] = invalid ? null : num;
+        updateNutritionResult(answers);
+        updateSaveState();
+      });
+    }
+  });
+  updateNutritionResult(answers);
+  function updateNutritionResult(a) {
+    const resultEl = block.querySelector('#nutrition-result');
+    const answered = NUTRITION_QUESTIONS.filter(q => a[q.id] != null).length;
+    const complete = answered === NUTRITION_QUESTIONS.length;
+    if (!complete) {
+      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/6) \u2014 le score nécessite les 6 réponses.`;
+      block.querySelector('#nutrition-score-input').value = '';
+      return;
+    }
+    const score = nutritionScore(a);
+    const lvl = nutritionLevel(score);
+    resultEl.innerHTML = `
+      <b>Score alimentaire : ${score}/100</b> \u2014 ${lvl.label}<br>
+      <span class="small">Fruits & légumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j · boissons sucrées ${a.sugary}/j · ultra-transformés ${a.ultra} fois/sem · petit-déjeuner ${a.breakfast}/5 · maison ${a.homecooked}/5 · eau ${a.water} verre${a.water > 1 ? 's' : ''}/j</span>
+      <div class="small" style="margin-top:4px">Repères OMS : ≥ 5 portions de fruits & légumes/jour · limiter les boissons sucrées · ≥ 80 équilibré · 60–79 moyen · &lt; 60 à améliorer</div>`;
+    block.querySelector('#nutrition-score-input').value = score;
+  }
+  if (lastScore != null) {
+    const info = document.createElement('div');
+    info.className = 'field-last';
+    info.innerHTML = `Dernier : score <b>${lastScore}</b>/100`;
+    block.insertBefore(info, block.querySelector('#nutrition-questions'));
+  }
+}
+
 function renderSessionFields() {
   const type = currentSessionType;
   const groups = SESSION_GROUPS[type];
@@ -1185,6 +1360,12 @@ function renderSessionFields() {
     }
     if (g === 'sleep') {
       renderSleepBlock(block);
+      container.appendChild(block);
+      updateSaveState();
+      return;
+    }
+    if (g === 'nutrition') {
+      renderNutritionBlock(block);
       container.appendChild(block);
       updateSaveState();
       return;
@@ -1327,7 +1508,7 @@ const STATIC_INFOS = {
       <li>Il va de <b>25</b> (tout est faible) à <b>100</b> (tout est bon).</li>
       <li><b>Score moyen (30 j)</b> = mesures des 30 derniers jours ; <b>Avant</b> = mesures antérieures à cette période.</li>
       <li><b>▲ en hausse</b> : +3 points ou plus · <b>▼ en baisse</b> : −3 points ou plus · <b>= stable</b> : entre −2 et +2 · <b>nouveau</b> : pas de mesure avant.</li>
-      <li>Ce score est propre à chaque dimension — il n'est pas l'IFG (qui pondère les 6 dimensions entre elles).</li>
+      <li>Ce score est propre à chaque dimension — il n'est pas l'IFG (qui pondère les dimensions entre elles).</li>
     </ul>`
   },
   __ipaq__: {
@@ -1366,6 +1547,32 @@ const STATIC_INFOS = {
       <li>Sources : PSQI (Buysse 1989), NSF (7–9 h), Cappuccio 2011 (méta-analyse sommeil/mortalité cardiovasculaire).</li>
     </ul>`
   },
+  __diet__: {
+    name: 'Habitudes alimentaires (profil)',
+    info: `<ul>
+      <li>Ces champs sont <b>déclaratifs</b> : ils ne participent pas au score, ils contextualisent votre bilan alimentaire hebdomadaire (onglet <b>Session → Alimentation</b>).</li>
+      <li><b>Régime particulier</b> (végétarien, végétalien, sans gluten) : précise vos repères pour interpréter le score.</li>
+      <li><b>Repas par jour</b> et <b>grignotage</b> : la régularité des repas et le grignotage influencent l'énergie, le poids et la récupération.</li>
+      <li>Toutes ces données restent <b>100 % locales</b> sur votre appareil.</li>
+    </ul>`
+  },
+  __nutrition__: {
+    name: 'Score alimentaire ↔ Indice FitTrack Global',
+    info: `<ul>
+      <li>Ce graphique croise votre <b>score alimentaire</b> (/100, axe horizontal) avec votre <b>Indice FitTrack Global</b> (IFG, axe vertical) à la même date.</li>
+      <li>Chaque point est une date où un bilan alimentaire a été enregistré. L'IFG est recalculé avec toutes les données disponibles à cette date.</li>
+      <li><b>Repères verticaux</b> : <span style="color:var(--ok)">80 = alimentation équilibrée</span> (ligne pleine) · <span style="color:var(--warn)">60 = seuil moyen</span> (ligne pointillée).</li>
+      <li><b>Corrélation de Pearson</b> (r entre −1 et +1) : mesure la force du lien linéaire entre les deux séries.
+        <ul>
+          <li><b>r proche de +1</b> : quand l'alimentation s'améliore, l'IFG monte aussi (corrélation positive forte).</li>
+          <li><b>r proche de 0</b> : pas de lien linéaire apparent.</li>
+        </ul>
+      </li>
+      <li>Seuils usuels : |r| ≥ 0,7 = forte · 0,4–0,7 = modérée · 0,2–0,4 = faible · &lt; 0,2 = négligeable.</li>
+      <li><b>Interprétation</b> : l'alimentation influence le poids, le tour de taille, la tension, l'énergie et la récupération. Une corrélation positive suggère que vos habitudes alimentaires influencent votre forme mesurée.</li>
+      <li>Sources : recommandations OMS (fruits &amp; légumes ≥ 400 g/j, limiter les boissons sucrées), classification NOVA des aliments ultra-transformés (Monteiro et al., 2019), études régime méditerranéen &amp; santé cardiovasculaire (Sofi et al., 2010 ; Widmer et al., 2015).</li>
+    </ul>`
+  },
   __sources__: {
     name: 'Sources scientifiques',
     info: `<ul>
@@ -1381,12 +1588,14 @@ const STATIC_INFOS = {
       <li><b>Facteurs de risque cardiovasculaire</b> (tabagisme, antécédents personnels/familiaux, hypertension, diabète, dyslipidémie, alcool, stress, IMC) : cadre des recommandations <b>ESC 2021</b> sur la prévention cardiovasculaire et du score <b>SCORE2</b> (âge, sexe, tabagisme, pression artérielle systolique, cholestérol, antécédents familiaux).</li>
       <li><b>Force musculaire (préhension, pompes, chaise 30 s, gainage)</b> : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli &amp; Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).</li>
       <li><b>Équilibre unipodal &amp; Sit-and-reach</b> : protocoles standardisés de la littérature (test unipodal yeux ouverts/fermés, Senior Fitness Test pour la souplesse).</li>
-      <li><b>Score global &amp; IFG (pondération des dimensions)</b> : pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
+      <li><b>Score global &amp; IFG (pondération des dimensions)</b> : cardio au repos &amp; métabolisme 20 %, endurance 20 %, force 20 %, équilibre &amp; mobilité 15 %, habitudes d'activité 10 %, sommeil &amp; récupération 10 %, alimentation 5 % — pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
       <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
       <li><b>Score de sommeil (questionnaire 5 items)</b> : durée, qualité subjective, latence d'endormissement, réveils nocturnes et sensation au réveil — inspiré du <b>PSQI</b> (Buysse DJ et al., <i>Psychiatry Research</i>, 1989), abrégé pour un usage régulier. Pondération : durée 30 %, qualité 25 %, latence 15 %, réveils 15 %, réveil 15 %.</li>
       <li><b>Durée de sommeil recommandée</b> : <b>NSF (National Sleep Foundation)</b> — 7–9 h par nuit pour un adulte (18–64 ans), 7–8 h pour 65 ans et +. <b>OMS</b> : le sommeil insuffisant (&lt; 6 h) est associé à un risque accru de maladies cardiovasculaires, d'obésité et de troubles métaboliques.</li>
       <li><b>Import montre connectée</b> : les formats CSV (Garmin Connect, générique), TCX (Training Center XML) et GPX sont lus localement (FileReader). Le mapping estime la FC de repos (min de la journée), la durée de sommeil et un score provisoire, ainsi qu'un score IPAQ approximatif depuis les pas, la durée et la FC moyenne (3,3 MET×marche + 4×modérée + 8×intense, protocole IPAQ court Craig 2003).</li>
       <li><b>Sommeil et récupération</b> : un sommeil de qualité est un pilier de la récupération musculaire et de la régulation hormonale (métabolisme, sensibilité à l'insuline). Les méta-analyses associent un sommeil court ou de mauvaise qualité à une mortalité cardiovasculaire et toutes causes accrue (ex. : Cappuccio FP et al., <i>European Heart Journal</i>, 2011).</li>
+      <li><b>Score alimentaire (questionnaire 6 items)</b> : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation — inspiré des repères <b>OMS</b> (≥ 400 g/j de fruits &amp; légumes, limiter les boissons sucrées) et de la classification <b>NOVA</b> des aliments ultra-transformés (Monteiro CA et al., 2019). Pondération : fruits &amp; légumes 25 %, boissons sucrées 20 %, ultra-transformés 20 %, petit-déjeuner 10 %, repas maison 15 %, hydratation 10 %.</li>
+      <li><b>Alimentation et santé cardiovasculaire</b> : les méta-analyses associent le régime méditerranéen et une alimentation riche en fruits/légumes à une réduction du risque cardiovasculaire (Sofi F et al., <i>Am J Clin Nutr</i>, 2010 ; Widmer RJ et al., <i>Am J Med</i>, 2015) ; les boissons sucrées sont associées au surpoids et au diabète de type 2 (Malik VS et al., méta-analyses).</li>
     </ul>
     <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,
   },
@@ -1914,6 +2123,7 @@ function renderAnalysis() {
     $('#ifg-trends').innerHTML = '';
     $('#ifg-scatter').innerHTML = '';
     $('#ifg-sleep-scatter').innerHTML = '';
+    $('#ifg-nutrition-scatter').innerHTML = '';
     return;
   }
 
@@ -1933,9 +2143,9 @@ function renderAnalysis() {
       <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span>${periodBadge}</p>
     ${ifgBarHtml(result.score)}
     ${deltaHtml}
-    <p class="small">Moyenne pondérée de 6 dimensions : cardio au repos &amp; métabolisme (25 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (10 %), sommeil &amp; récupération (10 %).</p>`;
+    <p class="small">Moyenne pondérée de 7 dimensions : cardio au repos &amp; métabolisme (20 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (10 %), sommeil &amp; récupération (10 %), alimentation (5 %).</p>`;
 
-  // 2. Radar des 6 dimensions (SVG)
+  // 2. Radar des dimensions (SVG)
   renderIfgRadar(result.dims);
 
   // 3. Points forts / faibles + conseil
@@ -1952,6 +2162,8 @@ function renderAnalysis() {
       strength: '2 séances de renforcement par semaine : pompes, gainage et chaise 30 s suffisent à démarrer.',
       balance: 'Travaillez l\'équilibre 5 min/jour (unipodal, yeux ouverts puis fermés) et la souplesse des jambes.',
       activity: 'Levez-vous toutes les heures et visez 150 min d\'activité modérée par semaine (marche comprise).',
+      sleep: 'Visez 7–9 h de sommeil par nuit, avec des horaires réguliers — le sommeil régule l\'appétit et la récupération.',
+      nutrition: 'Ciblez 5 portions de fruits & légumes par jour, limitez les boissons sucrées et cuisinez maison la majorité du temps.',
     };
     advice.innerHTML = `💡 <b>Conseil</b> : ${tips[worst.key] || 'Travaillez cette dimension en priorité.'}`;
     advice.style.display = '';
@@ -1968,6 +2180,9 @@ function renderAnalysis() {
 
   // 7. Nuage de points Sommeil ↔ IFG
   renderIfgSleepScatter();
+
+  // 8. Nuage de points Alimentation ↔ IFG
+  renderIfgNutritionScatter();
 }
 
 // Changement de période de calcul de l'IFG (boutons radio) → re-rendu complet de l'onglet Analyse
@@ -2226,6 +2441,62 @@ function renderIfgSleepScatter() {
   el.innerHTML = svg + corrHtml;
 }
 
+// Nuage de points : Alimentation (X) ↔ IFG au moment de la mesure (Y)
+// X = score alimentaire /100, repères verticaux à 80 (bon) et 60 (moyen)
+function renderIfgNutritionScatter() {
+  const el = $('#ifg-nutrition-scatter');
+  if (!el) return;
+  const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
+  const nutDates = sessions.filter(s => s.values?.nutrition_score != null && s.values.nutrition_score !== '');
+  if (nutDates.length < 2) { el.innerHTML = '<p class="small">Enregistrez au moins 2 bilans alimentaires pour voir la corrélation.</p>'; return; }
+  const points = [];
+  for (const s of nutDates) {
+    // IFG recalculé avec les données disponibles à cette date
+    const upTo = sessions.filter(x => x.date <= s.date);
+    const snapshotSessions = store.get('sessions', []);
+    store.set('sessions', upTo);
+    const res = computeIFG(getProfile());
+    store.set('sessions', snapshotSessions);
+    if (res) points.push({ date: s.date, nutrition: s.values.nutrition_score, ifg: res.score });
+  }
+  if (points.length < 2) { el.innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+
+  // Corrélation de Pearson
+  const r = pearsonCorrelation(points.map(p => p.nutrition), points.map(p => p.ifg));
+
+  const W = 420, H = 260, PAD = 44;
+  const xs = points.map(p => p.nutrition), ys = points.map(p => p.ifg);
+  let xLo = Math.min(...xs), xHi = Math.max(...xs);
+  let yLo = Math.min(...ys), yHi = Math.max(...ys);
+  // Bornes X toujours dans [0, 100] pour un score /100 lisible
+  xLo = Math.max(0, Math.min(xLo, 50) - 5);
+  xHi = Math.min(100, Math.max(xHi, 80) + 5);
+  const xPad = (xHi - xLo) * 0.05 || 5, yPad = (yHi - yLo) * 0.1 || 5;
+  yLo -= yPad; yHi += yPad;
+  const X = v => PAD + (v - xLo) / (xHi - xLo) * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - yLo) / (yHi - yLo) * (H - 2 * PAD);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // repère vertical à 80 (seuil « alimentation équilibrée »)
+  if (xLo <= 80 && 80 <= xHi)
+    svg += `<line x1="${X(80)}" x2="${X(80)}" y1="${PAD}" y2="${H - PAD}" stroke="var(--ok)" stroke-dasharray="4 4"/><text x="${X(80)}" y="${PAD - 4}" text-anchor="middle" font-size="10" fill="var(--ok)">80 (bon)</text>`;
+  // repère vertical à 60 (seuil « moyen »)
+  if (xLo <= 60 && 60 <= xHi)
+    svg += `<line x1="${X(60)}" x2="${X(60)}" y1="${PAD}" y2="${H - PAD}" stroke="var(--warn)" stroke-dasharray="2 4"/><text x="${X(60)}" y="${H - PAD + 12}" text-anchor="middle" font-size="9" fill="var(--warn)">60</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  // axes labels
+  svg += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">Score alimentaire /100</text>`;
+  svg += `<text x="12" y="${H / 2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${H / 2})">IFG /100</text>`;
+  points.forEach(p => {
+    svg += `<circle cx="${X(p.nutrition)}" cy="${Y(p.ifg)}" r="5" fill="#2e8b57"><title>${p.date.split('-').reverse().join('/')} : alimentation ${p.nutrition}/100 · IFG ${p.ifg}</title></circle>`;
+  });
+  svg += '</svg>';
+  const corrHtml = r != null
+    ? `<p class="small" style="margin-top:6px">📊 ${correlationLabel(r)}</p>`
+    : '';
+  el.innerHTML = svg + corrHtml;
+}
+
 // ---------- Historique & graphiques ----------
 function renderHistory() {
   // sélecteur de métrique : score global en haut de liste s'il a un historique
@@ -2401,6 +2672,9 @@ const PROFILE_CSV_KEYS = [
   ['dyslipidemia', 'Dyslipidémie / statine', p => p.dyslipidemia ? 'oui' : 'non'],
   ['alcohol', 'Alcool (verres/semaine)', p => p.alcohol ?? ''],
   ['stress', 'Stress chronique / dépression', p => p.stress === 'yes' ? 'oui' : (p.stress === 'no' ? 'non' : '')],
+  ['diet', 'Régime alimentaire', p => ({ vegetarian: 'Végétarien', vegan: 'Végétalien', glutenfree: 'Sans gluten', none: 'Aucun' }[p.diet] || '')],
+  ['meals', 'Repas par jour', p => p.meals ?? ''],
+  ['snacking', 'Grignotage fréquent', p => p.snacking === 'yes' ? 'oui' : (p.snacking === 'no' ? 'non' : '')],
 ];
 function profileCsvLines(profile) {
   if (!profile) return [];
@@ -2507,6 +2781,9 @@ function parseImportCsv(text) {
       else if (key === 'smoke' || key === 'cardiacHistory' || key === 'familyHistory'
         || key === 'hypertension' || key === 'diabetes' || key === 'dyslipidemia') data.profile[key] = value === 'oui';
       else if (key === 'stress') data.profile.stress = value === 'oui' ? 'yes' : (value === 'non' ? 'no' : null);
+      else if (key === 'snacking') data.profile.snacking = value === 'oui' ? 'yes' : (value === 'non' ? 'no' : null);
+      else if (key === 'diet') data.profile.diet = ({ 'Végétarien': 'vegetarian', 'Végétalien': 'vegan', 'Sans gluten': 'glutenfree', 'Aucun': 'none' }[value] || null);
+      else if (key === 'meals') data.profile.meals = value === '' ? null : value;
       else data.profile[key] = value === '' ? null : Number(value);
       continue;
     }
@@ -2965,6 +3242,9 @@ function renderProfileForm() {
   $('#p-dyslipidemia').checked = !!p.dyslipidemia;
   $('#p-alcohol').value = p.alcohol ?? '';
   $('#p-stress').value = p.stress || '';
+  $('#p-diet').value = p.diet || '';
+  $('#p-meals').value = p.meals || '';
+  $('#p-snacking').value = p.snacking || '';
   renderIMC();
   renderRiskSummary();
 }
@@ -2988,6 +3268,9 @@ $('#save-profile').addEventListener('click', () => {
     dyslipidemia: $('#p-dyslipidemia').checked,
     alcohol: parseInt($('#p-alcohol').value) || 0,
     stress: $('#p-stress').value || null,
+    diet: $('#p-diet').value || null,
+    meals: $('#p-meals').value || null,
+    snacking: $('#p-snacking').value || null,
   };
   store.set('profile', p);
   const msg = $('#profile-saved-msg');
