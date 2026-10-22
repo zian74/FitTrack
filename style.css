@@ -352,6 +352,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .delete-session-btn { padding: 2px 5px; font-size: .8em; background: var(--bad-bg); color: var(--bad); border: none; border-radius: 5px; cursor: pointer; }
 
 /* ---------- Questionnaire IPAQ court ---------- */
+.paren { font-size: .85em; font-style: italic; color: var(--muted); }
 #ipaq-questions .field-row label { display: block; }
 #ipaq-questions input[type="number"] { margin-top: 4px; }
 #ipaq-result { border-radius: 8px; padding: 12px; line-height: 1.6; }
