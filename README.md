@@ -8,14 +8,14 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 
 - **Tests au repos** (mensuel) : FC de repos, pression artérielle, tour de taille, poids/IMC, ratio taille/hauteur
 - **Mobilité & équilibre** : unipodal yeux ouverts/fermés, sit-and-reach
-- **Force** (trimestriel) : poigne, pompes, gainage planche, chaise 30 s
+- **Force** (trimestriel) : préhension, pompes, gainage planche, chaise 30 s
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 
 ### Fonctionnalités
 
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
-- Score global /100 basé sur les 5 mesures prédictives (poigne, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
+- Score global /100 basé sur les 5 mesures prédictives (préhension, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
 - **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 5 dimensions,
   radar, priorités, évolution et corrélation activité ↔ forme
@@ -67,5 +67,6 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 🪜 Test escalier : **3 méthodes au choix** (sélecteur radio) — Méthode 1 = pouls à 1 min (3 min, existante) · Méthode 2 = **marches gravis en 60 s** (timer 60 s, seuils ≥80/60/40) · Méthode 3 = **4 étages chronométrés** (chrono ⏱, seuils ≤45/≤60/>90 s, inversé) ; seule la méthode active est saisie/enregistrée, l'analyse (score global + IFG endurance) utilise la méthode disponible avec priorité méthode 1 > 2 > 3
 - [x] 🥁 Test escalier méthode 1 : **métronome 96 bpm** (bouton 🥁 dans le timer) — 1 bip par cycle (625 ms = 24 montées/min), démarre/pause/s'arrête avec le timer, activé par défaut et désactivable
 - [x] 📱 PWA **plein écran mobile** (simulation app native) : `display: fullscreen` + `display_override` dans le manifest, `viewport-fit=cover`, meta `mobile-web-app-capable` / `apple-mobile-web-app-capable` / `apple-mobile-web-app-status-bar-style: black-translucent`, et `env(safe-area-inset-*)` sur le header/main/chrono/timer (encoche iPhone + barre d'accueil)
-- [x] ⓘ Pop-up d'info pour le **test 9 Poigne** (dynamométrie) : échauffement, position debout coude à 90°, réglage sur la 2ᵉ phalange, serrage max 2–3 s, 2–3 essais/main avec 30 s de repos, meilleure valeur retenue, respiration (éviter Valsalva), arrêt en cas de douleur
+- [x] ⓘ Pop-up d'info pour le **test 9 Préhension** (dynamométrie) : échauffement, position debout coude à 90°, réglage sur la 2ᵉ phalange, serrage max 2–3 s, 2–3 essais/main avec 30 s de repos, meilleure valeur retenue, respiration (éviter Valsalva), arrêt en cas de douleur
+- [x] ✏️ Test 9 renommé « **Préhension** — meilleure main (kg) » (alias « Poigne » conservé pour l'import des anciens exports CSV)
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
