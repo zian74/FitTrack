@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FitTrack">
-<meta name="description" content="Suivi de la condition physique : 14 tests objectifs, scores, alertes et graphiques.">
+<meta name="description" content="Suivi de la condition physique : 21 mesures objectives, scores, alertes et graphiques.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -98,7 +98,7 @@
     <div class="card">
       <button id="save-session" class="primary big" disabled>💾 Enregistrer la session</button>
       <span id="session-progress" class="small"></span>
-      <span id="session-saved-msg" class="ok hidden">✅ Session enregistrée</span>
+      <span id="session-saved-msg" class="ok hidden" role="status" aria-live="polite">✅ Session enregistrée</span>
     </div>
     <div class="card">
       <h2>Dernière session</h2>
@@ -177,7 +177,7 @@
         <button id="export-pdf">🖨️ Fiche de score PDF</button>
         <button id="import-btn">⬆️ Importer un fichier</button>
         <input type="file" id="import-file" accept=".json,.csv" class="hidden">
-        <span id="import-msg" class="ok hidden"></span>
+        <span id="import-msg" class="ok hidden" role="status" aria-live="polite"></span>
       </div>
       <p class="small">L'import fusionne le profil et les mesures du fichier (JSON ou CSV) avec vos données actuelles — utile pour restaurer après un plantage ou changer d'appareil.</p>
       <div class="card" style="margin-top:12px;border:2px dashed var(--border);border-radius:10px;padding:16px" id="watch-drop-zone">
@@ -247,7 +247,7 @@
       </div>
       <p class="small">Ces informations restent locales et servent à contextualiser votre score alimentaire (bilan hebdomadaire dans l'onglet Session).</p>
       <button id="save-profile" class="primary">Enregistrer le profil</button>
-      <span id="profile-saved-msg" class="ok hidden">✅ Profil enregistré</span>
+      <span id="profile-saved-msg" class="ok hidden" role="status" aria-live="polite">✅ Profil enregistré</span>
     </div>
     <div class="card">
       <h2>Repères applicables</h2>
@@ -282,7 +282,7 @@
         </label>
       </div>
       <p class="small hidden" id="reminders-note"></p>
-      <span id="reminders-status" class="ok hidden"></span>
+      <span id="reminders-status" class="ok hidden" role="status" aria-live="polite"></span>
       <p class="small">Une notification est envoyée à l'heure choisie si des groupes de tests sont dus (jamais effectués ou à refaire). Fonctionne aussi quand l'app est fermée (Android/desktop).</p>
     </div>
     <div class="card">
@@ -295,7 +295,6 @@
     </div>
   </section>
 
-</main>
 </main>
 
 <!-- Onboarding (première visite) -->

@@ -1,7 +1,7 @@
 {
   "name": "HealthTest — FitTrack",
   "short_name": "FitTrack",
-  "description": "Suivi de la condition physique : 14 tests objectifs, scores, alertes et graphiques",
+  "description": "Suivi de la condition physique : 21 mesures objectives, scores, alertes et graphiques",
   "start_url": "./index.html",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone", "minimal-ui"],

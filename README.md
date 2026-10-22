@@ -61,7 +61,7 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] CI GitHub Actions (syntaxe + validation JSON)
 - [x] ⏳ Timers compte à rebours : chaise 30 s, escalier 3 min (réglable), Cooper 12/6 min (radios)
 - [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (priorité VMA > VO2max > Cooper > escalier)
-- [x] 🧹 Suite de tests jsdom : 31 suites green (test-score-mention.js obsolète remplacé par test-score-global.js, test-analysis.js réparé)
+- [x] CI GitHub Actions : syntaxe JS (`node --check`) + validation JSON (package.json, manifest) à chaque push/PR
 - [x] 📱 Modales scrollables sur mobile : contenu défile dans la pop-up, bouton « Compris » toujours visible (max-height 100dvh + flex column + overflow-y auto)
 - [x] ⚙️ Nouvel onglet **Paramètres** (dernier onglet, icône roue crantée) : regroupe le choix du **Thème** (Système/Clair/Sombre), les **Rappels de re-test** et les **Sources scientifiques** (déplacés depuis l'onglet Profil) ; libellés raccourcis sur mobile
 - [x] ⏳ Test escalier : après les 3 min de montées, un **compte à rebours de 1 min se lance automatiquement** pour indiquer le délai avant la mesure du pouls (chaînage auto du timer générique, annulable via ✕ ou ↺)

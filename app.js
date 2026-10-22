@@ -6,6 +6,9 @@
 // ---------- Utilitaires ----------
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
+// Échappe une valeur avant injection dans innerHTML (données importées :
+// nom de sport TCX, valeurs de sessions, dates, ids — jamais de HTML brut)
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem('ft_' + k)) ?? d; } catch { return d; } },
   set(k, v) { localStorage.setItem('ft_' + k, JSON.stringify(v)); }
@@ -806,7 +809,7 @@ function scoreSeries() {
 }
 
 // ---------- Indice FitTrack Global (IFG) ----------
-// Score /100 par dimension à partir des 16 mesures, pondéré selon la littérature
+// Score /100 par dimension à partir des mesures objectives, pondéré selon la littérature
 // (mortalité cardiovasculaire et toutes causes). Mêmes statuts/repères que l'app.
 const IFG_DIMENSIONS = [
   { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.20, icon: '🪀',
@@ -936,7 +939,7 @@ function renderLastSession() {
   }
   ids.sort((a, b) => TESTS.findIndex(t => t.id === a) - TESTS.findIndex(t => t.id === b));
   let html = '<table class="last3-table">';
-  html += '<tr><th>Test</th>' + cols.map(c => `<th>${frDate(c.date)} <button class="delete-session-btn" title="Supprimer les sessions de cette date" data-del-session="${c.sessions[0].id || ''}" data-del-date="${c.date}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
+  html += '<tr><th>Test</th>' + cols.map(c => `<th>${esc(frDate(c.date))} <button class="delete-session-btn" title="Supprimer les sessions de cette date" data-del-session="${esc(c.sessions[0].id || '')}" data-del-date="${esc(c.date)}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
   for (const id of ids) {
     const t = byId(id);
     // valeur d'une colonne = celle de la session qui contient ce test (la plus récente si plusieurs)
@@ -961,7 +964,7 @@ function renderLastSession() {
         : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
       deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
     }
-    html += `<tr><td class="test-name"><span class="test-num">${testNum(id)}</span>${t.name}</td>`;
+    html += `<tr><td class="test-name"><span class="test-num">${testNum(id)}</span>${esc(t.name)}</td>`;
     // IPAQ : la valeur est complétée du badge de niveau (élevé/modéré/faible)
     const valueCell = (v, s) => {
       if (v == null || v === '') return '<td class="num muted">—</td>';
@@ -972,7 +975,7 @@ function renderLastSession() {
           : id === 'nutrition_score'
             ? ` <span class="badge ${nutritionLevel(v).key}">${nutritionLevel(v).short}</span>`
             : '';
-      return `<td class="num">${v}${badge} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button></td>`;
+      return `<td class="num">${esc(v)}${badge} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${esc(s.id || '')}" data-edit-date="${esc(s.date)}" data-edit-test="${esc(id)}">✏️</button></td>`;
     };
     html += valueCell(cur, curS);
     html += valueCell(prv, prvS);
@@ -1638,7 +1641,9 @@ $('#info-modal').addEventListener('click', e => {
   if (e.target === $('#info-modal')) closeInfoModal();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeInfoModal();
+  if (e.key !== 'Escape') return;
+  if (!$('#info-modal').classList.contains('hidden')) closeInfoModal();
+  else if (!$('#edit-modal').classList.contains('hidden')) closeEditModal();
 });
 
 function updateFieldValidity(t, inp) {
@@ -2626,7 +2631,7 @@ function drawScoreChart() {
 // avec le sport si connu (TCX). Sessions manuelles : pas de badge.
 function sessionSourceBadge(s) {
   if (!s || s.source !== 'import') return '';
-  const sport = s._sport ? ` <span class="src-sport">${s._sport}</span>` : '';
+  const sport = s._sport ? ` <span class="src-sport">${esc(s._sport)}</span>` : '';
   return ` <span class="src-badge" title="Données importées d'une montre connectée">⌚ montre${sport}</span>`;
 }
 
@@ -2640,11 +2645,11 @@ function renderHistoryTable() {
       .filter(([, v]) => v != null && v !== '')
       .map(([id, v]) => {
         const t = byId(id) || { name: id, unit: '' };
-        return `${t.name} : <b>${v}</b> ${t.unit}
-          <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${s.id || ''}" data-edit-date="${s.date}" data-edit-test="${id}">✏️</button>`;
+        return `${esc(t.name)} : <b>${esc(v)}</b> ${esc(t.unit)}
+          <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${esc(s.id || '')}" data-edit-date="${esc(s.date)}" data-edit-test="${esc(id)}">✏️</button>`;
       })
       .join(' · ');
-    html += `<tr><td>${s.date}</td><td>${GROUP_LABELS[s.type] || s.type}${sessionSourceBadge(s)}</td><td>${results}</td></tr>`;
+    html += `<tr><td>${esc(s.date)}</td><td>${esc(GROUP_LABELS[s.type] || s.type)}${sessionSourceBadge(s)}</td><td>${results}</td></tr>`;
   }
   html += '</table>';
   el.innerHTML = html;
