@@ -360,3 +360,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 }
 .sleep-star:hover { transform: scale(1.15); }
 .sleep-star.active { color: #f9a825; }
+
+/* ---------- Import montre connectée (zone de drop) ---------- */
+#watch-drop-zone { transition: border-color .15s, background .15s; }
+#watch-drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+#watch-drop-zone h3 { font-size: 1.1em; }
