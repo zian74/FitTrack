@@ -128,16 +128,37 @@ const TESTS = [
       <li>Comptez vos répétitions complètes (descente + remontée = 1) et reportez le total dans le champ.</li>
       <li>Respirez normalement ; arrêtez si vous ressentez une douleur au genou ou au dos.</li>
     </ul>` },
-  { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min', unit: 'bpm', group: 'cardio', rev: true,
+  { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min (méthode 1)', unit: 'bpm', group: 'cardio', rev: true,
     hint: '3 min de montées (24/min), pouls 1 min après', good: 100, mid: 110, max: 200, min: 50,
     info: `<ul>
+      <li><b>Méthode 1</b> — <b>Récupération cardiaque</b> : 3 min de montées à allure régulière, puis mesure du pouls 1 min après l'arrêt.</li>
       <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
       <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b> (comptez-vous ou suivez un métronome à 96 bpm = 24 cycles montée+descente/min).</li>
-      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider.</li>
+      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider ; à la fin, un <b>compte à rebours de 1 min</b> se lance automatiquement pour la mesure du pouls.</li>
       <li>Dès la fin, <b>asseyez-vous immédiatement</b> et prenez votre pouls pendant 60 s, <b>1 minute après l'arrêt</b> (comptez 15 s × 4 et multipliez par 4, ou 60 s complet).</li>
       <li>Notez ce pouls à 1 min : c'est votre résultat. Plus il est bas, meilleure est votre récupération cardiaque.</li>
       <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif — consultez un médecin avant de recommencer.</li>
       <li>Test sous-maximal : évitez si vous avez des antécédents cardiaques ou un traitement bêtabloquant (voir avertissement dans l'onglet Session).</li>
+    </ul>` },
+  { id: 'stair_steps', name: 'Test escalier — marches en 60 s (méthode 2)', unit: 'marches', group: 'cardio',
+    hint: 'Comptez les marches gravis en 60 secondes', good: 80, mid: 60, max: 200, min: 5,
+    info: `<ul>
+      <li><b>Méthode 2</b> — <b>Nombre de marches en 60 s</b> : capacité fonctionnelle brute.</li>
+      <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
+      <li>Placez-vous au bas d'un escalier. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 60 s</b> : montez les marches <b>aussi vite que possible</b> (une marche à la fois, en sécurité).</li>
+      <li>À la fin des 60 s, <b>comptez le nombre total de marches gravis</b> et reportez-le dans le champ.</li>
+      <li>Interprétation : <b>≥ 80</b> bonne à très bonne endurance · <b>60–79</b> condition moyenne, marge d'amélioration · <b>40–59</b> capacité cardiorespiratoire faible à modérée · <b>&lt; 40</b> capacité fonctionnelle basse.</li>
+      <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif.</li>
+    </ul>` },
+  { id: 'stair_4floors', name: 'Test escalier — 4 étages chronométrés (méthode 3)', unit: 's', group: 'cardio', rev: true,
+    hint: 'Chronométrez le temps pour monter 4 étages', good: 45, mid: 60, max: 300, min: 5,
+    info: `<ul>
+      <li><b>Méthode 3</b> — <b>Temps pour monter 4 étages</b> : capacité d'effort fonctionnel.</li>
+      <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
+      <li>Placez-vous au bas de l'escalier (étage 0). Le bouton <b>⏱</b> ouvre un <b>chronomètre</b> : démarrez-le en partant, montez <b>4 étages complets</b> à allure soutenue mais sécurisée, arrêtez le chrono en haut.</li>
+      <li>Reportez le temps affiché (en secondes) dans le champ. <i>Plus le temps est court, meilleur est le niveau.</i></li>
+      <li>Interprétation : <b>&lt; 45 s</b> très bon niveau de capacité d'effort · <b>45–60 s</b> bon niveau fonctionnel (si aucun symptôme anormal) · <b>60–90 s</b> niveau moyen · <b>&gt; 90 s</b> mauvais.</li>
+      <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif.</li>
     </ul>` },
   { id: 'cooper', name: 'Cooper — distance (m, équiv. 12 min)', unit: 'm', group: 'cardio',
     hint: '12 min à allure soutenue, ou 6 min (demi-Cooper)', good: 2400, mid: 2200, max: 5000, min: 200,
@@ -453,7 +474,16 @@ function enduranceIndicator(lv) {
   if (lv.vo2max?.value != null && lv.vo2max.derived === 'cooper') return { id: 'vo2max', value: lv.vo2max.value };
   // Distance Cooper brute (pas de dérivation possible) ou test escalier.
   if (lv.cooper?.value != null) return { id: 'cooper', value: lv.cooper.value };
+  const stair = stairIndicator(lv);
+  if (stair) return stair;
+  return null;
+}
+
+// Indicateur escalier retenu parmi les 3 méthodes (priorité : pouls > marches > 4 étages)
+function stairIndicator(lv) {
   if (lv.stair_pulse?.value != null) return { id: 'stair_pulse', value: lv.stair_pulse.value };
+  if (lv.stair_steps?.value != null) return { id: 'stair_steps', value: lv.stair_steps.value };
+  if (lv.stair_4floors?.value != null) return { id: 'stair_4floors', value: lv.stair_4floors.value };
   return null;
 }
 
@@ -547,7 +577,13 @@ const SCORE_PTS = { good: 100, mid: 60, low: 25 };
 
 function computeGlobalScore(profile) {
   const lv = latestValues();
-  const scored = PREDICTIVE.filter(id => lv[id]);
+  // Remplace stair_pulse par l'indicateur escalier effectivement disponible (3 méthodes)
+  const predictive = PREDICTIVE.map(id => {
+    if (id !== 'stair_pulse') return id;
+    const stair = stairIndicator(lv);
+    return stair ? stair.id : null;
+  }).filter(Boolean);
+  const scored = predictive.filter(id => lv[id]);
   if (!scored.length) return null;
   const avg = Math.round(scored.reduce((a, id) => a + SCORE_PTS[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length);
   const rows = scored.map(id => {
@@ -584,7 +620,7 @@ const IFG_DIMENSIONS = [
   { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.30, icon: '🫀',
     tests: ['fc', 'pa_sys', 'pa_dia', 'waist'] },
   { key: 'endurance', label: 'Endurance cardio', weight: 0.20, icon: '🫁',
-    tests: ['stair_pulse', 'cooper'] },
+    tests: ['stair_pulse', 'stair_steps', 'stair_4floors', 'cooper'] },
   { key: 'strength', label: 'Force musculaire', weight: 0.20, icon: '💪',
     tests: ['grip', 'pushups', 'plank', 'chair'] },
   { key: 'balance', label: 'Équilibre & mobilité', weight: 0.15, icon: '⚖️',
@@ -857,7 +893,9 @@ $('#edit-delete').addEventListener('click', () => {
 });
 
 // ---------- Session ----------
-const chronoBtns = ['plank', 'balance_open', 'balance_closed'];
+const chronoBtns = ['plank', 'balance_open', 'balance_closed', 'stair_4floors'];
+// Méthodes du test escalier : 1 = pouls à 1 min (3 min), 2 = marches en 60 s, 3 = 4 étages chronométrés
+const STAIR_METHODS = ['stair_pulse', 'stair_steps', 'stair_4floors'];
 
 let currentSessionType = 'rest';
 
@@ -944,6 +982,51 @@ function renderSessionFields() {
     }
     container.appendChild(block); // dans le DOM avant les rows (initCooperEstim fait des querySelector globaux)
     for (const t of TESTS.filter(x => x.group === g && x.id !== 'vma' && x.id !== 'vo2max')) {
+      // --- Test escalier : 3 méthodes au choix (sélecteur radio + un seul row actif) ---
+      if (STAIR_METHODS.includes(t.id)) {
+        // Le sélecteur n'est rendu qu'une fois (avec la 1re méthode)
+        if (t.id === 'stair_pulse') {
+          const sel = document.createElement('div');
+          sel.className = 'stair-method-select';
+          sel.innerHTML = `
+            <span class="row ifg-period-group" id="stair-method" title="Méthode de mesure" style="margin:0 0 6px">
+              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_pulse" checked> Méthode 1 — Pouls à 1 min</label>
+              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_steps"> Méthode 2 — Marches en 60 s</label>
+              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_4floors"> Méthode 3 — 4 étages chronométrés</label>
+            </span>`;
+          block.appendChild(sel);
+        }
+        const row = document.createElement('div');
+        row.className = 'field-row stair-method-row';
+        row.dataset.stairMethod = t.id;
+        const chronoBtn = chronoBtns.includes(t.id)
+          ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+        // Timer 3 min (méthode 1, avec chaînage 1 min) ou 60 s (méthode 2)
+        const stairTimerBtn = t.id === 'stair_pulse'
+          ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable), puis 1 min auto avant la mesure du pouls">⏳</button>`
+          : t.id === 'stair_steps'
+            ? `<button class="timer-btn" data-timer-ms="60000" data-timer-label="Escalier — marches en 60 s" title="Compte à rebours 60 s pour compter les marches">⏳</button>`
+            : '';
+        const infoBtn = t.info
+          ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
+        const last = latestValues()[t.id]?.value;
+        const lastInfo = last != null
+          ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
+        row.innerHTML = `
+          <label><span class="test-num">${testNum(t.id)}</span>${t.name}
+            ${infoBtn}
+            <div class="field-hint">${t.hint || ''}</div>
+            ${lastInfo}
+          </label>
+          <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
+                 data-test="${t.id}" placeholder="${t.unit}" ${t.id !== 'stair_pulse' ? 'disabled' : ''}>
+          ${chronoBtn}
+          ${stairTimerBtn}`;
+        block.appendChild(row);
+        const inp = row.querySelector('input[data-test]');
+        inp.addEventListener('input', () => updateFieldValidity(t, inp));
+        continue; // saute le rendu générique ci-dessous
+      }
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
@@ -951,11 +1034,6 @@ function renderSessionFields() {
       // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
         ? `<button class="timer-btn" data-timer-ms="30000" data-timer-label="Chaise 30 s — répétitions" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
-      // Timer compte à rebours 3 min par défaut (durée réglable) pour le test escalier.
-      // À la fin des 3 min, un compte à rebours de 1 min se lance automatiquement
-      // pour indiquer le délai avant la mesure du pouls (1 min après l'arrêt).
-      const stairTimerBtn = t.id === 'stair_pulse'
-        ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable), puis 1 min auto avant la mesure du pouls">⏳</button>` : '';
       const infoBtn = t.info
         ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
       const last = latestValues()[t.id]?.value;
@@ -988,7 +1066,6 @@ function renderSessionFields() {
                data-test="${t.id}" placeholder="${t.unit}">
         ${chronoBtn}
         ${chairTimerBtn}
-        ${stairTimerBtn}
         ${cooperEstim}`;
       block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
@@ -996,6 +1073,8 @@ function renderSessionFields() {
       if (t.id === 'cooper') initCooperEstim(inp);
     }
   }
+  // --- Test escalier : activer/désactiver les inputs selon la méthode choisie ---
+  if (type === 'cardio') initStairMethod();
   updateSaveState();
   // Avertissement Cooper si facteurs de risque majeurs
   const profile = getProfile();
@@ -1006,6 +1085,27 @@ function renderSessionFields() {
     w.innerHTML = `⚠️ <b>Test de Cooper déconseillé</b> : ${n} facteur${n > 1 ? 's' : ''} de risque cardio majeur${n > 1 ? 's' : ''} déclaré${n > 1 ? 's' : ''} dans votre profil. Avis médical recommandé avant un test maximal (privilégiez le test de l'escalier, sous-maximal).`;
     container.prepend(w);
   }
+}
+
+// ---------- Test escalier : sélecteur de méthode (1/2/3) ----------
+// Affiche uniquement le row de la méthode choisie ; les inputs des autres méthodes
+// sont désactivés (ignorés à la sauvegarde) et leurs timers/chronos masqués.
+function initStairMethod() {
+  const apply = () => {
+    const checked = document.querySelector('input[name="stair-method"]:checked');
+    const active = checked ? checked.value : 'stair_pulse';
+    document.querySelectorAll('.stair-method-row').forEach(row => {
+      const isActive = row.dataset.stairMethod === active;
+      row.classList.toggle('hidden', !isActive);
+      const inp = row.querySelector('input[data-test]');
+      if (inp) inp.disabled = !isActive;
+    });
+  };
+  // Délégation : les radios sont re-rendus à chaque affichage de la session
+  document.addEventListener('change', e => {
+    if (e.target.name === 'stair-method') apply();
+  });
+  apply();
 }
 
 // ---------- Pop-up d'aide à la réalisation d'un test (icône ⓘ) ----------
@@ -1044,6 +1144,9 @@ const STATIC_INFOS = {
     info: `<ul>
       <li><b>IPAQ court (activité physique)</b> : Craig CL et al., « International physical activity questionnaire: 12-country reliability and validity », <i>Med Sci Sports Exerc</i>, 2003 — cotation MET-min/sem (8×intense, 4×modéré, 3,3×marche) et seuils 600 / 3000.</li>
       <li><b>Recommandations activité physique</b> : OMS, « Lignes directrices de l'OMS sur l'activité physique et la sédentarité », 2020 — ≥ 150 min d'activité modérée/semaine (≈ 600 MET-min/sem).</li>
+      <li><b>Test escalier — méthode 1 (pouls à 1 min)</b> : test sous-maximal de récupération cardiaque — 3 min de montées à 24/min, pouls mesuré 1 min après l'arrêt (protocoles de step-test sous-maximaux).</li>
+      <li><b>Test escalier — méthode 2 (marches en 60 s)</b> : test fonctionnel de capacité — nombre de marches gravis en 60 s. Interprétation : ≥ 80 bonne à très bonne endurance · 60–79 moyenne · 40–59 faible à modérée · &lt; 40 basse (pratiquant occasionnel).</li>
+      <li><b>Test escalier — méthode 3 (4 étages chronométrés)</b> : test fonctionnel de capacité d'effort — temps pour monter 4 étages. Interprétation : &lt; 45 s très bon · 45–60 s bon · 60–90 s moyen · &gt; 90 s mauvais.</li>
       <li><b>Test de Cooper (endurance)</b> : Cooper KH, « A means of assessing maximal power output », <i>JAMA</i>, 1968 — distance maximale en 12 min, repères cardio-respiratoires adultes (H/F). Le demi-Cooper (6 min ×2) suit la même logique de normalisation.</li>
       <li><b>VMA &amp; VO2max estimées</b> : VMA = distance Cooper (m) ÷ 200 (Cooper 1968, relation distance/vitesse) ; VO2max = 3,5 × VMA (Léger &amp; Mercier, 1983) ; VO2max = (distance − 504,9) ÷ 44,73 (ACSM, <i>Guidelines for Exercise Testing and Prescription</i>) ; inverse : VMA = VO2max ÷ 3,5.</li>
       <li><b>Tour de taille (risque métabolique)</b> : seuils OMS/IDF — ≥ 94 cm (H) / ≥ 80 cm (F) : risque accru ; ≥ 102 / ≥ 88 cm : risque substantiellement accru.</li>
@@ -1099,6 +1202,7 @@ document.addEventListener('keydown', e => {
 });
 
 function updateFieldValidity(t, inp) {
+  if (inp.disabled) { inp.classList.remove('invalid'); return; } // méthode escalier inactive
   const raw = inp.value.trim();
   const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
   // Bornes effectives : attributs min/max du champ (le demi-Cooper les resserre à 100–2500)
@@ -1130,12 +1234,14 @@ function cooperEstimValid() {
 
 function updateSaveState() {
   const btn = $('#save-session');
-  const filled = $$('#session-fields input[data-test]').some(i => i.value.trim() !== '' && !i.classList.contains('invalid'));
-  const invalid = $$('#session-fields input[data-test]').some(i => i.classList.contains('invalid'));
+  // Ignore les inputs disabled (méthodes escalier inactives)
+  const activeInputs = $$('#session-fields input[data-test]').filter(i => !i.disabled);
+  const filled = activeInputs.some(i => i.value.trim() !== '' && !i.classList.contains('invalid'));
+  const invalid = activeInputs.some(i => i.classList.contains('invalid'));
   // Bloc Cooper : VMA ou VO2max seul suffit à enregistrer la session cardio
   const estim = cooperEstimValid();
   btn.disabled = !(filled || estim.filled);
-  const count = $$('#session-fields input[data-test]').filter(i => i.value.trim() !== '' && !i.classList.contains('invalid')).length + estim.count;
+  const count = activeInputs.filter(i => i.value.trim() !== '' && !i.classList.contains('invalid')).length + estim.count;
   $('#session-progress').textContent = count > 0 ? `${count} mesure${count > 1 ? 's' : ''} saisie${count > 1 ? 's' : ''}` : '';
   btn.title = (invalid || estim.invalid) ? 'Corrigez les valeurs hors bornes' : '';
 }
@@ -1245,6 +1351,7 @@ $('#save-session').addEventListener('click', () => {
   // Demi-Cooper : la distance 6 min est stockée en équivalent 12 min (×2)
   const cooperDuration = cooperSelectedDuration() === '6' ? 2 : 1;
   $$('#session-fields input[data-test]').forEach(inp => {
+    if (inp.disabled) return; // méthode escalier inactive : ignorée
     const v = inp.value.trim();
     if (v !== '' && !inp.classList.contains('invalid')) {
       let num = parseFloat(v.replace(',', '.'));
