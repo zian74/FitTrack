@@ -91,6 +91,7 @@
         <button class="session-type-btn" data-type="cardio">🏃 Cardio</button>
         <button class="session-type-btn" data-type="activity">🪑 Activité (IPAQ)</button>
         <button class="session-type-btn" data-type="sleep">🌙 Sommeil</button>
+        <button class="session-type-btn" data-type="nutrition">🍽 Alimentation</button>
       </div>
     </div>
     <div id="session-fields"></div>
@@ -151,6 +152,11 @@
         <h2>Sommeil ↔ Forme <button class="info-btn" data-info-test="__sleep__" title="Comprendre le score de sommeil" aria-label="Informations sur le score de sommeil">ⓘ</button></h2>
         <p class="small">Score de sommeil (/100) en abscisse, indice en ordonnée — chaque point est une date de mesure. Un bon sommeil favorise la récupération et la performance.</p>
         <div id="ifg-sleep-scatter"></div>
+      </div>
+      <div class="card">
+        <h2>Alimentation ↔ Forme <button class="info-btn" data-info-test="__nutrition__" title="Comprendre le score alimentaire" aria-label="Informations sur le score alimentaire">ⓘ</button></h2>
+        <p class="small">Score alimentaire (/100) en abscisse, indice en ordonnée — chaque point est une date de mesure. Une alimentation équilibrée soutient le poids, la tension et la récupération.</p>
+        <div id="ifg-nutrition-scatter"></div>
       </div>
     </div>
   </section>
@@ -225,6 +231,21 @@
         </label>
       </div>
       <div id="risk-summary" class="small" style="margin-top:8px"></div>
+      <h3>Habitudes alimentaires
+        <button class="info-btn" data-info-test="__diet__" title="En savoir plus sur les habitudes alimentaires" aria-label="Informations sur les habitudes alimentaires">ⓘ</button>
+      </h3>
+      <div class="row">
+        <label>Régime particulier :
+          <select id="p-diet"><option value="">— Aucun —</option><option value="vegetarian">Végétarien</option><option value="vegan">Végétalien</option><option value="glutenfree">Sans gluten</option></select>
+        </label>
+        <label>Repas par jour :
+          <select id="p-meals"><option value="">—</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 ou plus</option></select>
+        </label>
+        <label>Grignotage fréquent :
+          <select id="p-snacking"><option value="">—</option><option value="no">Non</option><option value="yes">Oui</option></select>
+        </label>
+      </div>
+      <p class="small">Ces informations restent locales et servent à contextualiser votre score alimentaire (bilan hebdomadaire dans l'onglet Session).</p>
       <button id="save-profile" class="primary">Enregistrer le profil</button>
       <span id="profile-saved-msg" class="ok hidden">✅ Profil enregistré</span>
     </div>

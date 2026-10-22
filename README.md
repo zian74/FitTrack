@@ -12,15 +12,16 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 - **Sommeil & récupération** (hebdomadaire) : questionnaire **5 questions** sur les 7 derniers jours (durée, qualité, latence, réveils, sensation au réveil), **score de sommeil /100** calculé automatiquement
+- **Alimentation** (hebdomadaire) : questionnaire **6 questions** sur les 7 derniers jours (fruits & légumes, boissons sucrées, ultra-transformés, petit-déjeuner, repas maison, hydratation), **score alimentaire /100** calculé automatiquement
 
 ### Fonctionnalités
 
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
 - Score global /100 basé sur les 5 mesures prédictives (préhension, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
-- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 6 dimensions (inclut **Sommeil & récupération** 🌙, 10 %),
+- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 7 dimensions (inclut **Sommeil & récupération** 🌙, 10 %, et **Alimentation** 🍽, 5 %),
   radar, priorités, évolution, corrélation activité ↔ forme et
-  nuage Sommeil ↔ IFG avec coefficient de Pearson (r, libellé qualitatif)
+  nuages Sommeil ↔ IFG et Alimentation ↔ IFG avec coefficient de Pearson (r, libellé qualitatif)
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
 - ⏳ Timer compte à rebours générique (panneau flottant, bip de fin) : chaise 30 s, escalier 3 min (durée réglable), Cooper 12/6 min
@@ -75,5 +76,6 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
 - [x] ⌚ **Import montre connectée** : parseur CSV Garmin Connect/générique + TCX + GPX, mapping FC repos / sommeil / IPAQ, drag & drop, 100 % local
 - [x] 📊 **Corrélation Sommeil ↔ IFG** : nuage de points (score sommeil/100 ↔ IFG recalculé à chaque date de sommeil, repères 80/60) + coefficient de Pearson r avec libellé (forte/modérée/faible/négligeable), ⓘ explicatif
+- [x] 🍽 **Alimentation** : questionnaire 6 questions (fruits & légumes, boissons sucrées, ultra-transformés, petit-déjeuner, repas maison, hydratation), score /100, nouvelle dimension IFG (5 %, cardio au repos ramené à 20 %), bilan hebdomadaire, corrélation Alimentation ↔ IFG (nuage + Pearson), habitudes alimentaires déclaratives dans le Profil
 - [x] ⌚ **Badge provenance dans l'historique** : les mesures importées d'une montre connectée portent un badge « ⌚ montre » (avec le sport si connu, ex. Running pour un TCX) dans la colonne Type
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
