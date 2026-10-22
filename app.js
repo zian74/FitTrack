@@ -1361,6 +1361,7 @@ const STATIC_INFOS = {
       <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
       <li><b>Score de sommeil (questionnaire 5 items)</b> : durée, qualité subjective, latence d'endormissement, réveils nocturnes et sensation au réveil — inspiré du <b>PSQI</b> (Buysse DJ et al., <i>Psychiatry Research</i>, 1989), abrégé pour un usage régulier. Pondération : durée 30 %, qualité 25 %, latence 15 %, réveils 15 %, réveil 15 %.</li>
       <li><b>Durée de sommeil recommandée</b> : <b>NSF (National Sleep Foundation)</b> — 7–9 h par nuit pour un adulte (18–64 ans), 7–8 h pour 65 ans et +. <b>OMS</b> : le sommeil insuffisant (&lt; 6 h) est associé à un risque accru de maladies cardiovasculaires, d'obésité et de troubles métaboliques.</li>
+      <li><b>Import montre connectée</b> : les formats CSV (Garmin Connect, générique), TCX (Training Center XML) et GPX sont lus localement (FileReader). Le mapping estime la FC de repos (min de la journée), la durée de sommeil et un score provisoire, ainsi qu'un score IPAQ approximatif depuis les pas, la durée et la FC moyenne (3,3 MET×marche + 4×modérée + 8×intense, protocole IPAQ court Craig 2003).</li>
       <li><b>Sommeil et récupération</b> : un sommeil de qualité est un pilier de la récupération musculaire et de la régulation hormonale (métabolisme, sensibilité à l'insuline). Les méta-analyses associent un sommeil court ou de mauvaise qualité à une mortalité cardiovasculaire et toutes causes accrue (ex. : Cappuccio FP et al., <i>European Heart Journal</i>, 2011).</li>
     </ul>
     <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,
@@ -2396,6 +2397,327 @@ function parseImportCsv(text) {
   return data;
 }
 
+
+// ---------- Import montre connectée (Garmin Connect CSV, TCX, GPX) ----------
+// Parse un export d'activité d'une montre connectée (Garmin, Fitbit, Polar, Apple
+// Health, etc.) et le convertit en sessions FitTrack. 100 % local : le fichier est
+// lu côté client, jamais envoyé sur un serveur.
+//
+// Formats supportés :
+//   - CSV Garmin Connect « Activities » (colonnes : Activity Type, Date, Distance,
+//     Calories, Duration, Avg HR, Max HR, Avg Pace, ...)
+//   - CSV générique (colonnes reconnues : date, distance_km, calories, duree_min,
+//     fc_moy, fc_max, pas, sommeil_h, ...)
+//   - TCX (Training Center XML) : activités avec FC, distance, durée, calories
+//   - GPX : trace avec timestamps (durée, distance, FC optionnelle)
+//
+// Mapping vers les tests FitTrack :
+//   - FC de repos (fc)          ← min(FC) d'une journée (repos nocturne inclus)
+//   - Score de sommeil          ← durée de sommeil estimée (Garmin « Sleep » CSV)
+//   - Durée moyenne sommeil     ← durée de sommeil (h)
+//   - IPAQ (activité)           ← pas + durée d'activité modérée/intense
+// Les autres mesures (force, équilibre, Cooper) restent manuelles.
+
+// Parse CSV simple (gère les guillemets "..." avec ; ou , comme séparateur)
+function parseCsvGeneric(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ';' || c === ',') { row.push(field.trim()); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field.trim()); field = '';
+      if (row.some(f => f !== '')) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  if (field !== '' || row.length) { row.push(field.trim()); rows.push(row); }
+  return rows;
+}
+
+// Normalise un nom de colonne (minuscules, sans accents/espaces)
+function normCol(name) {
+  return String(name || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+// Synonymes de colonnes Garmin Connect / génériques → champ interne
+const GARMIN_COL_MAP = {
+  date: ['date', 'starttime', 'starttimelocal', 'datetime', 'jour', 'day', 'activitydate'],
+  type: ['activitytype', 'type', 'sport', 'activite', 'activity'],
+  distanceKm: ['distance', 'distancekm', 'distancekilometers', 'distancem', 'distanceenkm'],
+  calories: ['calories', 'kcal', 'cal', 'energy', 'depense'],
+  durationMin: ['duration', 'durationmin', 'duree', 'dureemin', 'temps', 'elapsedtime', 'movingtime'],
+  avgHr: ['avghr', 'averageheartrate', 'hrmean', 'fcmoyenne', 'fcmoy', 'avgheart rate'],
+  maxHr: ['maxhr', 'maximumheartrate', 'hrmax', 'fcmax', 'maxheart rate'],
+  minHr: ['minhr', 'minimumheartrate', 'hrmin', 'fcmin', 'restinghr', 'restingheartrate', 'fcde repos'],
+  steps: ['steps', 'stepcount', 'pas', 'nombredepas', 'total steps'],
+  sleepHours: ['sleephours', 'sleeptime', 'dureedesommeil', 'sommeil', 'sleeptotal', 'duree sommeil', 'sleep'],
+  avgSpeed: ['avgspeed', 'averagespeed', 'vitessemoyenne'],
+  elevation: ['elevationgain', 'totalascent', 'denivele', 'elevation', 'ascension'],
+};
+
+// Construit l'index colonne → champ interne à partir d'une ligne d'en-tête
+function buildColIndex(header) {
+  const idx = {};
+  header.forEach((h, i) => {
+    const n = normCol(h);
+    for (const [field, synonyms] of Object.entries(GARMIN_COL_MAP)) {
+      if (synonyms.some(s => normCol(s) === n)) { idx[field] = i; break; }
+    }
+  });
+  return idx;
+}
+
+// Parse une date Garmin ("2024-01-15 08:30:00", "15/01/2024", ISO, etc.)
+function parseGarminDate(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // ISO : 2024-01-15T08:30:00, 2024-01-15 08:30:00 ou 2024-01-15 (date seule)
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // JJ/MM/AAAA ou MM/JJ/AAAA : si le 1er groupe > 12 → c'est JJ/MM (FR),
+  // sinon si le 2e > 12 → c'est MM/JJ (US), sinon défaut FR (JJ/MM/AAAA)
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (m) {
+    const a = parseInt(m[1], 10), b = parseInt(m[2], 10), y = m[3];
+    if (a > 12) return `${y}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`; // JJ/MM
+    if (b > 12) return `${y}-${String(a).padStart(2, '0')}-${String(b).padStart(2, '0')}`; // MM/JJ
+    return `${y}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`; // défaut FR
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+
+// Parse un nombre Garmin ("1,234.56", "1 234,56", "12 min", "1:23:45")
+function parseGarminNumber(raw) {
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim();
+  // Durée au format h:mm:ss ou mm:ss → minutes
+  const dur = s.match(/^(?:(\d+):)?(\d{1,2}):(\d{2})$/);
+  if (dur) {
+    const h = parseInt(dur[1] || '0', 10), m = parseInt(dur[2], 10), sec = parseInt(dur[3], 10);
+    return Math.round((h * 60 + m + sec / 60) * 100) / 100;
+  }
+  // Nombre avec séparateur décimal , ou . (gère "1,234.56" et "1 234,56")
+  const cleaned = s.replace(/\s/g, '').replace(/,/g, '.');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+// Parse un CSV Garmin Connect (ou générique) → sessions FitTrack
+function parseGarminCsv(text) {
+  const rows = parseCsvGeneric(text);
+  if (!rows.length) return { sessions: [] };
+  const idx = buildColIndex(rows[0]);
+  if (idx.date == null) return { sessions: [] }; // pas de colonne date reconnue (idx.date = 0 est valide)
+  const sessions = [];
+  const byDate = new Map(); // agrégation par jour
+
+  for (let r = 1; r < rows.length; r++) {
+    const cols = rows[r];
+    const date = parseGarminDate(cols[idx.date]);
+    if (!date) continue;
+    const get = f => (idx[f] != null ? cols[idx[f]] : null);
+    const rec = {
+      type: (get('type') || '').toLowerCase(),
+      distanceKm: parseGarminNumber(get('distanceKm')),
+      calories: parseGarminNumber(get('calories')),
+      durationMin: parseGarminNumber(get('durationMin')),
+      avgHr: parseGarminNumber(get('avgHr')),
+      maxHr: parseGarminNumber(get('maxHr')),
+      minHr: parseGarminNumber(get('minHr')),
+      steps: parseGarminNumber(get('steps')),
+      sleepHours: parseGarminNumber(get('sleepHours')),
+    };
+    if (!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date).push(rec);
+  }
+
+  // Agrégation par jour → sessions FitTrack
+  for (const [date, recs] of byDate) {
+    const values = {};
+    // FC de repos = min des FC min de la journée (ou min des avg si pas de min)
+    const minHrs = recs.map(r => r.minHr).filter(v => v != null);
+    const restHr = minHrs.length ? Math.round(Math.min(...minHrs)) : null;
+    if (restHr != null && restHr >= 25 && restHr <= 120) values.fc = restHr;
+
+    // Sommeil : durée en heures (si colonne sommeil présente)
+    const sleepRecs = recs.filter(r => r.sleepHours != null && r.sleepHours > 0);
+    if (sleepRecs.length) {
+      const totalSleep = sleepRecs.reduce((s, r) => s + r.sleepHours, 0);
+      values.sleep_hours = Math.round(totalSleep * 10) / 10;
+      // Score de sommeil estimé depuis la durée seule (pondération partielle :
+      // durée = 30 % du poids total → score = itemScore × 100/30 normalisé)
+      // On stocke un score provisoire basé sur la durée (sera affiné si montre
+      // fournit aussi qualité/latence dans un futur format).
+      const q = SLEEP_QUESTIONS.find(x => x.id === 'hours');
+      // Score provisoire basé sur la durée seule (item 0–100, pondération 30 %).
+      // Un import ultérieur avec qualité/latence remplacera cette valeur.
+      values.sleep_score = Math.round(sleepItemScore(q, totalSleep));
+    }
+
+    // Activité : pas totaux + durée d'effort (modéré si FC avg > 100 ou allure)
+    // Estimation IPAQ : 3,3 MET × min de marche (pas) + 4 MET × min modéré + 8 MET × min intense
+    // Approximation : 100 pas/min = marche modérée. Activités avec FC avg > 120 = intense.
+    let metMin = 0;
+    for (const r of recs) {
+      if (r.steps && r.durationMin) {
+        const pasParMin = r.steps / r.durationMin;
+        if (pasParMin >= 90) metMin += 3.3 * r.durationMin; // marche
+      }
+      if (r.durationMin && r.avgHr) {
+        if (r.avgHr >= 130) metMin += 8 * r.durationMin;      // intense
+        else if (r.avgHr >= 100) metMin += 4 * r.durationMin; // modéré
+      } else if (r.durationMin && r.calories) {
+        // Sans FC : estimation par calories (~0,1 kcal/min/MET × poids estimé 70 kg)
+        metMin += Math.max(0, (r.calories / 7) - 1) * r.durationMin * 0.5;
+      }
+    }
+    if (metMin > 0) values.ipaq = Math.round(metMin);
+
+    if (Object.keys(values).length) {
+      // Type de session : priorité sommeil > repos (fc) > activité
+      let type = 'activity';
+      if (values.sleep_hours != null) type = 'sleep';
+      else if (values.fc != null) type = 'rest';
+      sessions.push({ date, type, values, source: 'import' });
+    }
+  }
+  return { sessions };
+}
+
+// Parse un fichier TCX (Training Center XML) → sessions FitTrack
+function parseTcx(text) {
+  const sessions = [];
+  // Extraction simple par regex (pas de DOMParser XML fiable hors-ligne sur tous
+  // les navigateurs pour du XML embarqué — on reste en vanilla JS pur)
+  const activityRe = /<Activity[^>]*Sport="([^"]*)"[^>]*>([\s\S]*?)<\/Activity>/gi;
+  let m;
+  while ((m = activityRe.exec(text))) {
+    const sport = m[1];
+    const body = m[2];
+    const dateM = body.match(/<Id>(\d{4}-\d{2}-\d{2})T/);
+    const date = dateM ? dateM[1] : null;
+    if (!date) continue;
+    const distM = body.match(/<DistanceMeters>([\d.]+)<\/DistanceMeters>/);
+    const durM = body.match(/<TotalTimeSeconds>([\d.]+)<\/TotalTimeSeconds>/);
+    const calM = body.match(/<Calories>(\d+)<\/Calories>/);
+    const hrValues = [...body.matchAll(/<Value>(\d+)<\/Value>/g)].map(x => parseInt(x[1], 10));
+    const values = {};
+    if (hrValues.length) {
+      const minHr = Math.min(...hrValues);
+      if (minHr >= 25 && minHr <= 120) values.fc = minHr;
+    }
+    if (distM) {
+      const km = parseFloat(distM[1]) / 1000;
+      if (km > 0) values._distanceKm = Math.round(km * 100) / 100;
+    }
+    if (durM) values._durationMin = Math.round(parseFloat(durM[1]) / 60 * 100) / 100;
+    if (calM) values._calories = parseInt(calM[1], 10);
+    if (Object.keys(values).length) {
+      sessions.push({ date, type: values.fc != null ? 'rest' : 'activity', values, source: 'import', _sport: sport });
+    }
+  }
+  return { sessions };
+}
+
+// Parse un fichier GPX → sessions FitTrack (durée + distance, FC si présente)
+function parseGpx(text) {
+  const sessions = [];
+  const trkptRe = /<trkpt[^>]*lat="([^"]*)"[^>]*lon="([^"]*)"[^>]*>([\s\S]*?)<\/trkpt>/gi;
+  const points = [];
+  let m;
+  while ((m = trkptRe.exec(text))) {
+    const body = m[3];
+    const timeM = body.match(/<time>([^<]+)<\/time>/);
+    const hrM = body.match(/<(?:hr|heartrate|heart_rate)>(?:<[^>]+>)?(\d+)/i);
+    const eleM = body.match(/<ele>([^<]+)<\/ele>/);
+    if (timeM) {
+      points.push({
+        time: new Date(timeM[1].trim()),
+        hr: hrM ? parseInt(hrM[1], 10) : null,
+        ele: eleM ? parseFloat(eleM[1]) : null,
+      });
+    }
+  }
+  if (points.length < 2) return { sessions: [] };
+  points.sort((a, b) => a.time - b.time);
+  const date = points[0].time.toISOString().slice(0, 10);
+  const durationMin = (points[points.length - 1].time - points[0].time) / 60000;
+  // Distance totale (formule de Haversine) — re-parse lat/lon depuis le texte
+  const pts2 = [];
+  const re2 = /<trkpt[^>]*lat="([-\d.]+)"[^>]*lon="([-\d.]+)"/gi;
+  while ((m = re2.exec(text))) pts2.push({ lat: parseFloat(m[1]), lon: parseFloat(m[2]) });
+  let dist = 0;
+  for (let i = 1; i < pts2.length; i++) {
+    const R = 6371, dLat = (pts2[i].lat - pts2[i - 1].lat) * Math.PI / 180;
+    const dLon = (pts2[i].lon - pts2[i - 1].lon) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(pts2[i - 1].lat * Math.PI / 180)
+      * Math.cos(pts2[i].lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    dist += 2 * R * Math.asin(Math.sqrt(a));
+  }
+  const hrVals = points.map(p => p.hr).filter(v => v != null);
+  const values = {};
+  if (hrVals.length) {
+    const minHr = Math.min(...hrVals);
+    if (minHr >= 25 && minHr <= 120) values.fc = minHr;
+  }
+  if (dist > 0) values._distanceKm = Math.round(dist * 100) / 100;
+  if (durationMin > 0) values._durationMin = Math.round(durationMin * 100) / 100;
+  if (Object.keys(values).length) {
+    sessions.push({ date, type: values.fc != null ? 'rest' : 'activity', values, source: 'import' });
+  }
+  return { sessions };
+}
+
+// Supprime les champs internes (préfixe _) d'une session importée — ils servent
+// au debug mais ne sont pas des tests FitTrack et ne doivent pas polluer le stockage.
+function cleanImportedSession(s) {
+  if (!s || !s.values) return s;
+  const values = {};
+  for (const [k, v] of Object.entries(s.values)) {
+    if (!k.startsWith('_') && v != null && v !== '') values[k] = v;
+  }
+  return { ...s, values };
+}
+
+// Détecte le format d'un fichier montre et parse → { sessions }
+function parseWatchFile(text, filename) {
+  const name = (filename || '').toLowerCase();
+  const head = text.slice(0, 500).trim();
+  if (name.endsWith('.tcx') || head.startsWith('<?xml') && head.includes('<TrainingCenterDatabase')) {
+    return parseTcx(text);
+  }
+  if (name.endsWith('.gpx') || head.startsWith('<?xml') && head.includes('<gpx')) {
+    return parseGpx(text);
+  }
+  if (name.endsWith('.csv') || head.includes(';') || head.includes(',')) {
+    // Essaie d'abord le parseur Garmin, fallback sur le parseur FitTrack existant
+    const garmin = parseGarminCsv(text);
+    if (garmin.sessions.length) return garmin;
+    return { sessions: parseImportCsv(text).sessions || [] };
+  }
+  if (name.endsWith('.json')) {
+    return JSON.parse(text);
+  }
+  throw new Error('Format non reconnu (attendu : CSV, TCX, GPX, JSON).');
+}
+
+// Nettoie les sessions d'un résultat de parse montre (retire les champs internes _xxx)
+function cleanWatchSessions(data) {
+  if (!data || !Array.isArray(data.sessions)) return data;
+  return { ...data, sessions: data.sessions.map(cleanImportedSession) };
+}
+
 $('#import-btn').addEventListener('click', () => $('#import-file').click());
 $('#import-file').addEventListener('change', e => {
   const file = e.target.files[0];
@@ -2405,7 +2727,27 @@ $('#import-file').addEventListener('change', e => {
   reader.onload = () => {
     try {
       const text = String(reader.result);
-      const data = file.name.toLowerCase().endsWith('.csv') ? parseImportCsv(text) : JSON.parse(text);
+      const name = file.name.toLowerCase();
+      let data;
+      // Fichiers montre connectée (Garmin, TCX, GPX, CSV générique)
+      if (name.endsWith('.tcx') || name.endsWith('.gpx') || name.endsWith('.fit')) {
+        data = cleanWatchSessions(parseWatchFile(text, file.name));
+        const n = applyImportedData(data);
+        showImportMsg(`✅ Import montre réussi : ${n} session(s) importée(s).`);
+        return;
+      }
+      if (name.endsWith('.csv')) {
+        // Essaie d'abord le parseur montre (Garmin Connect), fallback export FitTrack
+        const garmin = parseGarminCsv(text);
+        if (garmin.sessions.length) {
+          const n = applyImportedData(garmin);
+          showImportMsg(`✅ Import montre réussi : ${n} session(s) importée(s).`);
+          return;
+        }
+        data = { sessions: parseImportCsv(text).sessions || [] };
+      } else {
+        data = JSON.parse(text);
+      }
       const n = applyImportedData(data);
       showImportMsg(`✅ Import réussi : ${n} élément(s) fusionné(s).`);
     } catch (err) {
@@ -2415,6 +2757,57 @@ $('#import-file').addEventListener('change', e => {
   reader.onerror = () => showImportMsg('❌ Lecture du fichier impossible.', false);
   reader.readAsText(file);
 });
+
+// ---------- Import montre connectée : bouton dédié + zone de drop ----------
+// Même flux que l'import classique, mais avec un file picker acceptant
+// .csv, .tcx, .gpx (exports Garmin Connect, Polar, Fitbit, etc.)
+$('#import-watch-btn').addEventListener('click', () => $('#import-watch-file').click());
+$('#import-watch-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = cleanWatchSessions(parseWatchFile(String(reader.result), file.name));
+      const n = applyImportedData(data);
+      showImportMsg(`✅ Import montre réussi : ${n} session(s) — FC de repos, sommeil et activité détectés.`, true);
+    } catch (err) {
+      showImportMsg(`❌ Import montre impossible : ${err.message || 'format non reconnu'}`, false);
+    }
+  };
+  reader.onerror = () => showImportMsg('❌ Lecture du fichier impossible.', false);
+  reader.readAsText(file);
+});
+
+// Zone de drop pour les fichiers montre (drag & drop sur la carte d'import)
+const watchDrop = $('#watch-drop-zone');
+if (watchDrop) {
+  ['dragenter', 'dragover'].forEach(ev => watchDrop.addEventListener(ev, e => {
+    e.preventDefault();
+    watchDrop.classList.add('dragover');
+  }));
+  ['dragleave', 'drop'].forEach(ev => watchDrop.addEventListener(ev, e => {
+    e.preventDefault();
+    watchDrop.classList.remove('dragover');
+  }));
+  watchDrop.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = cleanWatchSessions(parseWatchFile(String(reader.result), file.name));
+        const n = applyImportedData(data);
+        showImportMsg(`✅ Import montre réussi : ${n} session(s) — FC de repos, sommeil et activité détectés.`, true);
+      } catch (err) {
+        showImportMsg(`❌ Import montre impossible : ${err.message || 'format non reconnu'}`, false);
+      }
+    };
+    reader.onerror = () => showImportMsg('❌ Lecture du fichier impossible.', false);
+    reader.readAsText(file);
+  });
+}
 
 // ---------- Paramètres (onglet ⚙️) ----------
 // Le sélecteur de thème vit dans l'onglet Paramètres : toujours initialisé,

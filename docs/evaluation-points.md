@@ -2,7 +2,7 @@
 
 Points gardés en mémoire pour une **future évaluation** de FitTrack.
 
-## 1. Import des données Garmin et autres montres connectées
+## 1. Import des données Garmin et autres montres connectées ✅ (fait — v1)
 
 - Import des données d'activité depuis les montres connectées (Garmin, et autres :
   Apple Watch, Fitbit, Polar, etc.)

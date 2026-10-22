@@ -29,6 +29,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Dimension Endurance (IFG)** : priorité **VMA saisie > VO2max saisie > Cooper/demi-Cooper (VMA/VO2max dérivées) > test escalier** — un seul indicateur retenu par session
 - Graphiques SVG par indicateur avec zones objectif
 - Export CSV / JSON, données 100 % locales (localStorage)
+- ⌚ **Import montre connectée** : CSV Garmin Connect / générique, TCX, GPX — FC de repos, durée de sommeil, pas, activité (IPAQ estimé), 100 % local (drag & drop ou sélection fichier)
 - Avertissement médical avant test maximal si facteurs de risque déclarés
 - Suivi du niveau d'activité (IPAQ court) avec repères OMS : ≥ 600 MET-min/sem, objectif ≥ 3000
 
@@ -71,4 +72,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] ⓘ Pop-up d'info pour le **test 9 Préhension** (dynamométrie) : échauffement, position debout coude à 90°, réglage sur la 2ᵉ phalange, serrage max 2–3 s, 2–3 essais/main avec 30 s de repos, meilleure valeur retenue, respiration (éviter Valsalva), arrêt en cas de douleur
 - [x] ✏️ Test 9 renommé « **Préhension** — meilleure main (kg) » (alias « Poigne » conservé pour l'import des anciens exports CSV)
 - [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
+- [x] ⌚ **Import montre connectée** : parseur CSV Garmin Connect/générique + TCX + GPX, mapping FC repos / sommeil / IPAQ, drag & drop, 100 % local
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

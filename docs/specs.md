@@ -113,6 +113,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - **Dimension Endurance (IFG) — priorité VMA > VO2max > Cooper/demi-Cooper > escalier** : un seul indicateur retenu par session pour ne pas compter deux fois la même capacité. Les saisies directes (VMA/VO2max dans le bloc Cooper) sont prioritaires sur les dérivations depuis la distance Cooper (VMA = dist/200), elles-mêmes prioritaires sur le test escalier. Les tendances 30 j et les périodes de calcul appliquent la même règle
 - Historique, graphique par indicateur avec zones objectif/seuil
 - Export CSV / JSON (le CSV embarque le profil en lignes « # profil ») ; import JSON/CSV avec fusion (profil, sessions par date+type, historiques) pour restaurer après plantage ; effacement complet des données
+- **Import montre connectée** (CSV Garmin Connect / générique, TCX, GPX) : parsing 100 % local (FileReader, aucun serveur). Mapping : FC de repos ← min(FC) journée, durée sommeil + score provisoire ← colonne Sleep, IPAQ estimé ← pas/durée/FC (3,3×marche + 4×modéré + 8×intense). Fusion par date+type (valeurs importées prioritaires). Détection auto du format (extension + contenu). Zone de drag & drop + sélecteur fichier (.csv, .tcx, .gpx)
 - Avertissement médical avant test maximal si facteurs de risque
 
 ## 4. Exigences non fonctionnelles

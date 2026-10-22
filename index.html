@@ -169,6 +169,18 @@
         <span id="import-msg" class="ok hidden"></span>
       </div>
       <p class="small">L'import fusionne le profil et les mesures du fichier (JSON ou CSV) avec vos données actuelles — utile pour restaurer après un plantage ou changer d'appareil.</p>
+      <div class="card" style="margin-top:12px;border:2px dashed var(--border);border-radius:10px;padding:16px" id="watch-drop-zone">
+        <h3 style="margin-top:0">⌚ Import montre connectée</h3>
+        <p class="small">Importez un export de votre montre (Garmin Connect, Polar, Fitbit, Apple Health…) : <b>.csv</b>, <b>.tcx</b>, <b>.gpx</b>.
+        Les données sont lues <b>100 % localement</b> — aucun envoi sur un serveur.</p>
+        <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+          <button id="import-watch-btn">⌚ Importer un fichier montre</button>
+          <input type="file" id="import-watch-file" accept=".csv,.tcx,.gpx" class="hidden">
+          <span class="small" style="color:var(--text-muted)">ou glissez-déposez le fichier ici</span>
+        </div>
+        <p class="small" style="margin-bottom:0">Données reconnues : <b>FC de repos</b> (min de la journée), <b>durée de sommeil</b>, <b>pas</b>, <b>durée d'activité</b>, <b>calories</b>.
+        L'import fusionne avec vos données existantes (les valeurs importées remplacent celles de la même date).</p>
+      </div>
       <div id="history-table" class="table-wrap"></div>
     </div>
   </section>
