@@ -63,4 +63,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] ⏳ Test escalier : après les 3 min de montées, un **compte à rebours de 1 min se lance automatiquement** pour indiquer le délai avant la mesure du pouls (chaînage auto du timer générique, annulable via ✕ ou ↺)
 - [x] 💾 Session Cardio : enregistrement avec VMA seule, VO2max seule ou distance Cooper (au moins un des 3 champs)
 - [x] 🏃 Refonte UI du test de Cooper (6 changements) : suppression du bouton ⏳ timer, suppression des formules de calcul dans le bloc d'estimation (déjà dans les sources scientifiques), renommage « 6 min (demi-Cooper) » (sans ×2), champ distance placé après le choix 12/6 min, phrase « Au moins un des 3 champs… » déplacée après les champs VMA/VO2max, et la distance Cooper n'apparaît plus dans le bloc d'estimation quand VMA ou VO2max est saisie
+- [x] 🐛 Correction : suppression d'une mesure via le stylo ✏️ rafraîchit désormais le tableau « Dernière session » (ainsi que l'historique et l'analyse si actifs) — la valeur supprimée n'apparaît plus
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

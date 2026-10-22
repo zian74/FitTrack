@@ -848,7 +848,12 @@ $('#edit-delete').addEventListener('click', () => {
     store.set('sessions', sessions);
   }
   closeEditModal();
+  // re-rendu des vues actives (même liste que edit-save : la mesure supprimée
+  // ne doit plus apparaître dans « Dernière session » ni l'historique)
   renderDashboard();
+  renderLastSession();
+  if ($('#view-history').classList.contains('active')) renderHistory();
+  if ($('#view-analysis').classList.contains('active')) renderAnalysis();
 });
 
 // ---------- Session ----------
