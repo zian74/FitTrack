@@ -65,7 +65,10 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   force (20 %), équilibre & mobilité (15 %), habitudes d'activité (10 %),
   sommeil & récupération (10 %) ;
   historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
-  courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG ;
+  courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG,
+  nuage Sommeil ↔ IFG (score sommeil/100 en X, IFG recalculé à chaque date
+  de sommeil en Y, repères 80/60) + coefficient de corrélation de Pearson r
+  avec libellé qualitatif (forte ≥ 0,70 / modérée ≥ 0,40 / faible ≥ 0,20) ;
   **période de calcul au choix** (dernière session / 1 sem / 1 mois / 1 an / toutes
   les valeurs) s'applique à l'IFG, aux dimensions et aux points forts/priorités
 - Alertes tendance : dégradation > 3–5 % ou stagnation sur 2 sessions

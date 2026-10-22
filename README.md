@@ -19,7 +19,8 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - Score global /100 basé sur les 5 mesures prédictives (préhension, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
 - **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 6 dimensions (inclut **Sommeil & récupération** 🌙, 10 %),
-  radar, priorités, évolution et corrélation activité ↔ forme
+  radar, priorités, évolution, corrélation activité ↔ forme et
+  nuage Sommeil ↔ IFG avec coefficient de Pearson (r, libellé qualitatif)
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
 - ⏳ Timer compte à rebours générique (panneau flottant, bip de fin) : chaise 30 s, escalier 3 min (durée réglable), Cooper 12/6 min
@@ -73,4 +74,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] ✏️ Test 9 renommé « **Préhension** — meilleure main (kg) » (alias « Poigne » conservé pour l'import des anciens exports CSV)
 - [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
 - [x] ⌚ **Import montre connectée** : parseur CSV Garmin Connect/générique + TCX + GPX, mapping FC repos / sommeil / IPAQ, drag & drop, 100 % local
+- [x] 📊 **Corrélation Sommeil ↔ IFG** : nuage de points (score sommeil/100 ↔ IFG recalculé à chaque date de sommeil, repères 80/60) + coefficient de Pearson r avec libellé (forte/modérée/faible/négligeable), ⓘ explicatif
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

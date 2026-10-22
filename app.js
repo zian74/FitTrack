@@ -1342,6 +1342,24 @@ const STATIC_INFOS = {
       <li>Dans ce graphique, chaque point croise votre score IPAQ (activité déclarée) avec votre IFG (forme mesurée) à la même date — un écart important signale un déséquilibre à creuser.</li>
     </ul>`
   },
+  __sleep__: {
+    name: 'Score de sommeil ↔ Indice FitTrack Global',
+    info: `<ul>
+      <li>Ce graphique croise votre <b>score de sommeil</b> (/100, axe horizontal) avec votre <b>Indice FitTrack Global</b> (IFG, axe vertical) à la même date.</li>
+      <li>Chaque point est une date où un bilan de sommeil a été enregistré. L'IFG est recalculé avec toutes les données disponibles à cette date.</li>
+      <li><b>Repères verticaux</b> : <span style="color:var(--ok)">80 = bon sommeil</span> (ligne pleine) · <span style="color:var(--warn)">60 = seuil moyen</span> (ligne pointillée).</li>
+      <li><b>Corrélation de Pearson</b> (r entre −1 et +1) : mesure la force du lien linéaire entre les deux séries.
+        <ul>
+          <li><b>r proche de +1</b> : quand le sommeil s'améliore, l'IFG monte aussi (corrélation positive forte).</li>
+          <li><b>r proche de 0</b> : pas de lien linéaire apparent.</li>
+          <li><b>r proche de −1</b> : corrélation négative (rare ici).</li>
+        </ul>
+      </li>
+      <li>Seuils usuels : |r| ≥ 0,7 = forte · 0,4–0,7 = modérée · 0,2–0,4 = faible · &lt; 0,2 = négligeable.</li>
+      <li><b>Interprétation</b> : un sommeil de qualité favorise la récupération musculaire, la régulation hormonale et la performance cardiovasculaire. Une corrélation positive suggère que vos nuits influencent votre forme mesurée — pensez à surveiller votre sommeil autant que votre activité.</li>
+      <li>Sources : PSQI (Buysse 1989), NSF (7–9 h), Cappuccio 2011 (méta-analyse sommeil/mortalité cardiovasculaire).</li>
+    </ul>`
+  },
   __sources__: {
     name: 'Sources scientifiques',
     info: `<ul>
@@ -1889,6 +1907,7 @@ function renderAnalysis() {
     $('#ifg-chart-stats').textContent = '';
     $('#ifg-trends').innerHTML = '';
     $('#ifg-scatter').innerHTML = '';
+    $('#ifg-sleep-scatter').innerHTML = '';
     return;
   }
 
@@ -1940,6 +1959,9 @@ function renderAnalysis() {
 
   // 6. Nuage de points IPAQ ↔ IFG
   renderIfgScatter();
+
+  // 7. Nuage de points Sommeil ↔ IFG
+  renderIfgSleepScatter();
 }
 
 // Changement de période de calcul de l'IFG (boutons radio) → re-rendu complet de l'onglet Analyse
@@ -2104,6 +2126,98 @@ function renderIfgScatter() {
   });
   svg += '</svg>';
   $('#ifg-scatter').innerHTML = svg;
+}
+
+// Coefficient de corrélation de Pearson entre deux séries appariées.
+// Retourne un nombre entre -1 et 1, ou null si < 2 points ou variance nulle.
+function pearsonCorrelation(xs, ys) {
+  const n = xs.length;
+  if (n < 2 || n !== ys.length) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - mx) * (ys[i] - my);
+    dx += (xs[i] - mx) ** 2;
+    dy += (ys[i] - my) ** 2;
+  }
+  const denom = Math.sqrt(dx * dy);
+  if (denom === 0) return null;
+  return num / denom;
+}
+
+// Libellé qualitatif d'un coefficient de corrélation
+function correlationLabel(r) {
+  if (r == null) return '';
+  const a = Math.abs(r);
+  const dir = r > 0 ? 'positive' : 'négative';
+  const rf = r.toFixed(2).replace('.', ',');
+  if (a >= 0.7) return `Corrélation ${dir} forte (r = ${rf})`;
+  if (a >= 0.4) return `Corrélation ${dir} modérée (r = ${rf})`;
+  if (a >= 0.2) return `Corrélation ${dir} faible (r = ${rf})`;
+  return `Pas de corrélation (r = ${rf})`;
+}
+
+// Nuage de points : Sommeil (X) ↔ IFG au moment de la mesure (Y)
+// X = score de sommeil /100, repère vertical à 80 (seuil « bon sommeil »)
+function renderIfgSleepScatter() {
+  const el = $('#ifg-sleep-scatter');
+  if (!el) return;
+  const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
+  const sleepDates = sessions.filter(s => s.values?.sleep_score != null && s.values.sleep_score !== '');
+  if (sleepDates.length < 2) { el.innerHTML = '<p class="small">Enregistrez au moins 2 bilans de sommeil pour voir la corrélation.</p>'; return; }
+  const points = [];
+  for (const s of sleepDates) {
+    // IFG recalculé avec les données disponibles à cette date
+    const upTo = sessions.filter(x => x.date <= s.date);
+    const snapshotSessions = store.get('sessions', []);
+    store.set('sessions', upTo);
+    const res = computeIFG(getProfile());
+    store.set('sessions', snapshotSessions);
+    if (res) points.push({
+      date: s.date,
+      sleep: s.values.sleep_score,
+      sleepHours: s.values.sleep_hours ?? null,
+      ifg: res.score,
+    });
+  }
+  if (points.length < 2) { el.innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+
+  // Corrélation de Pearson
+  const r = pearsonCorrelation(points.map(p => p.sleep), points.map(p => p.ifg));
+
+  const W = 420, H = 260, PAD = 44;
+  const xs = points.map(p => p.sleep), ys = points.map(p => p.ifg);
+  let xLo = Math.min(...xs), xHi = Math.max(...xs);
+  let yLo = Math.min(...ys), yHi = Math.max(...ys);
+  // Bornes X toujours dans [0, 100] pour un score /100 lisible
+  xLo = Math.max(0, Math.min(xLo, 50) - 5);
+  xHi = Math.min(100, Math.max(xHi, 80) + 5);
+  const xPad = (xHi - xLo) * 0.05 || 5, yPad = (yHi - yLo) * 0.1 || 5;
+  yLo -= yPad; yHi += yPad;
+  const X = v => PAD + (v - xLo) / (xHi - xLo) * (W - 2 * PAD);
+  const Y = v => H - PAD - (v - yLo) / (yHi - yLo) * (H - 2 * PAD);
+  let svg = `<svg viewBox="0 0 ${W} ${H}">`;
+  // repère vertical à 80 (seuil « bon sommeil »)
+  if (xLo <= 80 && 80 <= xHi)
+    svg += `<line x1="${X(80)}" x2="${X(80)}" y1="${PAD}" y2="${H - PAD}" stroke="var(--ok)" stroke-dasharray="4 4"/><text x="${X(80)}" y="${PAD - 4}" text-anchor="middle" font-size="10" fill="var(--ok)">80 (bon)</text>`;
+  // repère vertical à 60 (seuil « moyen »)
+  if (xLo <= 60 && 60 <= xHi)
+    svg += `<line x1="${X(60)}" x2="${X(60)}" y1="${PAD}" y2="${H - PAD}" stroke="var(--warn)" stroke-dasharray="2 4"/><text x="${X(60)}" y="${H - PAD + 12}" text-anchor="middle" font-size="9" fill="var(--warn)">60</text>`;
+  svg += `<line x1="${PAD}" x2="${W - PAD}" y1="${H - PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  svg += `<line x1="${PAD}" x2="${PAD}" y1="${PAD}" y2="${H - PAD}" stroke="var(--faint)"/>`;
+  // axes labels
+  svg += `<text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--muted)">Score de sommeil /100</text>`;
+  svg += `<text x="12" y="${H / 2}" text-anchor="middle" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${H / 2})">IFG /100</text>`;
+  points.forEach(p => {
+    const durTxt = p.sleepHours != null ? ` · ${String(p.sleepHours).replace('.', ',')} h` : '';
+    svg += `<circle cx="${X(p.sleep)}" cy="${Y(p.ifg)}" r="5" fill="#7c5cbf"><title>${p.date.split('-').reverse().join('/')} : sommeil ${p.sleep}/100${durTxt} · IFG ${p.ifg}</title></circle>`;
+  });
+  svg += '</svg>';
+  const corrHtml = r != null
+    ? `<p class="small" style="margin-top:6px">📊 ${correlationLabel(r)}</p>`
+    : '';
+  el.innerHTML = svg + corrHtml;
 }
 
 // ---------- Historique & graphiques ----------
