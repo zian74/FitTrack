@@ -22,7 +22,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 6 | Équilibre unipodal (yeux ouverts) | repos | mensuel | > 40 s |
 | 7 | Équilibre yeux fermés | repos | mensuel | > 10 s |
 | 8 | Sit-and-reach | repos | mensuel | toucher les pieds |
-| 9 | Poigne (dynamomètre) | force | trimestriel | H 45–55 / F 30–35 kg |
+| 9 | Préhension (dynamomètre) | force | trimestriel | H 45–55 / F 30–35 kg |
 | 10 | Pompes maximales | force | trimestriel | H > 35 / F > 20 |
 | 11 | Gainage planche | force | trimestriel | 2 min |
 | 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
@@ -81,7 +81,8 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   - test 15 « Escalier — méthode 3 » : **chronomètre ⏱** (pas de timer ⏳) — reporte le temps écoulé dans le champ
   - ~~test 14 « Cooper »~~ : **timer ⏳ supprimé** (le Cooper n'a plus de compte à rebours)
 - ⓘ instructions du test chaise (position mur, bras croisés, cuisses parallèles au sol)
-- ⓘ instructions du test poigne n°9 (dynamométrie : échauffement mains/avant-bras, debout coude fléchi à 90° avant-bras neutre, réglage poignée sur la 2ᵉ phalange, serrage progressif max 2–3 s sans bouger le bras, 2–3 essais par main avec 30 s de repos, meilleure valeur des deux mains retenue, respiration normale sans Valsalva, arrêt en cas de douleur)
+- ⓘ instructions du test préhension n°9 (dynamométrie : échauffement mains/avant-bras, debout coude fléchi à 90° avant-bras neutre, réglage poignée sur la 2ᵉ phalange, serrage progressif max 2–3 s sans bouger le bras, 2–3 essais par main avec 30 s de repos, meilleure valeur des deux mains retenue, respiration normale sans Valsalva, arrêt en cas de douleur)
+- Test 9 renommé « **Préhension** — meilleure main (kg) » ; propriété `aliases: ['Poigne — meilleure main (kg)']` pour que l'import CSV reconnaisse aussi l'ancien nom de colonne
 - **Test escalier — 3 méthodes au choix** (sélecteur radio pilules « Méthode 1 — Pouls à 1 min » / « Méthode 2 — Marches en 60 s » / « Méthode 3 — 4 étages chronométrés ») :
   - Seule la **méthode active** est visible et son input `enabled` ; les 2 autres rows sont masquées (`.hidden`) et leurs inputs `disabled` (ignorés à la sauvegarde et dans `updateSaveState`/`updateFieldValidity`)
   - **Méthode 1** (`stair_pulse`, n°13) : pouls à 1 min après 3 min de montées — seuils inversés ≤ 100 / ≤ 110 bpm — timer ⏳ 3 min (réglable) + chaînage auto 1 min

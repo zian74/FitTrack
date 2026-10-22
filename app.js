@@ -90,7 +90,7 @@ const TESTS = [
       <li>Cotation : <b>0</b> = bout des orteils, <b>négatif</b> = orteils non atteints, <b>positif</b> = au-delà des orteils.</li>
       <li>Échauffez le dos (flexions douces) avant de commencer.</li>
     </ul>` },
-  { id: 'grip', name: 'Poigne — meilleure main (kg)', unit: 'kg', group: 'strength',
+  { id: 'grip', name: 'Préhension — meilleure main (kg)', aliases: ['Poigne — meilleure main (kg)'], unit: 'kg', group: 'strength',
     hint: '2–3 essais par main, 30 s de repos entre essais',
     good: 45, mid: 35, max: 100, min: 5,
     gender: { H: { good: 45, mid: 35 }, F: { good: 30, mid: 20 } },
@@ -581,7 +581,7 @@ function showView(name) {
 }
 
 // ---------- Score global ----------
-// Score /100 : moyenne des statuts des 5 tests prédictifs (ordre fixe : FC, taille, poigne, escalier, équilibre)
+// Score /100 : moyenne des statuts des 5 tests prédictifs (ordre fixe : FC, taille, préhension, escalier, équilibre)
 const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open'];
 const SCORE_PTS = { good: 100, mid: 60, low: 25 };
 
@@ -1162,7 +1162,7 @@ const STATIC_INFOS = {
       <li><b>Tour de taille (risque métabolique)</b> : seuils OMS/IDF — ≥ 94 cm (H) / ≥ 80 cm (F) : risque accru ; ≥ 102 / ≥ 88 cm : risque substantiellement accru.</li>
       <li><b>Pression artérielle</b> : seuils de référence usuels (ESC/ESH) — normale &lt; 120/80 mmHg, élevée 130–139/85–89 mmHg.</li>
       <li><b>Facteurs de risque cardiovasculaire</b> (tabagisme, antécédents personnels/familiaux, hypertension, diabète, dyslipidémie, alcool, stress, IMC) : cadre des recommandations <b>ESC 2021</b> sur la prévention cardiovasculaire et du score <b>SCORE2</b> (âge, sexe, tabagisme, pression artérielle systolique, cholestérol, antécédents familiaux).</li>
-      <li><b>Force musculaire (poigne, pompes, chaise 30 s, gainage)</b> : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli &amp; Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).</li>
+      <li><b>Force musculaire (préhension, pompes, chaise 30 s, gainage)</b> : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli &amp; Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).</li>
       <li><b>Équilibre unipodal &amp; Sit-and-reach</b> : protocoles standardisés de la littérature (test unipodal yeux ouverts/fermés, Senior Fitness Test pour la souplesse).</li>
       <li><b>Score global &amp; IFG (pondération des dimensions)</b> : pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
       <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
@@ -2191,7 +2191,7 @@ function parseImportCsv(text) {
     const type = Object.keys(GROUP_LABELS).find(k => GROUP_LABELS[k] === typeLabel) || typeLabel;
     const values = {};
     head.slice(2).forEach((name, i) => {
-      const id = TESTS.find(t => t.name === name)?.id;
+      const id = TESTS.find(t => t.name === name || (t.aliases || []).includes(name))?.id;
       const raw = (cols[i + 2] ?? '').trim();
       if (id && raw !== '') values[id] = Number(raw);
     });
