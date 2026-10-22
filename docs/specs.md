@@ -128,7 +128,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 
 ## 6. Backlog
 
-- PWA installable (manifest, service worker) ✅
+- PWA installable (manifest, service worker) ✅ — **plein écran mobile** (simulation app native) : `display: fullscreen` + `display_override: [fullscreen, standalone, minimal-ui]`, `viewport-fit=cover`, meta `mobile-web-app-capable` / `apple-mobile-web-app-capable` / `apple-mobile-web-app-status-bar-style: black-translucent` / `apple-mobile-web-app-title: FitTrack`, et `env(safe-area-inset-top/bottom)` sur header, main, chrono et timer (encoche iPhone + barre d'accueil)
 - Notifications de rappel des tests ✅ (checkbox + heure dans Profil ; setTimeout in-app + PeriodicSync SW app fermée ; rattrapage au démarrage ; clic → ouvre l'app)
 - Mode sombre ✅ (sélecteur 3 états dans le Profil : système / clair / sombre ; persistant ; respecte `prefers-color-scheme` ; `theme-color` mis à jour)
 - Intégration HealthKit / Google Fit

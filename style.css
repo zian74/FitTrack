@@ -59,6 +59,7 @@ header {
   background: var(--accent);
   color: #fff;
   padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
   position: sticky; top: 0;
   z-index: 10;
 }
@@ -91,7 +92,7 @@ nav button[data-view="settings"] { padding: 8px 10px; font-size: 1.1em; line-hei
   nav button[data-view="profile"] { font-size: 0; }
   nav button[data-view="profile"]::after { font-size: .85rem; }
 }
-main { max-width: 900px; margin: 0 auto; padding: 16px; }
+main { max-width: 900px; margin: 0 auto; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 .view { display: none; }
 .view.active { display: block; }
 .card {
@@ -169,7 +170,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 .small { font-size: .85em; color: var(--muted); }
 /* Chrono flottant */
 #chrono {
-  position: fixed; bottom: 12px; right: 12px;
+  position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); right: 12px;
   background: var(--surface); border: 2px solid var(--accent); border-radius: 10px;
   padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   box-shadow: 0 4px 12px var(--shadow-strong); z-index: 20;
@@ -179,7 +180,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #chrono-startstop.running { background: var(--bad); color: #fff; }
 /* Timer compte à rebours générique (chaise 30 s, escalier 3 min, Cooper 12 min) */
 #timer {
-  position: fixed; bottom: 12px; right: 12px;
+  position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); right: 12px;
   background: var(--surface); border: 2px solid var(--warn); border-radius: 10px;
   padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
   box-shadow: 0 4px 12px var(--shadow-strong); z-index: 20;
