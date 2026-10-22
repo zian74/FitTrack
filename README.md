@@ -11,13 +11,14 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Force** (trimestriel) : préhension, pompes, gainage planche, chaise 30 s
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
+- **Sommeil & récupération** (hebdomadaire) : questionnaire **5 questions** sur les 7 derniers jours (durée, qualité, latence, réveils, sensation au réveil), **score de sommeil /100** calculé automatiquement
 
 ### Fonctionnalités
 
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
 - Score global /100 basé sur les 5 mesures prédictives (préhension, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
-- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 5 dimensions,
+- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 6 dimensions (inclut **Sommeil & récupération** 🌙, 10 %),
   radar, priorités, évolution et corrélation activité ↔ forme
 - Calendrier de re-test (mensuel / trimestriel)
 - Chronomètre intégré (planche, équilibre)
@@ -69,4 +70,5 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 📱 PWA **plein écran mobile** (simulation app native) : `display: fullscreen` + `display_override` dans le manifest, `viewport-fit=cover`, meta `mobile-web-app-capable` / `apple-mobile-web-app-capable` / `apple-mobile-web-app-status-bar-style: black-translucent`, et `env(safe-area-inset-*)` sur le header/main/chrono/timer (encoche iPhone + barre d'accueil)
 - [x] ⓘ Pop-up d'info pour le **test 9 Préhension** (dynamométrie) : échauffement, position debout coude à 90°, réglage sur la 2ᵉ phalange, serrage max 2–3 s, 2–3 essais/main avec 30 s de repos, meilleure valeur retenue, respiration (éviter Valsalva), arrêt en cas de douleur
 - [x] ✏️ Test 9 renommé « **Préhension** — meilleure main (kg) » (alias « Poigne » conservé pour l'import des anciens exports CSV)
+- [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.

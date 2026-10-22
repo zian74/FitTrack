@@ -32,6 +32,8 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 16 | Cooper (12 min) ou demi-Cooper (6 min, distance ×2) | cardio | trimestriel | H > 2400 / F > 2000 m (équiv. 12 min) |
 | 17 | IPAQ court — score activité (MET-min/sem) | activité | trimestriel | ≥ 600 (OMS) / ≥ 3000 (élevé) |
 | 18 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
+| 19 | Score de sommeil (questionnaire 5 items) | sommeil | hebdomadaire | ≥ 80 bon / 60–79 moyen / < 60 perturbé |
+| 20 | Durée moyenne de sommeil (h) | sommeil | hebdomadaire | 7–9 h (NSF) |
 
 ## 3. Exigences fonctionnelles
 
@@ -59,8 +61,9 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Score global /100 : moyenne des 5 tests prédictifs
 - Historique du score global (1 valeur/jour) consultable dans les graphiques par indicateur
 - Onglet **Analyse** : Indice FitTrack Global (IFG, /100) = moyenne pondérée de
-  5 dimensions — cardio au repos & métabolisme (30 %), endurance (20 %),
-  force (20 %), équilibre & mobilité (15 %), habitudes d'activité (15 %) ;
+  6 dimensions — cardio au repos & métabolisme (25 %), endurance (20 %),
+  force (20 %), équilibre & mobilité (15 %), habitudes d'activité (10 %),
+  sommeil & récupération (10 %) ;
   historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
   courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG ;
   **période de calcul au choix** (dernière session / 1 sem / 1 mois / 1 an / toutes

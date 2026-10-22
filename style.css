@@ -347,3 +347,16 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #ipaq-questions .field-row label { display: block; }
 #ipaq-questions input[type="number"] { margin-top: 4px; }
 #ipaq-result { border-radius: 8px; padding: 12px; line-height: 1.6; }
+
+/* ---------- Questionnaire Sommeil ---------- */
+#sleep-questions .field-row label { display: block; }
+#sleep-questions input[type="number"] { margin-top: 4px; }
+#sleep-result { border-radius: 8px; padding: 12px; line-height: 1.6; }
+.sleep-stars { display: inline-flex; gap: 4px; margin-top: 4px; }
+.sleep-star {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.8em; line-height: 1; padding: 2px 4px;
+  color: var(--border); transition: color .12s, transform .12s;
+}
+.sleep-star:hover { transform: scale(1.15); }
+.sleep-star.active { color: #f9a825; }
