@@ -226,12 +226,31 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5);
   display: flex; align-items: center; justify-content: center; z-index: 30; padding: 16px;
+  /* Autorise le scroll de la page quand la modale dépasse l'écran (mobile) */
+  overflow-y: auto;
 }
 .modal {
   background: var(--surface); border-radius: 12px; padding: 24px; max-width: 480px; width: 100%;
   box-shadow: 0 8px 30px var(--shadow-strong);
+  /* La modale ne dépasse jamais la hauteur de l'écran : le contenu interne scrolle */
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px); /* dvh = viewport dynamique mobile (barre d'adresse) */
+  display: flex; flex-direction: column;
+  margin: auto; /* centre vertical quand la modale est plus petite que l'overlay */
+  overflow-y: auto; /* filet de sécurité si pas de .info-body scrollable */
+  -webkit-overflow-scrolling: touch;
 }
-.modal h2 { margin-top: 0; color: var(--accent); }
+.modal h2 { margin-top: 0; color: var(--accent); flex-shrink: 0; }
+/* Corps scrollable : c'est lui qui défile, pas la page, pour garder le bouton visible */
+.modal .info-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Scroll fluide iOS */
+  -webkit-overflow-scrolling: touch;
+}
+/* Le bloc de boutons en bas de modale reste toujours visible */
+.modal .row[style*="flex-end"] { flex-shrink: 0; }
 .small-btn { font-size: .85em; }
 
 /* Champs de session */
