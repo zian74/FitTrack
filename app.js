@@ -140,13 +140,12 @@ const TESTS = [
       <li>Test sous-maximal : évitez si vous avez des antécédents cardiaques ou un traitement bêtabloquant (voir avertissement dans l'onglet Session).</li>
     </ul>` },
   { id: 'cooper', name: 'Cooper — distance (m, équiv. 12 min)', unit: 'm', group: 'cardio',
-    hint: '12 min à allure soutenue, ou 6 min (demi-Cooper ×2)', good: 2400, mid: 2200, max: 5000, min: 200,
+    hint: '12 min à allure soutenue, ou 6 min (demi-Cooper)', good: 2400, mid: 2200, max: 5000, min: 200,
     gender: { H: { good: 2400, mid: 2200 }, F: { good: 2000, mid: 1800 } },
     info: `<ul>
       <li><b>Cooper complet (12 min)</b> : couvrez la plus grande distance possible en 12 minutes, à allure soutenue et régulière.</li>
       <li><b>Demi-Cooper (6 min)</b> : même principe sur 6 minutes. La distance saisie est <b>automatiquement doublée (×2)</b> : elle est affichée en équivalent 12 min dans les estimations VMA/VO2max et stockée ×2 pour rester comparable aux repères 12 min.</li>
-      <li>Le bouton <b>⏳</b> ouvre un <b>compte à rebours</b> (12 min, ou 6 min en demi-Cooper).</li>
-      <li><b>VMA &amp; VO2max</b> : renseignez au choix la distance, la VMA (km/h) ou la VO2max (ml/kg/min) — les deux autres valeurs sont <b>calculées et affichées</b> en dessous. En demi-Cooper, la distance saisie est d'abord ×2 (équiv. 12 min) avant calcul : VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73.</li>
+      <li><b>VMA &amp; VO2max</b> : renseignez au choix la distance, la VMA (km/h) ou la VO2max (ml/kg/min) — les deux autres valeurs sont <b>calculées et affichées</b> en dessous (formules détaillées dans les sources scientifiques, onglet Paramètres).</li>
       <li>Échauffez-vous 5–10 min avant, sur terrain plat et mesuré, chaussures adaptées.</li>
       <li>Test maximal : arrêtez en cas de douleur thoracique, essoufflement excessif ou vertiges.</li>
     </ul>` },
@@ -961,19 +960,16 @@ function renderSessionFields() {
       const cooperSelect = t.id === 'cooper'
         ? `<span class="row ifg-period-group" id="cooper-duration" title="Durée du test" style="margin:0">
              <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="12" checked> 12 min (complet)</label>
-             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="6"> 6 min (demi-Cooper ×2)</label>
+             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="6"> 6 min (demi-Cooper)</label>
            </span>` : '';
-      // Timer compte à rebours 12 min (ou 6 min selon le sélecteur) pour le Cooper
-      const cooperTimerBtn = t.id === 'cooper'
-        ? `<button class="timer-btn" id="cooper-timer-btn" data-timer-ms="720000" data-timer-label="Cooper — 12 min" title="Compte à rebours 12 min">⏳</button>` : '';
       // Bloc d'estimation VMA / VO2max pour le Cooper (champs optionnels + calculs croisés)
       const cooperEstim = t.id === 'cooper'
         ? `<div class="cooper-estim">
-             <div class="field-hint">Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.</div>
              <div class="row" style="margin:6px 0">
                <label>VMA (km/h) : <input type="number" id="cooper-vma" step="0.1" min="4" max="30" placeholder="ex. 12,5" style="width:90px"></label>
                <label>VO2max (ml/kg/min) : <input type="number" id="cooper-vo2" step="0.1" min="10" max="90" placeholder="ex. 44" style="width:90px"></label>
              </div>
+             <div class="field-hint">Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.</div>
              <div id="cooper-estim-result" class="estimation-box hidden"></div>
            </div>` : '';
       row.innerHTML = `
@@ -982,13 +978,12 @@ function renderSessionFields() {
           <div class="field-hint">${t.hint || ''}</div>
           ${lastInfo}
         </label>
+        ${cooperSelect}
         <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
                data-test="${t.id}" placeholder="${t.unit}">
-        ${cooperSelect}
         ${chronoBtn}
         ${chairTimerBtn}
         ${stairTimerBtn}
-        ${cooperTimerBtn}
         ${cooperEstim}`;
       block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
@@ -1156,7 +1151,7 @@ document.addEventListener('change', e => {
   if (e.target.name !== 'cooper-duration') return;
   const inp = $('#session-fields input[data-test="cooper"]');
   if (!inp) return;
-  if (e.target.value === '6') { inp.min = 100; inp.max = 2500; inp.placeholder = 'm en 6 min (×2)'; }
+  if (e.target.value === '6') { inp.min = 100; inp.max = 2500; inp.placeholder = 'm en 6 min'; }
   else { inp.min = 200; inp.max = 5000; inp.placeholder = 'm'; }
   updateFieldValidity(byId('cooper'), inp);
 });
@@ -1188,15 +1183,19 @@ function updateCooperEstim() {
   const vma = vmaRaw ? parseFloat(vmaRaw.replace(',', '.')) : null;
   const vo2 = vo2Raw ? parseFloat(vo2Raw.replace(',', '.')) : null;
   const lines = [];
-  if (vma != null && !isNaN(vma)) {
+  const hasVma = vma != null && !isNaN(vma);
+  const hasVo2 = vo2 != null && !isNaN(vo2);
+  if (hasVma) {
     lines.push(`<b>VMA renseignée :</b> ${fmt1(vma)} km/h`);
-    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2FromVMA(vma))} ml/kg/min <span class="small">(3,5 × VMA, Léger &amp; Mercier)</span>`);
+    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2FromVMA(vma))} ml/kg/min`);
   }
-  if (vo2 != null && !isNaN(vo2)) {
+  if (hasVo2) {
     lines.push(`<b>VO2max renseignée :</b> ${fmt1(vo2)} ml/kg/min`);
-    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaFromVo2(vo2))} km/h <span class="small">(VO2max ÷ 3,5)</span>`);
+    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaFromVo2(vo2))} km/h`);
   }
-  if (dist != null && !isNaN(dist)) {
+  // La distance Cooper n'est affichée dans le bloc d'estimation que si ni VMA
+  // ni VO2max n'est renseignée (évite la redondance avec les tuiles VMA/VO2max).
+  if (dist != null && !isNaN(dist) && !hasVma && !hasVo2) {
     // En demi-Cooper (6 min), la distance saisie est automatiquement ×2
     // pour obtenir l'équivalent 12 min avant tout calcul.
     const isHalf = cooperSelectedDuration() === '6';
@@ -1207,8 +1206,8 @@ function updateCooperEstim() {
       ? `<b>Distance saisie (6 min) :</b> ${Math.round(dist)} m → <b>équiv. 12 min : ${Math.round(dist12)} m</b> (×2 automatique)`
       : `<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist12)} m`;
     lines.push(distLabel);
-    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h <span class="small">(distance équiv. 12 min ÷ 200)</span>`);
-    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min <span class="small">((distance − 504,9) ÷ 44,73, ACSM)</span>`);
+    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h`);
+    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min`);
   }
   if (!lines.length) { out.classList.add('hidden'); out.innerHTML = ''; return; }
   out.innerHTML = lines.join('<br>');
@@ -1216,21 +1215,14 @@ function updateCooperEstim() {
 }
 
 // À l'ouverture du bloc Cooper : branche les 3 champs + le sélecteur de durée
-// sur le recalcul, et synchronise le timer 12 min / 6 min.
+// sur le recalcul.
 function initCooperEstim(distInput) {
   // Le row est déjà dans le DOM (appendChild ci-dessus) : querySelector global OK.
   const vmaInp = document.querySelector('#cooper-vma');
   const vo2Inp = document.querySelector('#cooper-vo2');
-  const timerBtn = document.querySelector('#cooper-timer-btn');
   const sync = () => {
     updateCooperEstim();
     updateSaveState(); // VMA/VO2max seuls activent le bouton « Enregistrer »
-    if (timerBtn) {
-      const six = cooperSelectedDuration() === '6';
-      timerBtn.dataset.timerMs = six ? '360000' : '720000';
-      timerBtn.dataset.timerLabel = six ? 'Demi-Cooper — 6 min' : 'Cooper — 12 min';
-      timerBtn.title = six ? 'Compte à rebours 6 min' : 'Compte à rebours 12 min';
-    }
   };
   distInput.addEventListener('input', updateCooperEstim);
   vmaInp?.addEventListener('input', sync);
