@@ -534,6 +534,7 @@ $$('nav button').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.view === 'session') renderLastSession();
   if (b.dataset.view === 'history') renderHistory();
   if (b.dataset.view === 'analysis') renderAnalysis();
+  if (b.dataset.view === 'settings') { renderSettings(); renderRemindersForm(); }
 }));
 
 function showView(name) {
@@ -2021,11 +2022,16 @@ $('#import-file').addEventListener('change', e => {
   reader.readAsText(file);
 });
 
-// ---------- Profil ----------
-function renderProfileForm() {
-  // Le sélecteur de thème s'initialise même sans profil (le thème est indépendant)
+// ---------- Paramètres (onglet ⚙️) ----------
+// Le sélecteur de thème vit dans l'onglet Paramètres : toujours initialisé,
+// même sans profil (le thème est indépendant des données personnelles).
+function renderSettings() {
   const themeRadio = document.querySelector(`input[name="theme"][value="${getTheme()}"]`);
   if (themeRadio) themeRadio.checked = true;
+}
+
+// ---------- Profil ----------
+function renderProfileForm() {
   const p = getProfile();
   if (!p) return;
   $('#p-sex').value = p.sex || 'H';
@@ -2178,6 +2184,7 @@ $('#session-date').value = todayStr();
 renderSessionFields();
 renderProfileForm();
 renderReferenceTable();
+renderSettings();
 renderDashboard();
 
 // ---------- Rappels de re-test (notifications) ----------

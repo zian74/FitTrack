@@ -20,6 +20,7 @@
     <button data-view="analysis">Analyse</button>
     <button data-view="history">Historique</button>
     <button data-view="profile">Profil</button>
+    <button data-view="settings" title="Paramètres" aria-label="Paramètres">⚙️</button>
   </nav>
 </header>
 
@@ -180,12 +181,6 @@
       </div>
       <p class="small">IMC : <span id="profile-imc">—</span> <span id="profile-imc-badge" class="badge hidden"></span>
         <span class="small">(calculé avec la dernière mesure de poids)</span></p>
-      <h3>Thème</h3>
-      <div class="row ifg-period-group" id="theme-group">
-        <label class="theme-opt"><input type="radio" name="theme" value="system"> ☀️ Système</label>
-        <label class="theme-opt"><input type="radio" name="theme" value="light"> 🌞 Clair</label>
-        <label class="theme-opt"><input type="radio" name="theme" value="dark"> 🌙 Sombre</label>
-      </div>
       <h3>Facteurs de risque cardio
         <button class="info-btn" data-info-test="__risk__" title="En savoir plus sur les facteurs de risque" aria-label="Informations sur les facteurs de risque cardiovasculaire">ⓘ</button>
       </h3>
@@ -216,6 +211,21 @@
       <div id="reference-table" class="table-wrap"></div>
     </div>
     <div class="card">
+      <h2>Données</h2>
+      <button id="wipe-data" class="danger">🗑️ Effacer toutes les données</button>
+    </div>
+  </section>
+
+  <section id="view-settings" class="view">
+    <div class="card">
+      <h2>Thème</h2>
+      <div class="row ifg-period-group" id="theme-group">
+        <label class="theme-opt"><input type="radio" name="theme" value="system"> ☀️ Système</label>
+        <label class="theme-opt"><input type="radio" name="theme" value="light"> 🌞 Clair</label>
+        <label class="theme-opt"><input type="radio" name="theme" value="dark"> 🌙 Sombre</label>
+      </div>
+    </div>
+    <div class="card">
       <h2>Rappels de re-test 🔔</h2>
       <div class="row">
         <label><input type="checkbox" id="reminders-enabled"> Activer les rappels quotidiens</label>
@@ -233,15 +243,16 @@
       <p class="small">Une notification est envoyée à l'heure choisie si des groupes de tests sont dus (jamais effectués ou à refaire). Fonctionne aussi quand l'app est fermée (Android/desktop).</p>
     </div>
     <div class="card">
-      <h2>Données</h2>
-      <button id="wipe-data" class="danger">🗑️ Effacer toutes les données</button>
+      <h2>Sources scientifiques</h2>
+      <p>Retrouvez toutes les références scientifiques utilisées dans l'application (IPAQ, OMS, Cooper, Rikli & Jones, Kodama, ESC/SCORE2…).</p>
+      <p>
+        <button class="info-btn" data-info-test="__sources__" title="Sources scientifiques" aria-label="Sources scientifiques">ⓘ</button>
+        <b>Afficher toutes les sources scientifiques</b>
+      </p>
     </div>
-    <p class="small" style="text-align:center">
-      <button class="info-btn" data-info-test="__sources__" title="Sources scientifiques" aria-label="Sources scientifiques">ⓘ</button>
-      Sources scientifiques
-    </p>
   </section>
 
+</main>
 </main>
 
 <!-- Onboarding (première visite) -->
