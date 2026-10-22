@@ -93,7 +93,17 @@ const TESTS = [
   { id: 'grip', name: 'Poigne — meilleure main (kg)', unit: 'kg', group: 'strength',
     hint: '2–3 essais par main, 30 s de repos entre essais',
     good: 45, mid: 35, max: 100, min: 5,
-    gender: { H: { good: 45, mid: 35 }, F: { good: 30, mid: 20 } } },
+    gender: { H: { good: 45, mid: 35 }, F: { good: 30, mid: 20 } },
+    info: `<ul>
+      <li>Échauffez vos <b>mains et avant-bras</b> 2–3 min avant (flexions des doigts, ouverture/fermeture, rotations des poignets).</li>
+      <li>Position <b>debout</b>, bras le long du corps, <b>coude fléchi à 90°</b>, avant-bras en position neutre (pouce vers le haut). Le bras ne doit pas toucher le corps.</li>
+      <li>Réglez le dynamomètre à la taille de votre main : la poignée repose sur la <b>2ᵉ phalange des doigts</b> (ni trop serrée, ni trop lâche).</li>
+      <li>Saisissez le dynamomètre, puis <b>serrez progressivement au maximum</b> pendant <b>2–3 secondes</b>, sans bouger le bras ni l'épaule. Ne secouez pas la main.</li>
+      <li>Relâchez complètement, <b>reposez-vous 30 s</b>, puis recommencez. Faites <b>2–3 essais par main</b> en alternant.</li>
+      <li>Notez la <b>meilleure valeur de chaque main</b> et reportez la <b>meilleure des deux</b> dans le champ.</li>
+      <li><b>Respirez normalement</b> pendant l'effort : ne retenez pas votre souffle (évitez la manœuvre de Valsalva).</li>
+      <li>Arrêtez en cas de <b>douleur</b> au poignet, au coude ou à l'épaule.</li>
+    </ul>` },
   { id: 'pushups', name: 'Pompes maximales', unit: 'rép.', group: 'strength',
     hint: 'Sans pause, technique correcte',
     good: 35, mid: 20, max: 200, min: 0,
