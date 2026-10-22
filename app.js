@@ -186,6 +186,19 @@ const TESTS = [
   { id: 'sit', name: 'Temps assis (jour de semaine)', unit: 'min', group: 'activity', rev: true,
     hint: 'Question IPAQ n°7 — temps passé assis un jour de semaine habituel',
     good: 240, mid: 480, max: 1440, min: 0 },
+  // --- Groupe Sommeil (questionnaire 7 derniers jours, score calculé) ---
+  { id: 'sleep_score', name: 'Score de sommeil', unit: '/100', group: 'sleep',
+    hint: 'Score calculé automatiquement depuis le questionnaire (5 questions sur les 7 derniers jours)',
+    good: 80, mid: 60, max: 100, min: 0,
+    info: `<ul>
+      <li>Le <b>score de sommeil</b> (/100) est calculé automatiquement à partir de 5 questions sur vos 7 derniers jours : durée, qualité, latence d'endormissement, réveils nocturnes et sensation au réveil.</li>
+      <li><b>Interprétation</b> : ≥ 80 bon sommeil · 60–79 moyen, marge d'amélioration · &lt; 60 sommeil perturbé — pensez à en parler à un professionnel de santé si cela dure.</li>
+      <li>Repères (NSF) : un adulte dort en moyenne <b>7 à 9 h</b> par nuit.</li>
+    </ul>` },
+  { id: 'sleep_hours', name: 'Durée moyenne de sommeil', unit: 'h', group: 'sleep', rev: null,
+    hint: 'Moyenne sur les 7 derniers jours',
+    good: 8, mid: 7, max: 14, min: 1,
+    gender: { H: { good: 8, mid: 7 }, F: { good: 8, mid: 7 } } },
   // --- Indicateurs dérivés (non saisis directement) ---
   // VMA et VO2max estimées : calculées depuis la dernière session Cooper/demi-Cooper
   // (champs VMA/VO2max du bloc d'estimation). Utilisées pour les repères du Profil
@@ -259,19 +272,87 @@ function ipaqLevel(met) {
   return { key: 'low', short: 'Faible', label: '🔴 Niveau faible (sédentaire)' };
 }
 
+// ---------- Questionnaire Sommeil (évaluation de la qualité du sommeil) ----------
+// 5 questions sur les 7 derniers jours. Score /100 pondéré :
+//   durée 30 % · qualité subjective 25 % · latence 15 % · réveils 15 % · sensation au réveil 15 %
+// Repères NSF : 7–9 h par nuit pour un adulte (18–64 ans).
+const SLEEP_QUESTIONS = [
+  { id: 'hours', label: 'S1 — En moyenne, combien d\'heures dormez-vous par nuit ?', unit: 'h', type: 'number', min: 1, max: 14, step: 0.5, weight: 30 },
+  { id: 'quality', label: 'S2 — Comment évaluez-vous la qualité de votre sommeil ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 25 },
+  { id: 'latency', label: 'S3 — Combien de minutes mettez-vous en général à vous endormir ?', unit: 'min', type: 'number', min: 0, max: 180, step: 5, weight: 15 },
+  { id: 'awakenings', label: 'S4 — Combien de fois vous réveillez-vous en moyenne par nuit ?', unit: 'fois', type: 'number', min: 0, max: 10, step: 1, weight: 15 },
+  { id: 'rested', label: 'S5 — Au réveil, vous sentez-vous reposé(e) ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 15 },
+];
+
+// Score d'un item individuel (0–100) puis pondération pour le score global /100.
+function sleepItemScore(q, value) {
+  switch (q.id) {
+    case 'hours':
+      // 7–9 h = 100 · 6–7 h ou 9–10 h = 70 · 5–6 h ou 10–11 h = 40 · < 5 h ou > 11 h = 10
+      if (value >= 7 && value <= 9) return 100;
+      if (value >= 6 && value < 7) return 80;
+      if (value > 9 && value <= 10) return 80;
+      if (value >= 5 && value < 6) return 50;
+      if (value > 10 && value <= 11) return 50;
+      return 10;
+    case 'quality':
+      // Échelle 1–5 → 0–100 (5 = 100, 1 = 0)
+      return Math.round(((value - 1) / 4) * 100);
+    case 'latency':
+      // < 15 min = 100 · 15–30 = 80 · 30–45 = 50 · 45–60 = 30 · > 60 = 10
+      if (value < 15) return 100;
+      if (value <= 30) return 80;
+      if (value <= 45) return 50;
+      if (value <= 60) return 30;
+      return 10;
+    case 'awakenings':
+      // 0 = 100 · 1 = 80 · 2 = 50 · 3 = 30 · ≥ 4 = 10
+      if (value === 0) return 100;
+      if (value === 1) return 80;
+      if (value === 2) return 50;
+      if (value === 3) return 30;
+      return 10;
+    case 'rested':
+      // Échelle 1–5 → 0–100
+      return Math.round(((value - 1) / 4) * 100);
+    default:
+      return 0;
+  }
+}
+
+// Score de sommeil /100 (moyenne pondérée des 5 items, poids total = 100).
+function sleepScore(a) {
+  let total = 0, weight = 0;
+  for (const q of SLEEP_QUESTIONS) {
+    const v = a[q.id];
+    if (v == null) continue;
+    total += sleepItemScore(q, v) * q.weight;
+    weight += q.weight;
+  }
+  if (!weight) return null;
+  return Math.round(total / weight);
+}
+
+function sleepLevel(score) {
+  if (score >= 80) return { key: 'good', short: 'Bon', label: '🟢 Bon sommeil' };
+  if (score >= 60) return { key: 'mid', short: 'Moyen', label: '🟠 Sommeil moyen' };
+  return { key: 'low', short: 'Faible', label: '🔴 Sommeil perturbé' };
+}
+
 const byId = id => TESTS.find(t => t.id === id);
 // Numéro du test dans l'ordre de réalisation (1-based), ex. « 1. FC de repos (bpm) »
 const testNum = id => {
   const i = TESTS.findIndex(t => t.id === id);
   return i >= 0 ? `${i + 1}. ` : '';
 };
-const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité' };
+const GROUP_LABELS = { rest: 'Repos & mobilité', strength: 'Force', cardio: 'Cardio', activity: 'Activité & sédentarité', sleep: 'Sommeil & récupération' };
 // Groups présents par type de session
 const SESSION_GROUPS = {
   rest: ['rest'],
   strength: ['strength'],
   cardio: ['cardio'],
   activity: ['activity'],
+  sleep: ['sleep'],
 };
 
 // ---------- Interprétation ----------
@@ -539,21 +620,30 @@ function seriesOf(testId) {
     .filter(x => x.value != null && x.value !== '');
 }
 
-// Fréquence de re-test (en mois)
+// Fréquence de re-test (en mois). Le sommeil a une cadence hebdomadaire (gérée en jours
+// via RETEST_DAYS ci-dessous, pas en mois).
 const RETEST = { rest: 1, strength: 3, cardio: 3, activity: 3 };
+// Groupes à cadence journalière (en jours) — sommeil : bilan hebdomadaire
+const RETEST_DAYS = { sleep: 7 };
 
 // Groupes de tests dus (réutilisé par le dashboard et les rappels de notification)
 // Retourne [{ group, label, due, last, monthsDue }] — due=true si à refaire ou jamais fait
 function dueGroups() {
   const lv = latestValues();
   const out = [];
-  for (const [group, months] of Object.entries(RETEST)) {
+  const groups = { ...RETEST, ...Object.fromEntries(Object.keys(RETEST_DAYS).map(g => [g, null])) };
+  for (const group of Object.keys(groups)) {
     const ids = TESTS.filter(t => t.group === group).map(t => t.id);
     const last = ids.map(id => lv[id]?.date).filter(Boolean).sort().pop();
     const label = GROUP_LABELS[group];
     if (!last) { out.push({ group, label, due: true, last: null, monthsDue: Infinity }); continue; }
-    const m = monthsSince(last);
-    out.push({ group, label, due: m >= months, last, monthsDue: m });
+    if (RETEST_DAYS[group] != null) {
+      const days = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+      out.push({ group, label, due: days >= RETEST_DAYS[group], last, monthsDue: days / 30, daysDue: days, unit: 'jours' });
+    } else {
+      const m = monthsSince(last);
+      out.push({ group, label, due: m >= RETEST[group], last, monthsDue: m });
+    }
   }
   return out;
 }
@@ -627,16 +717,18 @@ function scoreSeries() {
 // Score /100 par dimension à partir des 16 mesures, pondéré selon la littérature
 // (mortalité cardiovasculaire et toutes causes). Mêmes statuts/repères que l'app.
 const IFG_DIMENSIONS = [
-  { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.30, icon: '🫀',
+  { key: 'cardio_rest', label: 'Cardio au repos & métabolisme', weight: 0.25, icon: '🪀',
     tests: ['fc', 'pa_sys', 'pa_dia', 'waist'] },
-  { key: 'endurance', label: 'Endurance cardio', weight: 0.20, icon: '🫁',
+  { key: 'endurance', label: 'Endurance cardio', weight: 0.20, icon: '🏃',
     tests: ['stair_pulse', 'stair_steps', 'stair_4floors', 'cooper'] },
   { key: 'strength', label: 'Force musculaire', weight: 0.20, icon: '💪',
     tests: ['grip', 'pushups', 'plank', 'chair'] },
   { key: 'balance', label: 'Équilibre & mobilité', weight: 0.15, icon: '⚖️',
     tests: ['balance_open', 'balance_closed', 'reach'] },
-  { key: 'activity', label: "Habitudes d'activité", weight: 0.15, icon: '🏃',
+  { key: 'activity', label: "Habitudes d'activité", weight: 0.10, icon: '🏃',
     tests: ['ipaq', 'sit'] },
+  { key: 'sleep', label: 'Sommeil & récupération', weight: 0.10, icon: '🌙',
+    tests: ['sleep_score', 'sleep_hours'] },
 ];
 
 function computeIFG(profile) {
@@ -704,15 +796,16 @@ function renderDashboard() {
   const due = dueGroups().map(d => {
     if (!d.last) return `<li><b>${d.label}</b> — jamais effectué <span class="badge low">à faire</span></li>`;
     const lastFr = d.last.split('-').reverse().join('/');
+    const dueLabel = d.unit === 'jours' ? `à refaire (${d.daysDue} j)` : `à refaire (${d.monthsDue} mois)`;
     return d.due
-      ? `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge low">à refaire (${d.monthsDue} mois)</span></li>`
+      ? `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge low">${dueLabel}</span></li>`
       : `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge good">à jour</span></li>`;
   });
   $('#due-tests').innerHTML = due.join('');
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
   const alerts = [];
-  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05, activity: 0.10 };
+  const THRESH = { rest: 0.03, strength: 0.05, cardio: 0.05, activity: 0.10, sleep: 0.10 };
   for (const t of TESTS) {
     if (t.good == null) continue;
     const series = seriesOf(t.id);
@@ -975,6 +1068,100 @@ function renderIpaqBlock(block) {
   }
 }
 
+
+// Bloc questionnaire Sommeil : 5 questions, score /100 calculé en direct.
+// Le score est persisté dans un input hidden data-test="sleep_score" ;
+// la durée moyenne (heures) est aussi persistée (data-test="sleep_hours").
+function renderSleepBlock(block) {
+  const last = latestValues();
+  const lastScore = last['sleep_score']?.value;
+  const lastHours = last['sleep_hours']?.value;
+  block.innerHTML += `
+    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 5 questions, le score se calcule automatiquement.</p>
+    <div id="sleep-questions"></div>
+    <div id="sleep-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
+    <input type="hidden" data-test="sleep_score" id="sleep-score-input">
+    <input type="hidden" data-test="sleep_hours" id="sleep-hours-input">`;
+  const qWrap = block.querySelector('#sleep-questions');
+  const answers = {};
+  SLEEP_QUESTIONS.forEach(q => {
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    if (q.type === 'stars') {
+      row.innerHTML = `
+        <label>${q.label}
+          <div class="sleep-stars" data-sleep-q="${q.id}">
+            ${[1, 2, 3, 4, 5].map(n =>
+              `<button type="button" class="sleep-star" data-star="${n}" title="${n}/5" aria-label="${n} sur 5">\u2606</button>`
+            ).join('')}
+          </div>
+        </label>`;
+      qWrap.appendChild(row);
+      row.querySelectorAll('.sleep-star').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const n = parseInt(btn.dataset.star, 10);
+          answers[q.id] = n;
+          row.querySelectorAll('.sleep-star').forEach(b => {
+            const v = parseInt(b.dataset.star, 10);
+            b.classList.toggle('active', v <= n);
+            b.textContent = v <= n ? '\u2605' : '\u2606';
+          });
+          updateSleepResult(answers);
+          updateSaveState();
+        });
+      });
+    } else {
+      row.innerHTML = `
+        <label>${q.label}
+          <input type="number" step="${q.step}" min="${q.min}" max="${q.max}"
+                 data-sleep="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
+        </label>`;
+      qWrap.appendChild(row);
+      const inp = row.querySelector('input[data-sleep]');
+      inp.addEventListener('input', () => {
+        const raw = inp.value.trim();
+        const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
+        const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
+        inp.classList.toggle('invalid', invalid);
+        answers[q.id] = invalid ? null : num;
+        updateSleepResult(answers);
+        updateSaveState();
+      });
+    }
+  });
+  updateSleepResult(answers);
+  function updateSleepResult(a) {
+    const resultEl = block.querySelector('#sleep-result');
+    const answered = SLEEP_QUESTIONS.filter(q => a[q.id] != null).length;
+    const complete = answered === SLEEP_QUESTIONS.length;
+    if (!complete) {
+      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/5) \u2014 le score n\u00e9cessite les 5 r\u00e9ponses.`;
+      block.querySelector('#sleep-score-input').value = '';
+      block.querySelector('#sleep-hours-input').value = '';
+      return;
+    }
+    const score = sleepScore(a);
+    const lvl = sleepLevel(score);
+    const h = a.hours;
+    const hFmt = h % 1 === 0 ? h.toFixed(0) : h.toFixed(1).replace('.', ',');
+    resultEl.innerHTML = `
+      <b>Score de sommeil : ${score}/100</b> \u2014 ${lvl.label}<br>
+      <span class="small">Dur\u00e9e moyenne : <b>${hFmt} h</b> \u00b7 qualit\u00e9 ${a.quality}/5 \u00b7 endormissement ${a.latency} min \u00b7 ${a.awakenings} r\u00e9veil${a.awakenings > 1 ? 's' : ''}/nuit \u00b7 repos\u00e9 ${a.rested}/5</span>
+      <div class="small" style="margin-top:4px">Rep\u00e8res NSF : 7\u20139 h par nuit pour un adulte \u00b7 \u2265 80 bon \u00b7 60\u201379 moyen \u00b7 &lt; 60 perturb\u00e9</div>`;
+    block.querySelector('#sleep-score-input').value = score;
+    block.querySelector('#sleep-hours-input').value = h;
+  }
+  if (lastScore != null || lastHours != null) {
+    const info = document.createElement('div');
+    info.className = 'field-last';
+    info.innerHTML = 'Dernier : ' + [
+      lastScore != null ? `score <b>${lastScore}</b>/100` : null,
+      lastHours != null ? `<b>${lastHours} h</b>` : null,
+    ].filter(Boolean).join(' \u00b7 ');
+    block.insertBefore(info, block.querySelector('#sleep-questions'));
+  }
+}
+
 function renderSessionFields() {
   const type = currentSessionType;
   const groups = SESSION_GROUPS[type];
@@ -986,6 +1173,12 @@ function renderSessionFields() {
     block.innerHTML = `<h3>${GROUP_LABELS[g]}</h3>`;
     if (g === 'activity') {
       renderIpaqBlock(block);
+      container.appendChild(block);
+      updateSaveState();
+      return;
+    }
+    if (g === 'sleep') {
+      renderSleepBlock(block);
       container.appendChild(block);
       updateSaveState();
       return;
@@ -1128,7 +1321,7 @@ const STATIC_INFOS = {
       <li>Il va de <b>25</b> (tout est faible) à <b>100</b> (tout est bon).</li>
       <li><b>Score moyen (30 j)</b> = mesures des 30 derniers jours ; <b>Avant</b> = mesures antérieures à cette période.</li>
       <li><b>▲ en hausse</b> : +3 points ou plus · <b>▼ en baisse</b> : −3 points ou plus · <b>= stable</b> : entre −2 et +2 · <b>nouveau</b> : pas de mesure avant.</li>
-      <li>Ce score est propre à chaque dimension — il n'est pas l'IFG (qui pondère les 5 dimensions entre elles).</li>
+      <li>Ce score est propre à chaque dimension — il n'est pas l'IFG (qui pondère les 6 dimensions entre elles).</li>
     </ul>`
   },
   __ipaq__: {
@@ -1166,6 +1359,9 @@ const STATIC_INFOS = {
       <li><b>Équilibre unipodal &amp; Sit-and-reach</b> : protocoles standardisés de la littérature (test unipodal yeux ouverts/fermés, Senior Fitness Test pour la souplesse).</li>
       <li><b>Score global &amp; IFG (pondération des dimensions)</b> : pondérations fondées sur les associations littérature entre condition physique (FC de repos, tour de taille, force, endurance, équilibre) et mortalité cardiovasculaire et toutes causes (ex. : Kodama et al., <i>JAMA</i> 2009, méta-analyse marche/course et mortalité ; Lee et al., méta-analyses fitness/mortalité). Les 5 mesures du score global sont celles les plus prédictives selon cette littérature.</li>
       <li><b>Temps assis</b> : seuils de sédentarité de la littérature IPAQ/OMS (objectif &lt; 4 h/jour ; alerte &gt; 8 h/jour).</li>
+      <li><b>Score de sommeil (questionnaire 5 items)</b> : durée, qualité subjective, latence d'endormissement, réveils nocturnes et sensation au réveil — inspiré du <b>PSQI</b> (Buysse DJ et al., <i>Psychiatry Research</i>, 1989), abrégé pour un usage régulier. Pondération : durée 30 %, qualité 25 %, latence 15 %, réveils 15 %, réveil 15 %.</li>
+      <li><b>Durée de sommeil recommandée</b> : <b>NSF (National Sleep Foundation)</b> — 7–9 h par nuit pour un adulte (18–64 ans), 7–8 h pour 65 ans et +. <b>OMS</b> : le sommeil insuffisant (&lt; 6 h) est associé à un risque accru de maladies cardiovasculaires, d'obésité et de troubles métaboliques.</li>
+      <li><b>Sommeil et récupération</b> : un sommeil de qualité est un pilier de la récupération musculaire et de la régulation hormonale (métabolisme, sensibilité à l'insuline). Les méta-analyses associent un sommeil court ou de mauvaise qualité à une mortalité cardiovasculaire et toutes causes accrue (ex. : Cappuccio FP et al., <i>European Heart Journal</i>, 2011).</li>
     </ul>
     <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,
   },
@@ -1711,9 +1907,9 @@ function renderAnalysis() {
       <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span>${periodBadge}</p>
     ${ifgBarHtml(result.score)}
     ${deltaHtml}
-    <p class="small">Moyenne pondérée de 5 dimensions : cardio au repos &amp; métabolisme (30 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (15 %).</p>`;
+    <p class="small">Moyenne pondérée de 6 dimensions : cardio au repos &amp; métabolisme (25 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (10 %), sommeil &amp; récupération (10 %).</p>`;
 
-  // 2. Radar des 5 dimensions (SVG)
+  // 2. Radar des 6 dimensions (SVG)
   renderIfgRadar(result.dims);
 
   // 3. Points forts / faibles + conseil
