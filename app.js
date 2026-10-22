@@ -133,8 +133,8 @@ const TESTS = [
     info: `<ul>
       <li><b>Méthode 1</b> — <b>Récupération cardiaque</b> : 3 min de montées à allure régulière, puis mesure du pouls 1 min après l'arrêt.</li>
       <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
-      <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b> (comptez-vous ou suivez un métronome à 96 bpm = 24 cycles montée+descente/min).</li>
-      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider ; à la fin, un <b>compte à rebours de 1 min</b> se lance automatiquement pour la mesure du pouls.</li>
+      <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b> (un cycle montée+descente toutes les 2,5 s).</li>
+      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider ; le bouton <b>🥁 96 bpm</b> dans le timer active un <b>métronome sonore</b> (1 bip par cycle, 96 bpm = 24 montées/min) qui démarre, pause et s'arrête avec le timer. À la fin des 3 min, un <b>compte à rebours de 1 min</b> se lance automatiquement pour la mesure du pouls.</li>
       <li>Dès la fin, <b>asseyez-vous immédiatement</b> et prenez votre pouls pendant 60 s, <b>1 minute après l'arrêt</b> (comptez 15 s × 4 et multipliez par 4, ou 60 s complet).</li>
       <li>Notez ce pouls à 1 min : c'est votre résultat. Plus il est bas, meilleure est votre récupération cardiaque.</li>
       <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif — consultez un médecin avant de recommencer.</li>
@@ -1003,7 +1003,7 @@ function renderSessionFields() {
           ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
         // Timer 3 min (méthode 1, avec chaînage 1 min) ou 60 s (méthode 2)
         const stairTimerBtn = t.id === 'stair_pulse'
-          ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable), puis 1 min auto avant la mesure du pouls">⏳</button>`
+          ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-metronome="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls">⏳</button>`
           : t.id === 'stair_steps'
             ? `<button class="timer-btn" data-timer-ms="60000" data-timer-label="Escalier — marches en 60 s" title="Compte à rebours 60 s pour compter les marches">⏳</button>`
             : '';
@@ -1400,6 +1400,31 @@ let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = nul
 const DEFAULT_TIMER_MS = 30000; // 30 s (chaise)
 let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, timerDuration = DEFAULT_TIMER_MS;
 let timerLabel = 'Compte à rebours';
+// Métronome 96 bpm (24 montées/min) pour le test escalier méthode 1 :
+// bip court toutes les 625 ms, synchronisé avec le timer (démarre/pause/arrêt avec lui).
+let metroId = null, metroAudioCtx = null, metroEnabled = false;
+const METRO_BPM = 96;
+const METRO_INTERVAL_MS = 60000 / METRO_BPM; // 625 ms
+function metroTick() {
+  try {
+    const ctx = metroAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    metroAudioCtx = ctx;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = 1320; // bip aigu, distinct du bip de fin (880 Hz)
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.08);
+  } catch { /* audio indisponible */ }
+}
+function metroStart() {
+  if (metroId) return;
+  metroTick(); // bip immédiat au démarrage
+  metroId = setInterval(metroTick, METRO_INTERVAL_MS);
+}
+function metroStop() {
+  clearInterval(metroId); metroId = null;
+}
 // Chaînage automatique : quand un timer se termine, lance le suivant (ex. escalier :
 // 3 min de montées → 1 min de pause avant la mesure du pouls). { ms, label } ou null.
 let timerNext = null;
@@ -1450,6 +1475,7 @@ function timerStop(finished = false) {
   timerRunning = false;
   timerSetBtn(false);
   $('#timer').classList.toggle('finished', finished);
+  metroStop(); // le métronome s'arrête avec le timer
   if (finished) timerBeep();
 }
 function timerToggle() {
@@ -1457,11 +1483,13 @@ function timerToggle() {
     clearInterval(timerId); timerId = null; timerRunning = false;
     timerSetBtn(false);
     $('#timer').classList.remove('finished');
+    metroStop(); // pause du métronome
   } else {
     timerRunning = true;
     timerSetBtn(true);
     $('#timer').classList.remove('finished');
     timerId = setInterval(timerUpdate, 100);
+    if (metroEnabled) metroStart(); // le métronome démarre avec le timer
   }
 }
 function timerReset() {
@@ -1471,15 +1499,25 @@ function timerReset() {
   timerSetBtn(false);
   $('#timer').classList.remove('finished');
   timerNext = null; // reset annule aussi le chaînage prévu
+  metroStop(); // reset arrête aussi le métronome
 }
 // Ouvre le timer pour un test donné : durée en ms, libellé, et mode de saisie de la durée.
 // durationEditable=true → l'utilisateur peut régler la durée (en minutes) avant de lancer.
-function openTimer(durationMs, label, durationEditable = false, next = null) {
+function openTimer(durationMs, label, durationEditable = false, next = null, metronome = false) {
   const el = $('#timer');
   if (!el) return;
   timerDuration = durationMs;
   timerLabel = label;
   timerNext = next; // chaînage auto à la fin (ex. escalier → pouls 1 min)
+  metroEnabled = metronome; // métronome 96 bpm réservé au test escalier méthode 1
+  const metroBtn = $('#timer-metronome');
+  if (metroBtn) {
+    metroBtn.classList.toggle('hidden', !metronome);
+    metroBtn.classList.toggle('active', metronome);
+    metroBtn.title = metronome
+      ? 'Métronome 96 bpm actif — cliquez pour le couper'
+      : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
+  }
   $('#timer-label').textContent = label;
   // Indice visuel : un timer suivant est prévu (ex. « puis 1 min avant le pouls »)
   const nextHint = $('#timer-next-hint');
@@ -1507,9 +1545,22 @@ $('#timer-reset').addEventListener('click', timerReset);
 $('#timer-close').addEventListener('click', () => {
   timerStop();
   timerNext = null; // fermeture annule aussi le chaînage prévu
+  metroEnabled = false; // fermeture désactive le métronome
+  $('#timer-metronome')?.classList.add('hidden');
   const el = $('#timer');
   el.classList.add('hidden');
   el.classList.remove('above-chrono');
+});
+// Métronome 96 bpm : bouton affiché uniquement pour le test escalier méthode 1
+$('#timer-metronome').addEventListener('click', () => {
+  metroEnabled = !metroEnabled;
+  const btn = $('#timer-metronome');
+  btn.classList.toggle('active', metroEnabled);
+  btn.title = metroEnabled
+    ? 'Métronome 96 bpm actif — cliquez pour le couper'
+    : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
+  if (metroEnabled && timerRunning) metroStart();
+  else metroStop();
 });
 // Changement de la durée (tests à durée réglable, ex. escalier 3 min par défaut)
 document.addEventListener('change', e => {
@@ -1533,7 +1584,9 @@ document.addEventListener('click', e => {
   const next = nextMs > 0
     ? { ms: nextMs, label: b.dataset.timerNextLabel || 'Suite du test' }
     : null;
-  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next);
+  // data-timer-metronome="1" : active le métronome 96 bpm (test escalier méthode 1)
+  const metronome = b.dataset.timerMetronome === '1';
+  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next, metronome);
 });
 function chronoFmt(ms) {
   const s = ms / 1000;
