@@ -77,6 +77,17 @@
     </div>
   </div>
 
+  <!-- Modale de confirmation (remplace confirm natif) -->
+  <div id="confirm-modal" class="modal-overlay hidden">
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-modal-msg">
+      <p id="confirm-modal-msg" style="font-size:1.05em"></p>
+      <div class="row" style="justify-content:flex-end">
+        <button id="confirm-modal-cancel">Annuler</button>
+        <button id="confirm-modal-ok" class="primary">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ SESSION ============ -->
   <section id="view-session" class="view">
     <div class="card">

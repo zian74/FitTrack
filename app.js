@@ -16,6 +16,60 @@ const store = {
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
+// ---------- Notifications in-app (remplacent alert/confirm natifs) ----------
+// Toast non bloquant en bas d'écran : type 'ok' | 'err' | 'info'.
+function toast(msg, type = 'info', ms = 3500) {
+  let wrap = $('#toast-wrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'toast-wrap';
+    wrap.setAttribute('aria-live', 'polite');
+    document.body.appendChild(wrap);
+  }
+  // Décale le toast au-dessus du chrono/timer flottants s'ils sont ouverts
+  const widgetOpen = !$('#chrono')?.classList.contains('hidden') || !$('#timer')?.classList.contains('hidden');
+  wrap.classList.toggle('above-widgets', !!widgetOpen);
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.setAttribute('role', type === 'err' ? 'alert' : 'status');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, ms);
+}
+
+// Modale de confirmation (remplace confirm natif) — retourne une Promise<boolean>.
+// options.danger : bouton de confirmation en rouge (action irréversible).
+function confirmDialog(msg, { danger = false } = {}) {
+  return new Promise(resolve => {
+    const ov = $('#confirm-modal');
+    $('#confirm-modal-msg').textContent = msg;
+    $('#confirm-modal-ok').classList.toggle('danger', danger);
+    $('#confirm-modal-ok').classList.toggle('primary', !danger);
+    ov.classList.remove('hidden');
+    $('#confirm-modal-ok').focus();
+    const cleanup = v => {
+      ov.classList.add('hidden');
+      $('#confirm-modal-ok').removeEventListener('click', onOk);
+      $('#confirm-modal-cancel').removeEventListener('click', onCancel);
+      ov.removeEventListener('click', onOverlay);
+      document.removeEventListener('keydown', onKey);
+      resolve(v);
+    };
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onOverlay = e => { if (e.target === ov) cleanup(false); };
+    const onKey = e => { if (e.key === 'Escape') cleanup(false); };
+    $('#confirm-modal-ok').addEventListener('click', onOk);
+    $('#confirm-modal-cancel').addEventListener('click', onCancel);
+    ov.addEventListener('click', onOverlay);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
 // ---------- Thème (mode sombre) ----------
 // 3 états : 'system' (suit prefers-color-scheme), 'light', 'dark'.
 // Persisté dans localStorage (ft_theme). Appliqué sur <html> (classe .dark)
@@ -985,14 +1039,16 @@ function renderLastSession() {
   compEl.innerHTML = html;
 }
 
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   const btn = e.target.closest('.delete-session-btn');
   if (!btn) return;
   const { delSession: id, delDate: date } = btn.dataset;
   const ofDate = getSessions().filter(s => s.date === date);
   const n = ofDate.reduce((acc, s) => acc + Object.keys(s.values || {}).length, 0);
-  if (!confirm(`Supprimer ${ofDate.length > 1 ? `les ${ofDate.length} sessions` : 'la session'} du ${date.split('-').reverse().join('/')} (${n} mesure${n > 1 ? 's' : ''}) ?\nCette action est définitive.`)) return;
+  const ok = await confirmDialog(`Supprimer ${ofDate.length > 1 ? `les ${ofDate.length} sessions` : 'la session'} du ${date.split('-').reverse().join('/')} (${n} mesure${n > 1 ? 's' : ''}) ? Cette action est définitive.`, { danger: true });
+  if (!ok) return;
   store.set('sessions', getSessions().filter(s => s.date !== date));
+  toast('Session supprimée.', 'ok', 2500);
   renderDashboard();
   renderLastSession();
 });
@@ -1061,9 +1117,9 @@ $('#edit-save').addEventListener('click', () => {
   const t = byId(editCtx.testId);
   const raw = $('#edit-value').value.trim().replace(',', '.');
   const num = parseFloat(raw);
-  if (raw === '' || isNaN(num)) { alert('Valeur invalide.'); return; }
-  if (t.max != null && num > t.max) { alert(`Valeur trop élevée (max ${t.max} ${t.unit}).`); return; }
-  if (t.min != null && num < t.min) { alert(`Valeur trop faible (min ${t.min} ${t.unit}).`); return; }
+  if (raw === '' || isNaN(num)) { toast('Valeur invalide.', 'err'); return; }
+  if (t.max != null && num > t.max) { toast(`Valeur trop élevée (max ${t.max} ${t.unit}).`, 'err'); return; }
+  if (t.min != null && num < t.min) { toast(`Valeur trop faible (min ${t.min} ${t.unit}).`, 'err'); return; }
   const sessions = getSessions();
   const s = findSession(editCtx, sessions);
   if (!s) { closeEditModal(); return; }
@@ -1076,9 +1132,10 @@ $('#edit-save').addEventListener('click', () => {
   if ($('#view-history').classList.contains('active')) renderHistory();
 });
 
-$('#edit-delete').addEventListener('click', () => {
+$('#edit-delete').addEventListener('click', async () => {
   if (!editCtx) return;
-  if (!confirm('Supprimer définitivement cette mesure ?')) return;
+  const ok = await confirmDialog('Supprimer définitivement cette mesure ?', { danger: true });
+  if (!ok) return;
   const sessions = getSessions();
   const s = findSession(editCtx, sessions);
   if (s) {
@@ -1644,6 +1701,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if (!$('#info-modal').classList.contains('hidden')) closeInfoModal();
   else if (!$('#edit-modal').classList.contains('hidden')) closeEditModal();
+  else if (!$('#confirm-modal').classList.contains('hidden')) $('#confirm-modal-cancel').click();
 });
 
 function updateFieldValidity(t, inp) {
@@ -1816,7 +1874,7 @@ $('#save-session').addEventListener('click', () => {
     if (vma != null && !isNaN(vma)) { values.vma = Math.round(vma * 10) / 10; any = true; }
     if (vo2 != null && !isNaN(vo2)) { values.vo2max = Math.round(vo2 * 10) / 10; any = true; }
   }
-  if (!any) { alert('Aucune valeur saisie.'); return; }
+  if (!any) { toast('Aucune valeur saisie.', 'err'); return; }
   const session = { date: $('#session-date').value || todayStr(), type: currentSessionType, values };
   // fusion avec session existante à la même date ? Non : on garde tout l'historique.
   addSession(session);
@@ -3310,13 +3368,13 @@ function renderReferenceTable() {
   $('#reference-table').innerHTML = html;
 }
 
-$('#wipe-data').addEventListener('click', () => {
-  if (confirm('Effacer TOUTES les données (profil + mesures) ? Action irréversible.')) {
-    Object.keys(localStorage).filter(k => k.startsWith('ft_')).forEach(k => localStorage.removeItem(k));
-    renderProfileForm(); renderReferenceTable();
-    if ($('#view-history').classList.contains('active')) renderHistory();
-    alert('Données effacées.');
-  }
+$('#wipe-data').addEventListener('click', async () => {
+  const ok = await confirmDialog('Effacer TOUTES les données (profil + mesures) ? Action irréversible.', { danger: true });
+  if (!ok) return;
+  Object.keys(localStorage).filter(k => k.startsWith('ft_')).forEach(k => localStorage.removeItem(k));
+  renderProfileForm(); renderReferenceTable();
+  if ($('#view-history').classList.contains('active')) renderHistory();
+  toast('Données effacées.', 'ok', 2500);
 });
 
 // ---------- Export PDF (fiche de score imprimable) ----------
@@ -3324,7 +3382,7 @@ $('#export-pdf').addEventListener('click', () => {
   const profile = getProfile();
   const lv = latestValues();
   const sessions = getSessions();
-  if (!sessions.length) { alert('Aucune donnée à exporter.'); return; }
+  if (!sessions.length) { toast('Aucune donnée à exporter.', 'err'); return; }
 
   let rows = '';
   for (const t of TESTS) {
@@ -3358,7 +3416,7 @@ $('#export-pdf').addEventListener('click', () => {
   </body></html>`;
 
   const w = window.open('', '_blank');
-  if (!w) { alert('Autorisez les pop-ups pour générer le PDF.'); return; }
+  if (!w) { toast('Autorisez les pop-ups pour générer le PDF.', 'err'); return; }
   w.document.write(html);
   w.document.close();
 });

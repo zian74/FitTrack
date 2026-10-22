@@ -377,6 +377,29 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .sleep-star:hover { transform: scale(1.15); }
 .sleep-star.active { color: #f9a825; }
 
+/* ---------- Toasts (notifications in-app, remplacent alert natif) ---------- */
+#toast-wrap {
+  position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%); z-index: 40;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none; width: max-content; max-width: calc(100vw - 32px);
+}
+.toast {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: 8px; padding: 10px 16px; font-size: .95em;
+  box-shadow: 0 4px 14px var(--shadow-strong);
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .25s, transform .25s;
+  max-width: 100%;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-ok { border-left-color: var(--ok); }
+.toast-err { border-left-color: var(--bad); }
+.toast-info { border-left-color: var(--accent); }
+/* Le toast flotte au-dessus du chrono/timer s'ils sont ouverts */
+#toast-wrap.above-widgets { bottom: 76px; }
+
 /* ---------- Import montre connectée (zone de drop) ---------- */
 #watch-drop-zone { transition: border-color .15s, background .15s; }
 #watch-drop-zone.dragover {

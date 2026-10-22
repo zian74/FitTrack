@@ -62,6 +62,7 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] ⏳ Timers compte à rebours : chaise 30 s, escalier 3 min (réglable), Cooper 12/6 min (radios)
 - [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (priorité VMA > VO2max > Cooper > escalier)
 - [x] CI GitHub Actions : syntaxe JS (`node --check`) + validation JSON (package.json, manifest) à chaque push/PR
+- [x] 🔔 Notifications in-app : toasts non bloquants (succès/erreur/info, `aria-live`) + modale de confirmation maison (`alertdialog`) — remplacent les `alert()`/`confirm()` natifs ; Échap ferme la modale ; le toast se décale au-dessus du chrono/timer
 - [x] 📱 Modales scrollables sur mobile : contenu défile dans la pop-up, bouton « Compris » toujours visible (max-height 100dvh + flex column + overflow-y auto)
 - [x] ⚙️ Nouvel onglet **Paramètres** (dernier onglet, icône roue crantée) : regroupe le choix du **Thème** (Système/Clair/Sombre), les **Rappels de re-test** et les **Sources scientifiques** (déplacés depuis l'onglet Profil) ; libellés raccourcis sur mobile
 - [x] ⏳ Test escalier : après les 3 min de montées, un **compte à rebours de 1 min se lance automatiquement** pour indiquer le délai avant la mesure du pouls (chaînage auto du timer générique, annulable via ✕ ou ↺)
