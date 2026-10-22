@@ -70,6 +70,27 @@ nav button {
   border-radius: 6px; cursor: pointer; font-size: .95em;
 }
 nav button.active { background: var(--surface); color: var(--accent); font-weight: 600; }
+/* Bouton Paramètres (⚙️) : icône seule, padding réduit */
+nav button[data-view="settings"] { padding: 8px 10px; font-size: 1.1em; line-height: 1; }
+@media (max-width: 640px) {
+  /* Sur mobile : libellés courts, l'icône ⚙️ suffit pour Paramètres */
+  nav button { padding: 8px 8px; font-size: .85em; }
+  nav button[data-view="dashboard"]::after { content: "Accueil"; }
+  nav button[data-view="dashboard"] { font-size: 0; }
+  nav button[data-view="dashboard"]::after { font-size: .85rem; }
+  nav button[data-view="session"]::after { content: "Session"; }
+  nav button[data-view="session"] { font-size: 0; }
+  nav button[data-view="session"]::after { font-size: .85rem; }
+  nav button[data-view="analysis"]::after { content: "Analyse"; }
+  nav button[data-view="analysis"] { font-size: 0; }
+  nav button[data-view="analysis"]::after { font-size: .85rem; }
+  nav button[data-view="history"]::after { content: "Hist."; }
+  nav button[data-view="history"] { font-size: 0; }
+  nav button[data-view="history"]::after { font-size: .85rem; }
+  nav button[data-view="profile"]::after { content: "Profil"; }
+  nav button[data-view="profile"] { font-size: 0; }
+  nav button[data-view="profile"]::after { font-size: .85rem; }
+}
 main { max-width: 900px; margin: 0 auto; padding: 16px; }
 .view { display: none; }
 .view.active { display: block; }
