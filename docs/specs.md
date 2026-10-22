@@ -26,10 +26,12 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 10 | Pompes maximales | force | trimestriel | H > 35 / F > 20 |
 | 11 | Gainage planche | force | trimestriel | 2 min |
 | 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
-| 13 | Test escalier (pouls 1 min) | cardio | trimestriel | < 90–100 |
-| 14 | Cooper (12 min) ou demi-Cooper (6 min, distance ×2) | cardio | trimestriel | H > 2400 / F > 2000 m (équiv. 12 min) |
-| 15 | IPAQ court — score activité (MET-min/sem) | activité | trimestriel | ≥ 600 (OMS) / ≥ 3000 (élevé) |
-| 16 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
+| 13 | Test escalier — méthode 1 (pouls 1 min) | cardio | trimestriel | ≤ 100 / ≤ 110 (inversé) |
+| 14 | Test escalier — méthode 2 (marches en 60 s) | cardio | trimestriel | ≥ 80 / ≥ 60 |
+| 15 | Test escalier — méthode 3 (4 étages chronométrés) | cardio | trimestriel | ≤ 45 / ≤ 60 (inversé) |
+| 16 | Cooper (12 min) ou demi-Cooper (6 min, distance ×2) | cardio | trimestriel | H > 2400 / F > 2000 m (équiv. 12 min) |
+| 17 | IPAQ court — score activité (MET-min/sem) | activité | trimestriel | ≥ 600 (OMS) / ≥ 3000 (élevé) |
+| 18 | IPAQ court — temps assis (min/jour de semaine) | activité | trimestriel | ≤ 240 (4 h) / alerte > 480 (8 h) |
 
 ## 3. Exigences fonctionnelles
 
@@ -74,10 +76,18 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Chronomètre intégré pour les tests chronométrés
 - ⏳ **Timer compte à rebours générique** (panneau flottant : démarrage/pause, reset ↺, fermeture ✕, arrêt auto à 00:00 avec bip sonore + état « finished » vert, compatible mode sombre, décale au-dessus du chrono si les deux sont ouverts) :
   - test 12 « Chaise 30 s » : 30 s fixe (compter les répétitions)
-  - test 13 « Escalier » : **3 min par défaut, durée réglable** en minutes (montées à 24/min) ; **à la fin des 3 min, un compte à rebours de 1 min se lance automatiquement** (« Escalier — mesure du pouls dans 1 min (asseyez-vous) ») pour indiquer le délai avant la prise du pouls — chaînage auto du timer générique via `data-timer-next-ms` / `data-timer-next-label`, annulable par fermeture (✕) ou reset (↺)
+  - test 13 « Escalier — méthode 1 » : **3 min par défaut, durée réglable** en minutes (montées à 24/min) ; **à la fin des 3 min, un compte à rebours de 1 min se lance automatiquement** (« Escalier — mesure du pouls dans 1 min (asseyez-vous) ») pour indiquer le délai avant la prise du pouls — chaînage auto du timer générique via `data-timer-next-ms` / `data-timer-next-label`, annulable par fermeture (✕) ou reset (↺)
+  - test 14 « Escalier — méthode 2 » : **60 s fixe** (compter les marches gravis), pas de chaînage
+  - test 15 « Escalier — méthode 3 » : **chronomètre ⏱** (pas de timer ⏳) — reporte le temps écoulé dans le champ
   - ~~test 14 « Cooper »~~ : **timer ⏳ supprimé** (le Cooper n'a plus de compte à rebours)
 - ⓘ instructions du test chaise (position mur, bras croisés, cuisses parallèles au sol)
-- **Test 14 Cooper — refonte UI (6 changements)** :
+- **Test escalier — 3 méthodes au choix** (sélecteur radio pilules « Méthode 1 — Pouls à 1 min » / « Méthode 2 — Marches en 60 s » / « Méthode 3 — 4 étages chronométrés ») :
+  - Seule la **méthode active** est visible et son input `enabled` ; les 2 autres rows sont masquées (`.hidden`) et leurs inputs `disabled` (ignorés à la sauvegarde et dans `updateSaveState`/`updateFieldValidity`)
+  - **Méthode 1** (`stair_pulse`, n°13) : pouls à 1 min après 3 min de montées — seuils inversés ≤ 100 / ≤ 110 bpm — timer ⏳ 3 min (réglable) + chaînage auto 1 min
+  - **Méthode 2** (`stair_steps`, n°14) : nombre de marches gravis en 60 s — seuils ≥ 80 (bon) / ≥ 60 (moyen) / < 40 (bas) — timer ⏳ 60 s fixe
+  - **Méthode 3** (`stair_4floors`, n°15) : temps pour monter 4 étages — seuils inversés ≤ 45 (très bon) / ≤ 60 (bon) / > 90 (mauvais) — chronomètre ⏱ avec report dans le champ
+  - **Analyse** : `stairIndicator(lv)` retourne l'indicateur escalier retenu (priorité méthode 1 > 2 > 3) ; utilisé par `enduranceIndicator` (dimension Endurance IFG) et `computeGlobalScore` (remplace `stair_pulse` dans `PREDICTIVE`)
+- **Test 16 Cooper — refonte UI (6 changements)** :
   - **Ordre des champs** : label → choix de durée (radios pilules « 12 min (complet) » / « 6 min (demi-Cooper) ») → champ distance (m) → bloc estimation VMA/VO2max
   - **Bloc estimation VMA/VO2max** : champs VMA (km/h) + VO2max (ml/kg/min) en premier, puis la phrase « Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session. », puis le bloc de résultats
   - **Formules supprimées du bloc d'estimation** : les formules (VMA = distance ÷ 200, VO2max = 3,5 × VMA, VO2max = (distance − 504,9) ÷ 44,73, VMA = VO2max ÷ 3,5) ne sont plus affichées à côté des valeurs estimées — elles restent disponibles dans la pop-up « Sources scientifiques » (onglet Paramètres)
