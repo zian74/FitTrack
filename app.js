@@ -947,9 +947,11 @@ function renderSessionFields() {
       // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
         ? `<button class="timer-btn" data-timer-ms="30000" data-timer-label="Chaise 30 s — répétitions" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
-      // Timer compte à rebours 3 min par défaut (durée réglable) pour le test escalier
+      // Timer compte à rebours 3 min par défaut (durée réglable) pour le test escalier.
+      // À la fin des 3 min, un compte à rebours de 1 min se lance automatiquement
+      // pour indiquer le délai avant la mesure du pouls (1 min après l'arrêt).
       const stairTimerBtn = t.id === 'stair_pulse'
-        ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable)">⏳</button>` : '';
+        ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable), puis 1 min auto avant la mesure du pouls">⏳</button>` : '';
       const infoBtn = t.info
         ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
       const last = latestValues()[t.id]?.value;
@@ -1294,6 +1296,9 @@ let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = nul
 const DEFAULT_TIMER_MS = 30000; // 30 s (chaise)
 let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, timerDuration = DEFAULT_TIMER_MS;
 let timerLabel = 'Compte à rebours';
+// Chaînage automatique : quand un timer se termine, lance le suivant (ex. escalier :
+// 3 min de montées → 1 min de pause avant la mesure du pouls). { ms, label } ou null.
+let timerNext = null;
 function timerFmt(ms) {
   const total = Math.max(0, ms);
   const m = Math.floor(total / 60000);
@@ -1319,6 +1324,13 @@ function timerUpdate() {
   if (timerRemaining <= 0) {
     timerRemaining = 0;
     timerStop(true);
+    // Chaînage : si un timer suivant est prévu, le lancer automatiquement
+    if (timerNext) {
+      const next = timerNext;
+      timerNext = null;
+      openTimer(next.ms, next.label, false);
+      timerToggle(); // démarre tout de suite
+    }
   }
   $('#timer-display').textContent = timerFmt(timerRemaining);
 }
@@ -1354,15 +1366,27 @@ function timerReset() {
   $('#timer-display').textContent = timerFmt(timerRemaining);
   timerSetBtn(false);
   $('#timer').classList.remove('finished');
+  timerNext = null; // reset annule aussi le chaînage prévu
 }
 // Ouvre le timer pour un test donné : durée en ms, libellé, et mode de saisie de la durée.
 // durationEditable=true → l'utilisateur peut régler la durée (en minutes) avant de lancer.
-function openTimer(durationMs, label, durationEditable = false) {
+function openTimer(durationMs, label, durationEditable = false, next = null) {
   const el = $('#timer');
   if (!el) return;
   timerDuration = durationMs;
   timerLabel = label;
+  timerNext = next; // chaînage auto à la fin (ex. escalier → pouls 1 min)
   $('#timer-label').textContent = label;
+  // Indice visuel : un timer suivant est prévu (ex. « puis 1 min avant le pouls »)
+  const nextHint = $('#timer-next-hint');
+  if (nextHint) {
+    if (next) {
+      nextHint.textContent = `puis ${timerFmt(next.ms)} — ${next.label}`;
+      nextHint.classList.remove('hidden');
+    } else {
+      nextHint.classList.add('hidden');
+    }
+  }
   $('#timer-duration-wrap').classList.toggle('hidden', !durationEditable);
   const durInput = $('#timer-duration-min');
   if (durationEditable) durInput.value = Math.round(durationMs / 60000);
@@ -1378,6 +1402,7 @@ $('#timer-startstop').addEventListener('click', timerToggle);
 $('#timer-reset').addEventListener('click', timerReset);
 $('#timer-close').addEventListener('click', () => {
   timerStop();
+  timerNext = null; // fermeture annule aussi le chaînage prévu
   const el = $('#timer');
   el.classList.add('hidden');
   el.classList.remove('above-chrono');
@@ -1398,7 +1423,13 @@ document.addEventListener('click', e => {
   if (!b) return;
   const dur = parseInt(b.dataset.timerMs || '30000', 10);
   const editable = b.dataset.timerEditable === '1';
-  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable);
+  // data-timer-next-ms + data-timer-next-label : timer lancé automatiquement à la fin
+  // (ex. escalier : 3 min de montées → 1 min avant la mesure du pouls)
+  const nextMs = parseInt(b.dataset.timerNextMs || '0', 10);
+  const next = nextMs > 0
+    ? { ms: nextMs, label: b.dataset.timerNextLabel || 'Suite du test' }
+    : null;
+  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next);
 });
 function chronoFmt(ms) {
   const s = ms / 1000;

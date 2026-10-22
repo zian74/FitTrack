@@ -188,6 +188,9 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #timer-startstop.running { background: var(--bad); color: #fff; }
 #timer.finished { border-color: var(--ok); }
 #timer.finished #timer-display { color: var(--ok); }
+/* Timer suivant enchaîné automatiquement (ex. escalier → mesure du pouls 1 min) */
+#timer-next-hint { color: var(--accent); font-weight: 600; }
+#timer.finished #timer-next-hint { color: var(--ok); }
 #timer-duration-wrap { white-space: nowrap; }
 #timer-duration-min { width: 64px; padding: 4px 6px; }
 .timer-btn {
