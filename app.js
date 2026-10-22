@@ -243,6 +243,12 @@ function derivedVO2(lvArg) {
   return null;
 }
 
+// Entoure les segments entre parenthèses d'un <span class="paren"> pour les
+// afficher plus petits et en italique (explications, ex. « (course, vélo rapide…) »)
+function wrapParens(text) {
+  return text.replace(/\(([^()]*)\)/g, '<span class="paren">($1)</span>');
+}
+
 // ---------- Questionnaire IPAQ court (évaluation de la sédentarité) ----------
 // 7 questions sur les 7 derniers jours. Q1/Q3/Q5 : jours + minutes (effort vigorous/modéré/marche).
 // Q2/Q4/Q6 : minutes de marche/transports. Q7 : minutes assis (jour de semaine).
@@ -1019,7 +1025,7 @@ function renderIpaqBlock(block) {
     const row = document.createElement('div');
     row.className = 'field-row';
     row.innerHTML = `
-      <label>${q.label}
+      <label>${wrapParens(q.label)}
         <input type="number" step="1" min="${q.min}" max="${q.max}"
                data-ipaq="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
       </label>`;
@@ -1051,9 +1057,9 @@ function renderIpaqBlock(block) {
     const sitH = Math.floor((a.sit_min || 0) / 60), sitM = (a.sit_min || 0) % 60;
     resultEl.innerHTML = `
       <b>Score IPAQ : ${met} MET-min/semaine</b> — ${lvl.label}<br>
-      <span class="small">Détail : intense ${Math.round((a.vig_days||0)*(a.vig_min||0))} min/j ×8 · modéré ${Math.round((a.mod_days||0)*(a.mod_min||0))} min/j ×4 · marche ${Math.round((a.walk_days||0)*(a.walk_min||0))} min/j ×3,3 (par semaine)</span><br>
-      <span class="small">Temps assis (jour de semaine) : <b>${a.sit_min} min</b> (${sitH} h ${String(sitM).padStart(2,'0')})${a.sit_min > 480 ? ' — au-delà de 8 h : pensez à vous lever régulièrement' : ''}</span>
-      <div class="small" style="margin-top:4px">Repères OMS : ≥ 600 MET-min/sem (ou 150 min d’activité modérée/sem) · objectif haut : ≥ 3000</div>`;
+      <span class="small">Détail : intense ${Math.round((a.vig_days||0)*(a.vig_min||0))} min/j ×8 · modéré ${Math.round((a.mod_days||0)*(a.mod_min||0))} min/j ×4 · marche ${Math.round((a.walk_days||0)*(a.walk_min||0))} min/j ×3,3 ${wrapParens('(par semaine)')}</span><br>
+      <span class="small">${wrapParens('Temps assis (jour de semaine)')} : <b>${a.sit_min} min</b> ${wrapParens(`(${sitH} h ${String(sitM).padStart(2,'0')})`)}${a.sit_min > 480 ? ' — au-delà de 8 h : pensez à vous lever régulièrement' : ''}</span>
+      <div class="small" style="margin-top:4px">Repères OMS : ≥ 600 MET-min/sem ${wrapParens('(ou 150 min d\'activité modérée/sem)')} · objectif haut : ≥ 3000</div>`;
     block.querySelector('#ipaq-score-input').value = met;
     block.querySelector('#ipaq-sit-input').value = a.sit_min;
   }
