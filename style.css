@@ -247,6 +247,14 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 }
 .edit-btn:hover { opacity: 1; }
 
+/* Badge de provenance \u2014 donn\u00e9es import\u00e9es d'une montre connect\u00e9e (historique) */
+.src-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  border-radius: 10px; font-size: .75em; font-weight: 600;
+  background: var(--mid-bg); color: var(--accent); white-space: nowrap;
+}
+.src-badge .src-sport { opacity: .75; font-weight: 400; }
+
 /* Onboarding / modale */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.5);
