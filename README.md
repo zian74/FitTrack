@@ -58,5 +58,6 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] ⏳ Timers compte à rebours : chaise 30 s, escalier 3 min (réglable), Cooper 12/6 min (radios)
 - [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (priorité VMA > VO2max > Cooper > escalier)
 - [x] 🧹 Suite de tests jsdom : 31 suites green (test-score-mention.js obsolète remplacé par test-score-global.js, test-analysis.js réparé)
+- [x] 📱 Modales scrollables sur mobile : contenu défile dans la pop-up, bouton « Compris » toujours visible (max-height 100dvh + flex column + overflow-y auto)
 - [x] 💾 Session Cardio : enregistrement avec VMA seule, VO2max seule ou distance Cooper (au moins un des 3 champs)
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
