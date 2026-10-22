@@ -58,7 +58,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
   faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
-- Questionnaire **Alimentation** (6 questions sur les 7 derniers jours) : score /100
+- Questionnaire **Alimentation** (6 questions scorées + N7 alcool contextuelle sur les 7 derniers jours) : score /100
   calculé automatiquement (fruits & légumes 25 %, boissons sucrées 20 %,
   ultra-transformés 20 %, petit-déjeuner 10 %, repas maison 15 %, hydratation 10 %),
   niveau équilibré/moyen/à améliorer selon seuils 80/60 ; repères OMS (≥ 5 portions
@@ -83,7 +83,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Calendrier de re-test : badges « à jour / à refaire »
 - Rappels de re-test : notification quotidienne à heure choisie (in-app via setTimeout + PeriodicSync SW pour app fermée, rattrapage au démarrage si l'heure est passée)
 - Onglet **Paramètres** (⚙️) : carte « Sources scientifiques » avec lien ⓘ listant les références utilisées (IPAQ court — Craig 2003 ; OMS 2020 ; Cooper 1968 ; seuils OMS/IDF tour de taille ; ESC/ESH pression artérielle ; Rikli & Jones Senior Fitness Test 1999 ; Kodama 2009 / Lee méta-analyses mortalité ; seuils sédentarité IPAQ/OMS ; alimentation — OMS fruits & légumes ≥ 400 g/j, NOVA Monteiro 2019, Sofi 2010 / Widmer 2015 régime méditerranéen), avec mention « repères indicatifs, pas d'avis médical »
-- Onglet **Profil** : facteurs de risque cardiovasculaire — tabagisme, antécédents cardiaques personnels, antécédents familiaux précoces (1ᵉʳ degré < 55/65 ans), hypertension connue, diabète connu, dyslipidémie/statine, alcool (verres/semaine), stress chronique/dépression ; ⓘ explicatif (cadre ESC 2021 / SCORE2)
+- Onglet **Profil** : facteurs de risque cardiovasculaire — tabagisme, antécédents cardiaques personnels, antécédents familiaux précoces (1ᵉʳ degré < 55/65 ans), hypertension connue, diabète connu, dyslipidémie/statine, stress chronique/dépression ; ⓘ explicatif (cadre ESC 2021 / SCORE2). L'alcool (verres/semaine) est saisi dans le questionnaire Alimentation (N7) et alimente ce récapitulatif
 - **IMC** affiché dans le Profil (taille du profil + dernière mesure de poids des sessions) avec badge OMS (maigreur/surpoids/obésité) ; IMC ≥ 30 = facteur de risque majeur
 - **Habitudes alimentaires** dans le Profil (déclaratives, contextuelles) : régime
   particulier (végétarien/végétalien/sans gluten), nombre de repas/jour, grignotage

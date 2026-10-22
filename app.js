@@ -258,10 +258,10 @@ const TESTS = [
     gender: { H: { good: 8, mid: 7 }, F: { good: 8, mid: 7 } } },
   // --- Groupe Alimentation (questionnaire 7 derniers jours, score calculé) ---
   { id: 'nutrition_score', name: 'Score alimentaire', unit: '/100', group: 'nutrition',
-    hint: 'Score calculé automatiquement depuis le questionnaire (6 questions sur les 7 derniers jours)',
+    hint: 'Score calculé automatiquement depuis le questionnaire (6 questions scorées + alcool N7 contextuel, sur les 7 derniers jours)',
     good: 80, mid: 60, max: 100, min: 0,
     info: `<ul>
-      <li>Le <b>score alimentaire</b> (/100) est calculé automatiquement à partir de 6 questions sur vos 7 derniers jours : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation.</li>
+      <li>Le <b>score alimentaire</b> (/100) est calculé automatiquement à partir de <b>6 questions</b> sur vos 7 derniers jours : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation. La question <b>N7 (alcool)</b> est <b>contextuelle</b> : elle n'entre pas dans le score mais alimente le récapitulatif des facteurs de risque cardio (onglet Profil).</li>
       <li><b>Interprétation</b> : ≥ 80 alimentation équilibrée · 60–79 moyenne, marge d'amélioration · &lt; 60 alimentation à améliorer.</li>
       <li><b>Repères OMS</b> : au moins 400 g de fruits et légumes par jour (5 portions), limiter les boissons sucrées et les aliments ultra-transformés.</li>
     </ul>` },
@@ -288,6 +288,15 @@ const TESTS = [
       <li>Elle est <b>estimée automatiquement</b> à partir de votre dernière session Cooper/demi-Cooper (VO2max = 3,5 × VMA, ou formule ACSM depuis la distance), ou reprise du champ VO2max saisi dans le bloc Cooper.</li>
       <li>Repères indicatifs (adultes) : ≥ 45 (H) / ≥ 38 (F) ml/kg/min = bonne forme ; 35–44,9 (H) / 30–37,9 (F) = moyenne.</li>
       <li>Une VO2max élevée est associée à une meilleure santé cardiovasculaire et une mortalité réduite (Kodama et al., JAMA 2009).</li>
+    </ul>` },
+  // --- Mesure contextuelle (hors score, alimente le risque cardio) ---
+  { id: 'alcohol', name: 'Alcool (verres/semaine)', unit: 'verres/sem', group: 'nutrition', rev: true,
+    hint: 'Saisi dans le questionnaire Alimentation (N7) — informatif, hors score alimentaire',
+    good: 0, mid: 7, max: 60, min: 0,
+    info: `<ul>
+      <li>Consommation d'alcool déclarée dans le <b>questionnaire Alimentation</b> (question N7, sur les 7 derniers jours).</li>
+      <li>Cette mesure est <b>contextuelle</b> : elle ne participe pas au score alimentaire, mais alimente le <b>recapitulatif des facteurs de risque cardiovasculaire</b> (onglet Profil).</li>
+      <li>Repères OMS : au-delà de <b>14 verres/semaine</b>, la consommation est considérée comme à risque (facteur majeur).</li>
     </ul>` },
 ];
 
@@ -418,12 +427,14 @@ function sleepLevel(score) {
 // Repères OMS : ≥ 400 g/j de fruits & légumes (5 portions), limiter les boissons
 // sucrées et les aliments ultra-transformés (classification NOVA, Monteiro 2019).
 const NUTRITION_QUESTIONS = [
-  { id: 'veg', label: 'N1 — En moyenne, combien de portions de fruits & légumes par jour ?', unit: 'portions', type: 'number', min: 0, max: 15, step: 0.5, weight: 25 },
+  { id: 'veg', label: 'N1 — En moyenne, combien de portions de fruits & légumes par jour ?', unit: 'portions', type: 'number', min: 0, max: 15, step: 0.5, weight: 25,
+    infoKey: '__portion__', infoTitle: 'Qu’est-ce qu’une portion de fruits & légumes ?' },
   { id: 'sugary', label: 'N2 — Combien de boissons sucrées (sodas, jus, boissons énergisantes) par jour ?', unit: 'verres', type: 'number', min: 0, max: 15, step: 0.5, weight: 20 },
   { id: 'ultra', label: 'N3 — Combien de fois par semaine consommez-vous des produits ultra-transformés (snacks, fast-food, plats industriels) ?', unit: 'fois/sem', type: 'number', min: 0, max: 21, step: 1, weight: 20 },
   { id: 'breakfast', label: 'N4 — Prenez-vous un petit-déjeuner régulièrement ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 10 },
   { id: 'homecooked', label: 'N5 — Vos repas sont-ils majoritairement préparés maison ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 15 },
   { id: 'water', label: 'N6 — Combien de verres d’eau buvez-vous par jour ?', unit: 'verres', type: 'number', min: 0, max: 20, step: 1, weight: 10 },
+  { id: 'alcohol', label: 'N7 — Combien de verres d’alcool consommez-vous par semaine ?', unit: 'verres/sem', type: 'number', min: 0, max: 60, step: 1, weight: 0, contextual: true },
 ];
 
 // Score d'un item individuel (0–100) puis pondération pour le score global /100.
@@ -472,6 +483,7 @@ function nutritionItemScore(q, value) {
 function nutritionScore(a) {
   let total = 0, weight = 0;
   for (const q of NUTRITION_QUESTIONS) {
+    if (q.contextual) continue; // N7 alcool : informatif, hors score
     const v = a[q.id];
     if (v == null) continue;
     total += nutritionItemScore(q, v) * q.weight;
@@ -616,7 +628,9 @@ function riskFactors(profile) {
   if (p.hypertension) out.push({ key: 'hypertension', label: 'Hypertension artérielle connue', major: true });
   if (p.diabetes) out.push({ key: 'diabetes', label: 'Diabète connu', major: true });
   if (p.dyslipidemia) out.push({ key: 'dyslipidemia', label: 'Dyslipidémie / statine', major: true });
-  const alcohol = Number(p.alcohol);
+  // Alcool : saisi dans le questionnaire Alimentation (N7), persisté comme mesure
+  // 'alcohol' dans les sessions — la dernière valeur connue alimente le risque.
+  const alcohol = Number(latestValues().alcohol?.value ?? 0);
   if (alcohol >= 14) out.push({ key: 'alcohol', label: `Alcool : ${alcohol} verres/semaine (≥ 14)`, major: true });
   else if (alcohol > 0) out.push({ key: 'alcohol', label: `Alcool : ${alcohol} verre${alcohol > 1 ? 's' : ''}/semaine`, major: false });
   if (p.stress === 'yes') out.push({ key: 'stress', label: 'Stress chronique / dépression', major: true });
@@ -1320,24 +1334,31 @@ function renderSleepBlock(block) {
   }
 }
 
-// Bloc questionnaire Alimentation : 6 questions, score /100 calculé en direct.
+// Bloc questionnaire Alimentation : 6 questions scorées + N7 alcool (contextuelle), score /100 calculé en direct.
 // Le score est persisté dans un input hidden data-test="nutrition_score".
 function renderNutritionBlock(block) {
   const last = latestValues();
   const lastScore = last['nutrition_score']?.value;
   block.innerHTML += `
-    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 6 questions, le score se calcule automatiquement.</p>
+    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 6 questions, le score se calcule automatiquement (la question N7 sur l'alcool est facultative et hors score).</p>
     <div id="nutrition-questions"></div>
     <div id="nutrition-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
-    <input type="hidden" data-test="nutrition_score" id="nutrition-score-input">`;
+    <input type="hidden" data-test="nutrition_score" id="nutrition-score-input">
+    <input type="hidden" data-test="alcohol" id="nutrition-alcohol-input">`;
   const qWrap = block.querySelector('#nutrition-questions');
   const answers = {};
+  // N7 alcool : informatif — prérempli avec la dernière valeur connue
+  const lastAlcohol = latestValues()['alcohol']?.value;
+  if (lastAlcohol != null) answers.alcohol = lastAlcohol;
   NUTRITION_QUESTIONS.forEach(q => {
     const row = document.createElement('div');
     row.className = 'field-row';
+    const infoBtn = q.infoKey
+      ? ` <button type="button" class="info-btn" data-info-test="${q.infoKey}" title="${q.infoTitle}" aria-label="${q.infoTitle}">ⓘ</button>`
+      : '';
     if (q.type === 'stars') {
       row.innerHTML = `
-        <label>${q.label}
+        <label>${q.label}${infoBtn}
           <div class="sleep-stars" data-nutrition-q="${q.id}">
             ${[1, 2, 3, 4, 5].map(n =>
               `<button type="button" class="sleep-star" data-star="${n}" title="${n}/5" aria-label="${n} sur 5">\u2606</button>`
@@ -1360,12 +1381,13 @@ function renderNutritionBlock(block) {
       });
     } else {
       row.innerHTML = `
-        <label>${q.label}
+        <label>${q.label}${infoBtn}
           <input type="number" step="${q.step}" min="${q.min}" max="${q.max}"
                  data-nutrition="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
         </label>`;
       qWrap.appendChild(row);
       const inp = row.querySelector('input[data-nutrition]');
+      if (q.id === 'alcohol' && lastAlcohol != null) inp.value = lastAlcohol;
       inp.addEventListener('input', () => {
         const raw = inp.value.trim();
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
@@ -1380,20 +1402,25 @@ function renderNutritionBlock(block) {
   updateNutritionResult(answers);
   function updateNutritionResult(a) {
     const resultEl = block.querySelector('#nutrition-result');
-    const answered = NUTRITION_QUESTIONS.filter(q => a[q.id] != null).length;
-    const complete = answered === NUTRITION_QUESTIONS.length;
+    // Le score porte sur les 6 questions pondérées ; N7 (alcool) est informatif et optionnel
+    const scored = NUTRITION_QUESTIONS.filter(q => !q.contextual);
+    const answered = scored.filter(q => a[q.id] != null).length;
+    const complete = answered === scored.length;
     if (!complete) {
-      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/6) \u2014 le score nécessite les 6 réponses.`;
+      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/6) \u2014 le score n\u00e9cessite les 6 r\u00e9ponses.`;
       block.querySelector('#nutrition-score-input').value = '';
-      return;
-    }
-    const score = nutritionScore(a);
-    const lvl = nutritionLevel(score);
-    resultEl.innerHTML = `
+    } else {
+      const score = nutritionScore(a);
+      const lvl = nutritionLevel(score);
+      const alcoholTxt = a.alcohol != null ? ` \u00b7 alcool ${a.alcohol} verre${a.alcohol > 1 ? 's' : ''}/sem` : '';
+      resultEl.innerHTML = `
       <b>Score alimentaire : ${score}/100</b> \u2014 ${lvl.label}<br>
-      <span class="small">Fruits & légumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j · boissons sucrées ${a.sugary}/j · ultra-transformés ${a.ultra} fois/sem · petit-déjeuner ${a.breakfast}/5 · maison ${a.homecooked}/5 · eau ${a.water} verre${a.water > 1 ? 's' : ''}/j</span>
-      <div class="small" style="margin-top:4px">Repères OMS : ≥ 5 portions de fruits & légumes/jour · limiter les boissons sucrées · ≥ 80 équilibré · 60–79 moyen · &lt; 60 à améliorer</div>`;
-    block.querySelector('#nutrition-score-input').value = score;
+      <span class="small">Fruits & l\u00e9gumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j \u00b7 boissons sucr\u00e9es ${a.sugary}/j \u00b7 ultra-transform\u00e9s ${a.ultra} fois/sem \u00b7 petit-d\u00e9jeuner ${a.breakfast}/5 \u00b7 maison ${a.homecooked}/5 \u00b7 eau ${a.water} verre${a.water > 1 ? 's' : ''}/j${alcoholTxt}</span>
+      <div class="small" style="margin-top:4px">Rep\u00e8res OMS : \u2265 5 portions de fruits & l\u00e9gumes/jour \u00b7 limiter les boissons sucr\u00e9es \u00b7 \u2265 80 \u00e9quilibr\u00e9 \u00b7 60\u201379 moyen \u00b7 &lt; 60 \u00e0 am\u00e9liorer</div>`;
+      block.querySelector('#nutrition-score-input').value = score;
+    }
+    // N7 alcool persisté dès qu'elle est saisie (hors score, alimente le risque cardio)
+    block.querySelector('#nutrition-alcohol-input').value = a.alcohol != null ? a.alcohol : '';
   }
   if (lastScore != null) {
     const info = document.createElement('div');
@@ -1561,6 +1588,17 @@ function initStairMethod() {
 // ---------- Pop-up d'aide à la réalisation d'un test (icône ⓘ) ----------
 // Contenu statique pour les explications hors tests (id commençant par « __ »)
 const STATIC_INFOS = {
+  __portion__: {
+    name: 'Qu’est-ce qu’une portion de fruits & légumes ?',
+    info: `<ul>
+      <li>Une <b>portion</b> ≈ <b>80–100 g</b> de fruits ou de légumes, soit environ une poignée.</li>
+      <li><b>Exemples</b> : 1 pomme, 1 banane, 1 orange, 1 poignée de raisins, 1 bol de soupe de légumes, 1 assiette de légumes crus ou cuits, 1 verre de jus de fruit (100 % pur, sans sucre ajouté — compte pour 1 portion max/jour).</li>
+      <li><b>Repère OMS</b> : au moins <b>5 portions par jour</b> (≈ 400 g), idéalement variées et de saison.</li>
+      <li>Les <b>légumineuses</b> (lentilles, pois chiches, haricots) comptent comme une portion de légumes <i>et</i> apportent des protéines.</li>
+      <li>Les <b>fruits secs</b> (abricots, raisins secs…) : une petite poignée = 1 portion (30 g), à modérer (caloriques).</li>
+      <li>Les <b>pommes de terre</b> et autres féculents ne comptent pas comme des légumes.</li>
+    </ul>`
+  },
   __trends__: {
     name: 'Tendances par dimension',
     info: `<ul>
@@ -1889,7 +1927,7 @@ $('#save-session').addEventListener('click', () => {
   renderLastSession();
   renderDashboard(); // met à jour l'historique du score global
   recordIFG(); // idem pour l'indice FitTrack Global
-  renderIMC(); renderRiskSummary(); // le poids saisi peut changer l'IMC et les facteurs de risque
+  renderIMC(); renderRiskSummary(); // poids saisi → IMC ; alcool N7 → facteurs de risque
   renderReferenceTable(); // VMA/VO2max peuvent avoir changé
 });
 
@@ -2733,7 +2771,6 @@ const PROFILE_CSV_KEYS = [
   ['hypertension', 'Hypertension artérielle connue', p => p.hypertension ? 'oui' : 'non'],
   ['diabetes', 'Diabète connu', p => p.diabetes ? 'oui' : 'non'],
   ['dyslipidemia', 'Dyslipidémie / statine', p => p.dyslipidemia ? 'oui' : 'non'],
-  ['alcohol', 'Alcool (verres/semaine)', p => p.alcohol ?? ''],
   ['stress', 'Stress chronique / dépression', p => p.stress === 'yes' ? 'oui' : (p.stress === 'no' ? 'non' : '')],
   ['diet', 'Régime alimentaire', p => ({ vegetarian: 'Végétarien', vegan: 'Végétalien', glutenfree: 'Sans gluten', none: 'Aucun' }[p.diet] || '')],
   ['meals', 'Repas par jour', p => p.meals ?? ''],
@@ -2748,6 +2785,10 @@ function profileCsvLines(profile) {
 
 $('#export-csv').addEventListener('click', () => {
   const ids = TESTS.filter(t => t.id !== 'vma' && t.id !== 'vo2max').map(t => t.id);
+  // Anciens exports : la colonne « Alcool (verres/semaine) » était un champ profil.
+  // Elle est désormais une mesure (questionnaire Alimentation N7) — on l'ajoute en
+  // tête de liste si au moins une session la contient, pour rester lisible.
+  const hasAlcohol = getSessions().some(s => s.values?.alcohol != null && s.values.alcohol !== '');
   const head = ['date', 'type', ...ids.map(id => byId(id).name)].join(';');
   const lines = getSessions().map(s =>
     [s.date, GROUP_LABELS[s.type], ...ids.map(id => s.values?.[id] ?? '')].join(';'));
@@ -2856,7 +2897,10 @@ function parseImportCsv(text) {
     const type = Object.keys(GROUP_LABELS).find(k => GROUP_LABELS[k] === typeLabel) || typeLabel;
     const values = {};
     head.slice(2).forEach((name, i) => {
-      const id = TESTS.find(t => t.name === name || (t.aliases || []).includes(name))?.id;
+      // Colonne « Alcool (verres/semaine) » d'un ancien export (champ profil) :
+      // on la redirige vers la mesure 'alcohol' (questionnaire Alimentation N7)
+      const isLegacyAlcohol = name === 'Alcool (verres/semaine)';
+      const id = isLegacyAlcohol ? 'alcohol' : TESTS.find(t => t.name === name || (t.aliases || []).includes(name))?.id;
       const raw = (cols[i + 2] ?? '').trim();
       if (id && raw !== '') values[id] = Number(raw);
     });
@@ -3303,7 +3347,6 @@ function renderProfileForm() {
   $('#p-hypertension').checked = !!p.hypertension;
   $('#p-diabetes').checked = !!p.diabetes;
   $('#p-dyslipidemia').checked = !!p.dyslipidemia;
-  $('#p-alcohol').value = p.alcohol ?? '';
   $('#p-stress').value = p.stress || '';
   $('#p-diet').value = p.diet || '';
   $('#p-meals').value = p.meals || '';
@@ -3329,7 +3372,6 @@ $('#save-profile').addEventListener('click', () => {
     hypertension: $('#p-hypertension').checked,
     diabetes: $('#p-diabetes').checked,
     dyslipidemia: $('#p-dyslipidemia').checked,
-    alcohol: parseInt($('#p-alcohol').value) || 0,
     stress: $('#p-stress').value || null,
     diet: $('#p-diet').value || null,
     meals: $('#p-meals').value || null,

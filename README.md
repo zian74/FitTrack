@@ -12,7 +12,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 - **Sommeil & récupération** (hebdomadaire) : questionnaire **5 questions** sur les 7 derniers jours (durée, qualité, latence, réveils, sensation au réveil), **score de sommeil /100** calculé automatiquement
-- **Alimentation** (hebdomadaire) : questionnaire **6 questions** sur les 7 derniers jours (fruits & légumes, boissons sucrées, ultra-transformés, petit-déjeuner, repas maison, hydratation), **score alimentaire /100** calculé automatiquement
+- **Alimentation** (hebdomadaire) : questionnaire **6 questions scorées + 1 contextuelle (alcool)** sur les 7 derniers jours (fruits & légumes ⓘ, boissons sucrées, ultra-transformés, petit-déjeuner, repas maison, hydratation), **score alimentaire /100** calculé automatiquement
 
 ### Fonctionnalités
 
@@ -77,6 +77,6 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 🌙 **Sommeil & récupération** : questionnaire 5 questions (durée, qualité, latence, réveils, sensation au réveil), score /100, nouvelle dimension IFG (10 %), bilan hebdomadaire
 - [x] ⌚ **Import montre connectée** : parseur CSV Garmin Connect/générique + TCX + GPX, mapping FC repos / sommeil / IPAQ, drag & drop, 100 % local
 - [x] 📊 **Corrélation Sommeil ↔ IFG** : nuage de points (score sommeil/100 ↔ IFG recalculé à chaque date de sommeil, repères 80/60) + coefficient de Pearson r avec libellé (forte/modérée/faible/négligeable), ⓘ explicatif
-- [x] 🍽 **Alimentation** : questionnaire 6 questions (fruits & légumes, boissons sucrées, ultra-transformés, petit-déjeuner, repas maison, hydratation), score /100, nouvelle dimension IFG (5 %, cardio au repos ramené à 20 %), bilan hebdomadaire, corrélation Alimentation ↔ IFG (nuage + Pearson), habitudes alimentaires déclaratives dans le Profil
+- [x] 🍽 **Alimentation** : questionnaire 6 questions scorées + N7 alcool (contextuelle, alimente le risque cardio), score /100, nouvelle dimension IFG (5 %, cardio au repos ramené à 20 %), bilan hebdomadaire, corrélation Alimentation ↔ IFG (nuage + Pearson), habitudes alimentaires déclaratives dans le Profil
 - [x] ⌚ **Badge provenance dans l'historique** : les mesures importées d'une montre connectée portent un badge « ⌚ montre » (avec le sport si connu, ex. Running pour un TCX) dans la colonne Type
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
