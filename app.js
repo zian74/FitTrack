@@ -2458,7 +2458,8 @@ const GARMIN_COL_MAP = {
   durationMin: ['duration', 'durationmin', 'duree', 'dureemin', 'temps', 'elapsedtime', 'movingtime'],
   avgHr: ['avghr', 'averageheartrate', 'hrmean', 'fcmoyenne', 'fcmoy', 'avgheart rate'],
   maxHr: ['maxhr', 'maximumheartrate', 'hrmax', 'fcmax', 'maxheart rate'],
-  minHr: ['minhr', 'minimumheartrate', 'hrmin', 'fcmin', 'restinghr', 'restingheartrate', 'fcde repos'],
+  minHr: ['minhr', 'minimumheartrate', 'hrmin', 'fcmin'],
+  restingHr: ['restinghr', 'restingheartrate', 'fcde repos', 'fc repos', 'resting heart rate'],
   steps: ['steps', 'stepcount', 'pas', 'nombredepas', 'total steps'],
   sleepHours: ['sleephours', 'sleeptime', 'dureedesommeil', 'sommeil', 'sleeptotal', 'duree sommeil', 'sleep'],
   avgSpeed: ['avgspeed', 'averagespeed', 'vitessemoyenne'],
@@ -2535,6 +2536,7 @@ function parseGarminCsv(text) {
       avgHr: parseGarminNumber(get('avgHr')),
       maxHr: parseGarminNumber(get('maxHr')),
       minHr: parseGarminNumber(get('minHr')),
+      restingHr: parseGarminNumber(get('restingHr')),
       steps: parseGarminNumber(get('steps')),
       sleepHours: parseGarminNumber(get('sleepHours')),
     };
@@ -2545,9 +2547,12 @@ function parseGarminCsv(text) {
   // Agrégation par jour → sessions FitTrack
   for (const [date, recs] of byDate) {
     const values = {};
-    // FC de repos = min des FC min de la journée (ou min des avg si pas de min)
+    // FC de repos = Resting HR si disponible, sinon min des FC min de la journée
+    const restingHrs = recs.map(r => r.restingHr).filter(v => v != null);
     const minHrs = recs.map(r => r.minHr).filter(v => v != null);
-    const restHr = minHrs.length ? Math.round(Math.min(...minHrs)) : null;
+    const restHr = restingHrs.length
+      ? Math.round(Math.min(...restingHrs))
+      : (minHrs.length ? Math.round(Math.min(...minHrs)) : null);
     if (restHr != null && restHr >= 25 && restHr <= 120) values.fc = restHr;
 
     // Sommeil : durée en heures (si colonne sommeil présente)
