@@ -42,7 +42,16 @@ python3 -m http.server 8080
 # ouvrir http://localhost:8080
 ```
 
-Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` directement.
+Aucun build, aucune dépendance runtime. Fonctionne aussi en ouvrant `index.html` directement.
+
+### Tests
+
+Smoke tests [jsdom](https://github.com/jsdom/jsdom) (chargement de l'app, navigation, formulaires, modale info 100 % DOM) — exécutés en CI à chaque push/PR :
+
+```bash
+npm ci     # installe jsdom (devDependency)
+npm test   # lance tests/smoke/run.js (tous les *.test.js)
+```
 
 **PWA installable** : servie via HTTP(S), l'app peut être installée sur mobile/desktop (manifest + service worker, fonctionne hors ligne).
 

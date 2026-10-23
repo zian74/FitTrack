@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "App de suivi de la condition physique — plan de test complet",
   "scripts": {
-    "start": "python3 -m http.server 8080"
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/smoke/run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
   }
 }
