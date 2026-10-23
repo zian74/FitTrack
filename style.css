@@ -183,6 +183,8 @@ tr:nth-child(even) td { background: var(--surface-alt); }
   box-shadow: 0 4px 12px var(--shadow-strong); z-index: 20;
 }
 #chrono-display { font-size: 1.5em; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 70px; }
+#chrono-display.countdown { color: var(--warn); animation: chrono-pulse 1s ease-in-out infinite; }
+@keyframes chrono-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
 #chrono-target-name { max-width: 180px; }
 #chrono-startstop.running { background: var(--bad); color: #fff; }
 /* Timer compte à rebours générique (chaise 30 s, escalier 3 min, Cooper 12 min) */

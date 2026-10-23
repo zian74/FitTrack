@@ -151,7 +151,7 @@ const TESTS = [
       <li>Arrêtez dès que vous perdez l'équilibre (pied au sol ou appui des mains).</li>
       <li>Prévoyez un appui à proximité en cas de déséquilibre.</li>
     </ul>` },
-  { id: 'balance_closed', name: 'Équilibre yeux fermés (s)', unit: 's', group: 'rest',
+  { id: 'balance_closed', name: 'Équilibre unipodal yeux fermés (s)', unit: 's', group: 'rest',
     hint: '', good: 10, mid: 5, max: 120, min: 0,
     info: `<ul>
       <li>Même position que le test yeux ouverts : debout, mains sur les hanches, un pied décollé.</li>
@@ -1273,6 +1273,8 @@ $('#edit-delete').addEventListener('click', async () => {
 
 // ---------- Session ----------
 const chronoBtns = ['plank', 'balance_open', 'balance_closed', 'stair_4floors'];
+// Tests d'équilibre : le chrono démarre automatiquement après un compte à rebours de 3 s (bip sonore)
+const COUNTDOWN_BEFORE_CHRONO = ['balance_open', 'balance_closed'];
 // Méthodes du test escalier : 1 = pouls à 1 min (3 min), 2 = marches en 60 s, 3 = 4 étages chronométrés
 const STAIR_METHODS = ['stair_pulse', 'stair_steps', 'stair_4floors'];
 
@@ -1923,6 +1925,7 @@ document.addEventListener('keydown', e => {
   if (!$('#info-modal').classList.contains('hidden')) closeInfoModal();
   else if (!$('#edit-modal').classList.contains('hidden')) closeEditModal();
   else if (!$('#confirm-modal').classList.contains('hidden')) $('#confirm-modal-cancel').click();
+  else if (!$('#chrono').classList.contains('hidden')) chronoClose();
 });
 
 function updateFieldValidity(t, inp) {
@@ -2333,6 +2336,46 @@ function openChrono(targetId) {
   $('#chrono').classList.remove('hidden');
   // Si le timer est aussi ouvert, on le décale au-dessus du chrono
   if (!$('#timer').classList.contains('hidden')) $('#timer').classList.add('above-chrono');
+  // Tests d'équilibre : compte à rebours de 3 s avec bip avant le démarrage auto du chrono
+  if (COUNTDOWN_BEFORE_CHRONO.includes(targetId)) startChronoCountdown();
+}
+// Compte à rebours de 3 s (bip à chaque seconde) puis démarrage automatique du chrono.
+// Annulé si l'utilisateur ferme le chrono ou appuie sur Échap pendant le décompte.
+let chronoCountdownTimer = null;
+function startChronoCountdown() {
+  cancelChronoCountdown();
+  let remaining = 3;
+  const disp = $('#chrono-display');
+  const btn = $('#chrono-startstop');
+  btn.disabled = true;
+  btn.textContent = '…';
+  btn.title = 'Préparation…';
+  const tick = () => {
+    timerBeep();
+    disp.textContent = `0:${String(remaining).padStart(2, '0')}`;
+    disp.classList.add('countdown');
+    remaining--;
+    if (remaining < 0) {
+      // Fin du compte à rebours : bip final + démarrage du chrono
+      cancelChronoCountdown();
+      disp.classList.remove('countdown');
+      timerBeep();
+      chronoElapsed = 0;
+      disp.textContent = '00:00';
+      chronoStart = Date.now();
+      chronoTimer = setInterval(chronoUpdate, 100);
+      chronoSetToggleBtn(true);
+    }
+  };
+  tick(); // bip immédiat + affichage « 0:03 »
+  chronoCountdownTimer = setInterval(tick, 1000);
+}
+function cancelChronoCountdown() {
+  if (chronoCountdownTimer) { clearInterval(chronoCountdownTimer); chronoCountdownTimer = null; }
+  const disp = $('#chrono-display');
+  disp?.classList.remove('countdown');
+  const btn = $('#chrono-startstop');
+  if (btn && btn.disabled && !chronoTimer) { btn.disabled = false; chronoSetToggleBtn(false); }
 }
 function chronoUpdate() {
   chronoElapsed = Date.now() - chronoStart;
@@ -2355,21 +2398,27 @@ function chronoToggle() {
   }
 }
 function chronoReset() {
+  cancelChronoCountdown();
   clearInterval(chronoTimer); chronoTimer = null; chronoElapsed = 0;
   $('#chrono-display').textContent = '00:00';
   chronoSetToggleBtn(false);
 }
+function chronoClose() {
+  cancelChronoCountdown();
+  chronoReset();
+  $('#chrono').classList.add('hidden');
+  $('#timer').classList.remove('above-chrono');
+}
 $('#chrono-startstop').addEventListener('click', chronoToggle);
 $('#chrono-reset').addEventListener('click', chronoReset);
+$('#chrono-close').addEventListener('click', chronoClose);
 $('#chrono-send').addEventListener('click', () => {
   const inp = $(`#session-fields input[data-test="${chronoTargetId}"]`);
   if (inp) {
     inp.value = Math.round(chronoElapsed / 1000); // report en secondes entières (plus de 1/10)
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  $('#chrono').classList.add('hidden');
-  $('#timer').classList.remove('above-chrono');
-  chronoReset(); // le temps reporté est consommé : le chrono repart à zéro
+  chronoClose(); // le temps reporté est consommé : le chrono repart à zéro
 });
 document.addEventListener('click', e => {
   const b = e.target.closest('.chrono-btn');
