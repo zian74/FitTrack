@@ -6,9 +6,31 @@
 // ---------- Utilitaires ----------
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
-// Échappe une valeur avant injection dans innerHTML (données importées :
-// nom de sport TCX, valeurs de sessions, dates, ids — jamais de HTML brut)
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// ---------- Helper DOM sécurisé (migration innerHTML → création de nœuds) ----------
+// h(tag, attrs, ...children) : crée un élément. attrs = { class, id, text, html,
+//   style (objet CSS), on (objet event→handler), ...attributs HTML }.
+// - text : inséré via textContent (sûr, jamais interprété comme HTML)
+// - html : inséré via innerHTML (à réserver au contenu statique interne, ex. SVG)
+// - tout nœud enfant est appendé tel quel ; les chaînes sont converties en text nodes.
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'on' && typeof v === 'object') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
+    else if (k === 'dataset' && typeof v === 'object') Object.assign(el.dataset, v);
+    else if (v === true) el.setAttribute(k, '');
+    else el.setAttribute(k, v);
+  }
+  for (const c of children.flat(Infinity)) {
+    if (c == null || c === false) continue;
+    el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem('ft_' + k)) ?? d; } catch { return d; } },
   set(k, v) { localStorage.setItem('ft_' + k, JSON.stringify(v)); }
@@ -648,16 +670,28 @@ function renderRiskSummary() {
   const factors = riskFactors();
   const majors = factors.filter(f => f.major);
   if (!factors.length) {
-    el.innerHTML = 'Aucun facteur de risque déclaré. <span class="small">(Renseignez-les ci-dessus si votre situation a évolué.)</span>';
+    el.replaceChildren(
+      'Aucun facteur de risque déclaré. ',
+      h('span', { class: 'small' }, '(Renseignez-les ci-dessus si votre situation a évolué.)')
+    );
     return;
   }
   const level = majors.length >= 3 ? { cls: 'low', txt: 'Risque élevé' }
     : majors.length >= 1 ? { cls: 'mid', txt: 'Risque modéré' }
     : { cls: 'good', txt: 'Risque faible' };
-  const items = factors.map(f => `<li>${f.label}${f.major ? ' <span class="badge low">majeur</span>' : ''}</li>`).join('');
-  el.innerHTML = `<b>${factors.length} facteur${factors.length > 1 ? 's' : ''} déclaré${factors.length > 1 ? 's' : ''}</b> · niveau : <span class="badge ${level.cls}">${level.txt}</span> (${majors.length} majeur${majors.length > 1 ? 's' : ''})
-    <ul class="list" style="margin:6px 0 0">${items}</ul>
-    <p class="small" style="margin-top:6px">Ce récapitulatif est indicatif et ne remplace pas une évaluation médicale (scores SCORE2 / Framingham).</p>`;
+  const items = factors.map(f => h('li', {},
+    f.label,
+    f.major ? ' ' : null,
+    f.major ? h('span', { class: 'badge low' }, 'majeur') : null
+  ));
+  el.replaceChildren(
+    h('b', {}, `${factors.length} facteur${factors.length > 1 ? 's' : ''} déclaré${factors.length > 1 ? 's' : ''}`),
+    ` · niveau : `,
+    h('span', { class: `badge ${level.cls}` }, level.txt),
+    ` (${majors.length} majeur${majors.length > 1 ? 's' : ''})`,
+    h('ul', { class: 'list', style: { margin: '6px 0 0' } }, items),
+    h('p', { class: 'small', style: { marginTop: '6px' } }, 'Ce récapitulatif est indicatif et ne remplace pas une évaluation médicale (scores SCORE2 / Framingham).')
+  );
 }
 
 // ---------- Période de calcul de l'IFG (onglet Analyse) ----------
@@ -852,7 +886,10 @@ function computeGlobalScore(profile) {
   const rows = scored.map(id => {
     const t = byId(id);
     const st = statusOf(t, lv[id].value, profile);
-    return `<li>${t.name} — ${lv[id].value} ${t.unit} <span class="badge ${st}">${STATUS_LABEL[st]}</span></li>`;
+    return h('li', {},
+      `${t.name} — ${lv[id].value} ${t.unit} `,
+      h('span', { class: `badge ${st}` }, STATUS_LABEL[st])
+    );
   });
   return { score: avg, rows };
 }
@@ -943,30 +980,42 @@ function renderDashboard() {
   const scoreEl = $('#score-global-content');
   const result = computeGlobalScore(profile);
   if (!result) {
-    scoreEl.innerHTML = '<p>Aucune mesure enregistrée. Commencez par une <b>session de test</b>.</p>';
+    scoreEl.replaceChildren(
+      h('p', {}, 'Aucune mesure enregistrée. Commencez par une ', h('b', {}, 'session de test'), '.')
+    );
   } else {
     // Barre de niveau : 5 paliers colorés, le remplissage correspond au score /100
     const pct = Math.max(0, Math.min(100, result.score));
     const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
-    scoreEl.innerHTML = `<p style="font-size:2em;font-weight:700;color:var(--accent)">${result.score}<span style="font-size:.6em"> /100</span></p>
-      <div class="score-bar" role="progressbar" aria-valuenow="${result.score}" aria-valuemin="0" aria-valuemax="100" title="${result.score}/100">
-        <div class="score-bar-track"><div class="score-bar-fill" style="width:${pct}%;background:${fill}"></div></div>
-        <div class="score-bar-labels small"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
-      </div>
-      <p class="small">Basé sur les 5 mesures les plus prédictives selon la littérature scientifique.</p>
-      <ul class="list">${result.rows.join('')}</ul>`;
+    scoreEl.replaceChildren(
+      h('p', { style: { fontSize: '2em', fontWeight: '700', color: 'var(--accent)' } },
+        String(result.score),
+        h('span', { style: { fontSize: '.6em' } }, ' /100')
+      ),
+      h('div', { class: 'score-bar', role: 'progressbar', 'aria-valuenow': result.score, 'aria-valuemin': '0', 'aria-valuemax': '100', title: `${result.score}/100` },
+        h('div', { class: 'score-bar-track' },
+          h('div', { class: 'score-bar-fill', style: { width: `${pct}%`, background: fill } })
+        ),
+        h('div', { class: 'score-bar-labels small' },
+          h('span', {}, '0'), h('span', {}, '20'), h('span', {}, '40'),
+          h('span', {}, '60'), h('span', {}, '80'), h('span', {}, '100')
+        )
+      ),
+      h('p', { class: 'small' }, 'Basé sur les 5 mesures les plus prédictives selon la littérature scientifique.'),
+      h('ul', { class: 'list' }, result.rows)
+    );
   }
 
   // Tests dus (logique factorisée dans dueGroups(), aussi utilisée par les rappels)
   const due = dueGroups().map(d => {
-    if (!d.last) return `<li><b>${d.label}</b> — jamais effectué <span class="badge low">à faire</span></li>`;
+    if (!d.last) return h('li', {}, h('b', {}, d.label), ' — jamais effectué ', h('span', { class: 'badge low' }, 'à faire'));
     const lastFr = d.last.split('-').reverse().join('/');
     const dueLabel = d.unit === 'jours' ? `à refaire (${d.daysDue} j)` : `à refaire (${d.monthsDue} mois)`;
     return d.due
-      ? `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge low">${dueLabel}</span></li>`
-      : `<li><b>${d.label}</b> — dernier : ${lastFr} <span class="badge good">à jour</span></li>`;
+      ? h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge low' }, dueLabel))
+      : h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge good' }, 'à jour'));
   });
-  $('#due-tests').innerHTML = due.join('');
+  $('#due-tests').replaceChildren(...due);
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
   const alerts = [];
@@ -979,17 +1028,17 @@ function renderDashboard() {
     const delta = (last.value - prev.value) / Math.max(prev.value, 1);
     const bad = t.rev ? delta > THRESH[t.group] : delta < -THRESH[t.group];
     const stagnant = Math.abs(delta) <= 0.01;
-    if (bad) alerts.push(`<li>🔴 <b>${t.name}</b> : ${prev.value} → ${last.value} ${t.unit} (dégradation). Ajustez l'entraînement${['fc','pa_sys','pa_dia'].includes(t.id) ? ' ou consultez' : ''}.</li>`);
-    else if (stagnant && series.length >= 3) alerts.push(`<li>🟠 <b>${t.name}</b> : stable sur 2 sessions. Pensez à varier l'entraînement.</li>`);
+    if (bad) alerts.push(h('li', {}, '🔴 ', h('b', {}, t.name), ` : ${prev.value} → ${last.value} ${t.unit} (dégradation). Ajustez l'entraînement${['fc','pa_sys','pa_dia'].includes(t.id) ? ' ou consultez' : ''}.`));
+    else if (stagnant && series.length >= 3) alerts.push(h('li', {}, '🟠 ', h('b', {}, t.name), ` : stable sur 2 sessions. Pensez à varier l'entraînement.`));
   }
-  $('#alerts').innerHTML = alerts.length ? alerts.join('') : '<li>Aucune alerte. 👍</li>';
+  $('#alerts').replaceChildren(...(alerts.length ? alerts : [h('li', {}, 'Aucune alerte. 👍')]));
 }
 
 // La carte « Dernière session » vit dans l'onglet Session de test
 function renderLastSession() {
   const sessions = getSessions();
   const compEl = $('#last-comparison');
-  if (sessions.length === 0) { compEl.innerHTML = '<p>Aucune donnée.</p>'; return; }
+  if (sessions.length === 0) { compEl.replaceChildren(h('p', {}, 'Aucune donnée.')); return; }
   const frDate = d => d.split('-').reverse().join('/');
   // regrouper les sessions par date (une colonne par date, sessions multiples fusionnées)
   const byDate = [];
@@ -1000,14 +1049,24 @@ function renderLastSession() {
   }
   const cols = byDate.slice(0, 2); // les 2 dates les plus récentes
   // tous les tests présents dans ces colonnes, triés dans l'ordre de TESTS
-  // (= ordre de présentation dans les sessions : repos & mobilité, force, cardio, activité)
   const ids = [];
   for (const c of cols) for (const s of c.sessions) for (const id of Object.keys(s.values || {})) {
     if (s.values[id] != null && s.values[id] !== '' && !ids.includes(id)) ids.push(id);
   }
   ids.sort((a, b) => TESTS.findIndex(t => t.id === a) - TESTS.findIndex(t => t.id === b));
-  let html = '<table class="last3-table">';
-  html += '<tr><th>Test</th>' + cols.map(c => `<th>${esc(frDate(c.date))} <button class="delete-session-btn" title="Supprimer les sessions de cette date" data-del-session="${esc(c.sessions[0].id || '')}" data-del-date="${esc(c.date)}">🗑️</button></th>`).join('') + '<th>Δ</th></tr>';
+
+  // En-tête : Test | <date + bouton supprimer> × colonnes | Δ
+  const headerCells = cols.map(c => h('th', {},
+    frDate(c.date), ' ',
+    h('button', {
+      class: 'delete-session-btn',
+      title: 'Supprimer les sessions de cette date',
+      dataset: { delSession: c.sessions[0].id || '', delDate: c.date },
+    }, '🗑️')
+  ));
+  const thead = h('tr', {}, h('th', {}, 'Test'), ...headerCells, h('th', {}, 'Δ'));
+
+  const bodyRows = [];
   for (const id of ids) {
     const t = byId(id);
     // valeur d'une colonne = celle de la session qui contient ce test (la plus récente si plusieurs)
@@ -1021,8 +1080,9 @@ function renderLastSession() {
     const prv = prvS?.values?.[id];
     const hasCur = cur != null && cur !== '';
     const hasPrv = prv != null && prv !== '';
+
     // delta : significatif seulement si les deux valeurs existent
-    let deltaCell = '<td class="num muted">—</td>';
+    let deltaTd;
     if (hasCur && hasPrv) {
       const d = cur - prv;
       const sign = d > 0 ? '+' : '';
@@ -1030,27 +1090,50 @@ function renderLastSession() {
       const cls = d === 0 ? 'muted'
         : (t.id === 'weight' ? weightDeltaClass(cur, prv)
         : (t.rev ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down')));
-      deltaCell = `<td class="num ${cls}">${sign}${Math.round(d * 10) / 10}</td>`;
+      deltaTd = h('td', { class: `num ${cls}` }, `${sign}${Math.round(d * 10) / 10}`);
+    } else {
+      deltaTd = h('td', { class: 'num muted' }, '—');
     }
-    html += `<tr><td class="test-name"><span class="test-num">${testNum(id)}</span>${esc(t.name)}</td>`;
-    // IPAQ : la valeur est complétée du badge de niveau (élevé/modéré/faible)
+
+    // IPAQ/sommeil/nutrition : la valeur est complétée du badge de niveau
     const valueCell = (v, s) => {
-      if (v == null || v === '') return '<td class="num muted">—</td>';
-      const badge = id === 'ipaq'
-        ? ` <span class="badge ${ipaqLevel(v).key === 'high' ? 'good' : ipaqLevel(v).key === 'mid' ? 'mid' : 'low'}">${ipaqLevel(v).short}</span>`
-        : id === 'sleep_score'
-          ? ` <span class="badge ${sleepLevel(v).key}">${sleepLevel(v).short}</span>`
-          : id === 'nutrition_score'
-            ? ` <span class="badge ${nutritionLevel(v).key}">${nutritionLevel(v).short}</span>`
-            : '';
-      return `<td class="num">${esc(v)}${badge} <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${esc(s.id || '')}" data-edit-date="${esc(s.date)}" data-edit-test="${esc(id)}">✏️</button></td>`;
+      if (v == null || v === '') return h('td', { class: 'num muted' }, '—');
+      let badge = null;
+      if (id === 'ipaq') {
+        const lv = ipaqLevel(v);
+        badge = h('span', { class: `badge ${lv.key === 'high' ? 'good' : lv.key === 'mid' ? 'mid' : 'low'}` }, lv.short);
+      } else if (id === 'sleep_score') {
+        const lv = sleepLevel(v);
+        badge = h('span', { class: `badge ${lv.key}` }, lv.short);
+      } else if (id === 'nutrition_score') {
+        const lv = nutritionLevel(v);
+        badge = h('span', { class: `badge ${lv.key}` }, lv.short);
+      }
+      return h('td', { class: 'num' },
+        String(v),
+        badge ? ' ' : null,
+        badge,
+        ' ',
+        h('button', {
+          class: 'edit-btn',
+          title: 'Corriger cette mesure',
+          dataset: { editId: s.id || '', editDate: s.date, editTest: id },
+        }, '✏️')
+      );
     };
-    html += valueCell(cur, curS);
-    html += valueCell(prv, prvS);
-    html += deltaCell + '</tr>';
+
+    bodyRows.push(h('tr', {},
+      h('td', { class: 'test-name' },
+        h('span', { class: 'test-num' }, testNum(id)),
+        t.name
+      ),
+      valueCell(cur, curS),
+      valueCell(prv, prvS),
+      deltaTd
+    ));
   }
-  html += '</table>';
-  compEl.innerHTML = html;
+
+  compEl.replaceChildren(h('table', { class: 'last3-table' }, thead, ...bodyRows));
 }
 
 document.addEventListener('click', async e => {
@@ -1434,11 +1517,11 @@ function renderSessionFields() {
   const type = currentSessionType;
   const groups = SESSION_GROUPS[type];
   const container = $('#session-fields');
-  container.innerHTML = '';
+  container.replaceChildren();
   for (const g of groups) {
     const block = document.createElement('div');
     block.className = 'session-block';
-    block.innerHTML = `<h3>${GROUP_LABELS[g]}</h3>`;
+    block.replaceChildren(h('h3', {}, GROUP_LABELS[g]));
     if (g === 'activity') {
       renderIpaqBlock(block);
       container.appendChild(block);
@@ -1861,7 +1944,7 @@ function updateCooperEstim() {
     lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h`);
     lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min`);
   }
-  if (!lines.length) { out.classList.add('hidden'); out.innerHTML = ''; return; }
+  if (!lines.length) { out.classList.add('hidden'); out.replaceChildren(); return; }
   out.innerHTML = lines.join('<br>');
   out.classList.remove('hidden');
 }
@@ -1922,7 +2005,7 @@ $('#save-session').addEventListener('click', () => {
   $$('#session-fields input').forEach(i => { i.value = ''; i.classList.remove('invalid'); });
   // Efface aussi les champs VMA/VO2max du bloc Cooper
   ['#cooper-vma', '#cooper-vo2'].forEach(sel => { const el = $(sel); if (el) el.value = ''; });
-  const estimBox = $('#cooper-estim-result'); if (estimBox) { estimBox.classList.add('hidden'); estimBox.innerHTML = ''; }
+  const estimBox = $('#cooper-estim-result'); if (estimBox) { estimBox.classList.add('hidden'); estimBox.replaceChildren(); }
   updateSaveState();
   renderLastSession();
   renderDashboard(); // met à jour l'historique du score global
@@ -2215,16 +2298,16 @@ function renderAnalysis() {
   const result = computeIFGPeriod(profile, periodKey);
   if (!result) {
     $('#ifg-content').innerHTML = '<p>Enregistrez des sessions de test pour calculer votre indice.</p>';
-    $('#ifg-radar').innerHTML = '';
+    $('#ifg-radar').replaceChildren();
     $('#ifg-radar-legend').textContent = '';
-    $('#ifg-strengths').innerHTML = '';
+    $('#ifg-strengths').replaceChildren();
     $('#ifg-advice').style.display = 'none';
-    $('#ifg-chart').innerHTML = '';
+    $('#ifg-chart').replaceChildren();
     $('#ifg-chart-stats').textContent = '';
-    $('#ifg-trends').innerHTML = '';
-    $('#ifg-scatter').innerHTML = '';
-    $('#ifg-sleep-scatter').innerHTML = '';
-    $('#ifg-nutrition-scatter').innerHTML = '';
+    $('#ifg-trends').replaceChildren();
+    $('#ifg-scatter').replaceChildren();
+    $('#ifg-sleep-scatter').replaceChildren();
+    $('#ifg-nutrition-scatter').replaceChildren();
     return;
   }
 
@@ -2723,32 +2806,50 @@ function drawScoreChart() {
   $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} /100</b> <span class="badge ${st}">${STATUS_LABEL[st]}</span> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} pts (${pct} %)</b>`;
 }
 
-// Badge de provenance d'une session : montre connectée importée (⌚),
-// avec le sport si connu (TCX). Sessions manuelles : pas de badge.
-function sessionSourceBadge(s) {
-  if (!s || s.source !== 'import') return '';
-  const sport = s._sport ? ` <span class="src-sport">${esc(s._sport)}</span>` : '';
-  return ` <span class="src-badge" title="Données importées d'une montre connectée">⌚ montre${sport}</span>`;
-}
+// Le badge « ⌚ montre » est désormais construit en nœuds DOM (voir badgeNodes)
+// pour la migration innerHTML → DOM. sessionSourceBadge (string) est supprimé.
 
 function renderHistoryTable() {
   const sessions = getSessions().slice().reverse();
   const el = $('#history-table');
-  if (!sessions.length) { el.innerHTML = '<p class="small">Aucune mesure.</p>'; return; }
-  let html = '<table><tr><th>Date</th><th>Type</th><th>Résultats</th></tr>';
+  if (!sessions.length) { el.replaceChildren(h('p', { class: 'small' }, 'Aucune mesure.')); return; }
+  const rows = [h('tr', {}, h('th', {}, 'Date'), h('th', {}, 'Type'), h('th', {}, 'Résultats'))];
   for (const s of sessions) {
     const results = Object.entries(s.values || {})
       .filter(([, v]) => v != null && v !== '')
       .map(([id, v]) => {
         const t = byId(id) || { name: id, unit: '' };
-        return `${esc(t.name)} : <b>${esc(v)}</b> ${esc(t.unit)}
-          <button class="edit-btn" title="Corriger cette mesure" data-edit-id="${esc(s.id || '')}" data-edit-date="${esc(s.date)}" data-edit-test="${esc(id)}">✏️</button>`;
-      })
-      .join(' · ');
-    html += `<tr><td>${esc(s.date)}</td><td>${esc(GROUP_LABELS[s.type] || s.type)}${sessionSourceBadge(s)}</td><td>${results}</td></tr>`;
+        return [
+          `${t.name} : `,
+          h('b', {}, String(v)),
+          ` ${t.unit} `,
+          h('button', {
+            class: 'edit-btn',
+            title: 'Corriger cette mesure',
+            dataset: { editId: s.id || '', editDate: s.date, editTest: id },
+          }, '✏️'),
+        ];
+      });
+    // Aplatir et intercaler les séparateurs « · » entre les résultats
+    const resultsCell = [];
+    results.forEach((r, idx) => {
+      if (idx > 0) resultsCell.push(' · ');
+      resultsCell.push(...r);
+    });
+    rows.push(h('tr', {},
+      h('td', {}, s.date),
+      h('td', {}, GROUP_LABELS[s.type] || s.type, badgeNodes(s)),
+      h('td', {}, resultsCell)
+    ));
   }
-  html += '</table>';
-  el.innerHTML = html;
+  el.replaceChildren(h('table', {}, ...rows));
+}
+
+// Construit les nœuds du badge « ⌚ montre » (données importées) pour une session
+function badgeNodes(s) {
+  if (!s || s.source !== 'import') return null;
+  const sport = s._sport ? h('span', { class: 'src-sport' }, ` ${s._sport}`) : null;
+  return h('span', { class: 'src-badge', title: 'Données importées d’une montre connectée' }, '⌚ montre', sport);
 }
 
 // ---------- Exports ----------
@@ -3388,11 +3489,16 @@ $('#save-profile').addEventListener('click', () => {
 
 function renderReferenceTable() {
   const profile = getProfile();
-  let html = '<table><tr><th>Test</th><th>Bon</th><th>Moyen</th><th>Faible</th></tr>';
+  const rows = [h('tr', {}, h('th', {}, 'Test'), h('th', {}, 'Bon'), h('th', {}, 'Moyen'), h('th', {}, 'Faible'))];
   for (const t of TESTS) {
     if (t.good == null || t.id === 'vma' || t.id === 'vo2max') continue; // rendus plus bas (avec valeur courante)
     const { good, mid, rev } = thresholds(t, profile);
-    html += `<tr><td><span class="test-num">${testNum(t.id)}</span>${t.name}</td><td>${rev ? '≤ ' : '≥ '}${good}</td><td>${rev ? '≤ ' : '≥ '}${mid}</td><td>${rev ? '> ' : '< '}${mid} ${t.unit}</td></tr>`;
+    rows.push(h('tr', {},
+      h('td', {}, h('span', { class: 'test-num' }, testNum(t.id)), t.name),
+      h('td', {}, `${rev ? '≤ ' : '≥ '}${good}`),
+      h('td', {}, `${rev ? '≤ ' : '≥ '}${mid}`),
+      h('td', {}, `${rev ? '> ' : '< '}${mid} ${t.unit}`)
+    ));
   }
   // Indicateurs dérivés VMA / VO2max : repères avec la dernière valeur connue
   const lv = latestValues();
@@ -3401,13 +3507,17 @@ function renderReferenceTable() {
     if (!t) continue;
     const { good, mid } = thresholds(t, profile);
     const cur = lv[id]?.value;
-    const curTxt = cur != null
-      ? ` <span class="small">(vous : <b>${fmt1(cur)}</b> ${t.unit}${lv[id].derived === 'cooper' ? ' · estimé Cooper' : ''})</span>`
-      : ' <span class="small">(aucune mesure Cooper)</span>';
-    html += `<tr><td><span class="test-num">${testNum(id)}</span>${t.name}${curTxt}</td><td>≥ ${good}</td><td>≥ ${mid}</td><td>&lt; ${mid} ${t.unit}</td></tr>`;
+    const curSpan = cur != null
+      ? h('span', { class: 'small' }, '(vous : ', h('b', {}, fmt1(cur)), ` ${t.unit}${lv[id].derived === 'cooper' ? ' · estimé Cooper' : ''})`)
+      : h('span', { class: 'small' }, '(aucune mesure Cooper)');
+    rows.push(h('tr', {},
+      h('td', {}, h('span', { class: 'test-num' }, testNum(id)), t.name, ' ', curSpan),
+      h('td', {}, `≥ ${good}`),
+      h('td', {}, `≥ ${mid}`),
+      h('td', {}, `< ${mid} ${t.unit}`)
+    ));
   }
-  html += '</table>';
-  $('#reference-table').innerHTML = html;
+  $('#reference-table').replaceChildren(h('table', {}, ...rows));
 }
 
 $('#wipe-data').addEventListener('click', async () => {
