@@ -12,6 +12,9 @@ const $$ = sel => Array.from(document.querySelectorAll(sel));
 // - text : inséré via textContent (sûr, jamais interprété comme HTML)
 // - html : inséré via innerHTML (à réserver au contenu statique interne, ex. SVG)
 // - tout nœud enfant est appendé tel quel ; les chaînes sont converties en text nodes.
+//   ⚠ null/false/undefined sont ignorés (sinon append/replaceChildren les
+//   convertirait en text nodes « null »/« undefined » visibles — bug corrigé ici).
+const nodes = (...list) => list.flat(Infinity).filter(c => c != null && c !== false);
 function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -25,8 +28,7 @@ function h(tag, attrs = {}, ...children) {
     else if (v === true) el.setAttribute(k, '');
     else el.setAttribute(k, v);
   }
-  for (const c of children.flat(Infinity)) {
-    if (c == null || c === false) continue;
+  for (const c of nodes(...children)) {
     el.appendChild(typeof c === 'object' ? c : document.createTextNode(String(c)));
   }
   return el;
@@ -1022,7 +1024,7 @@ function renderDashboard() {
       ? h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge low' }, dueLabel))
       : h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge good' }, 'à jour'));
   });
-  $('#due-tests').replaceChildren(...due);
+  $('#due-tests').replaceChildren(...nodes(...due));
 
   // Alertes de tendance : dégradation ou stagnation sur 2 sessions
   const alerts = [];
@@ -1140,7 +1142,7 @@ function renderLastSession() {
     ));
   }
 
-  compEl.replaceChildren(h('table', { class: 'last3-table' }, thead, ...bodyRows));
+  compEl.replaceChildren(h('table', { class: 'last3-table' }, thead, ...nodes(...bodyRows)));
 }
 
 document.addEventListener('click', async e => {
@@ -1639,7 +1641,7 @@ function renderSessionFields() {
         const last = latestValues()[t.id]?.value;
         const lastInfo = last != null
           ? h('div', { class: 'field-last' }, 'Dernier : ', h('b', {}, `${last}`), ` ${t.unit}`) : null;
-        row.replaceChildren(
+        row.replaceChildren(...nodes(
           h('label', {},
             h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
             infoBtn,
@@ -1651,7 +1653,7 @@ function renderSessionFields() {
             ...(t.id !== 'stair_pulse' ? { disabled: true } : {})
           }),
           chronoBtn,
-          stairTimerBtn);
+          stairTimerBtn));
         block.appendChild(row);
         const inp = row.querySelector('input[data-test]');
         inp.addEventListener('input', () => updateFieldValidity(t, inp));
@@ -1697,7 +1699,7 @@ function renderSessionFields() {
             h('div', { class: 'field-hint', text: 'Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.' }),
             h('div', { id: 'cooper-estim-result', class: 'estimation-box hidden' }))
         : null;
-      row.replaceChildren(
+      row.replaceChildren(...nodes(
         h('label', {},
           h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
           infoBtn,
@@ -1710,7 +1712,7 @@ function renderSessionFields() {
         }),
         chronoBtn,
         chairTimerBtn,
-        cooperEstim);
+        cooperEstim));
       block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
       inp.addEventListener('input', () => updateFieldValidity(t, inp));
@@ -2031,12 +2033,12 @@ function updateCooperEstim() {
     lines.push([h('b', {}, 'VO2max estimée :'), ` ${fmt1(vo2D)} ml/kg/min`]);
   }
   if (!lines.length) { out.classList.add('hidden'); out.replaceChildren(); return; }
-  const nodes = [];
+  const els = [];
   lines.forEach((line, i) => {
-    if (i > 0) nodes.push(h('br'));
-    nodes.push(...line);
+    if (i > 0) els.push(h('br'));
+    els.push(...line);
   });
-  out.replaceChildren(...nodes);
+  out.replaceChildren(...els);
   out.classList.remove('hidden');
 }
 
@@ -2424,12 +2426,12 @@ function renderAnalysis() {
     h('span', { class: `badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}`, text: palier.label }),
     periodBadge ? ' ' : null,
     periodBadge);
-  $('#ifg-content').replaceChildren(
+  $('#ifg-content').replaceChildren(...nodes(
     scoreP,
     ifgBarNodes(result.score),
     deltaBadge,
     h('p', { class: 'small', text: 'Moyenne pondérée de 7 dimensions : cardio au repos & métabolisme (20 %), endurance (20 %), force (20 %), équilibre & mobilité (15 %), habitudes d’activité (10 %), sommeil & récupération (10 %), alimentation (5 %).' })
-  );
+  ));
 
   // 2. Radar des dimensions (SVG)
   renderIfgRadar(result.dims);
@@ -2509,9 +2511,9 @@ function renderIfgRadar(dims) {
   }
   svg += '</svg>';
   $('#ifg-radar').innerHTML = svg; // SVG : innerHTML conservé (pas de createElementNS fiable ici)
-  $('#ifg-radar-legend').replaceChildren(...dims.map(d =>
+  $('#ifg-radar-legend').replaceChildren(...nodes(...dims.map(d =>
     h('div', { class: 'ifg-legend-item' }, `${d.icon} ${d.label} : `, h('b', {}, String(d.score)))
-  ));
+  )));
 }
 
 function renderIfgChart(series) {
@@ -2604,7 +2606,7 @@ function renderIfgTrends(profile) {
       h('td', {}, p != null ? String(p) : '—'),
       trend));
   }
-  $('#ifg-trends').replaceChildren(h('table', {}, rows));
+  $('#ifg-trends').replaceChildren(h('table', {}, ...nodes(...rows)));
 }
 
 // Nuage de points : IPAQ (X) ↔ IFG au moment de la mesure (Y)
@@ -2822,7 +2824,7 @@ function renderHistory() {
   if (scores.length) options.push(h('option', { value: '__score__', text: '★ Score global (/100)' }));
   options.push(...withData.map(t => h('option', { value: t.id, text: `${testNum(t.id)}${t.name}` })));
   if (options.length) {
-    sel.replaceChildren(...options);
+    sel.replaceChildren(...nodes(...options));
     drawChart(sel.value);
   } else {
     sel.replaceChildren(h('option', { value: '', text: '— aucune donnée —' }));
@@ -2890,13 +2892,13 @@ function drawChart(testId) {
   const delta = lastV - first;
   const pct = (delta / Math.max(first, 1) * 100).toFixed(1);
   const st = statusOf(t, lastV, profile);
-  $('#chart-stats').replaceChildren(
+  $('#chart-stats').replaceChildren(...nodes(
     'Dernière valeur : ',
     h('b', {}, `${lastV} ${t.unit}`),
     st ? ` ${STATUS_LABEL[st]}` : null,
     ' · Évolution depuis la 1re mesure : ',
     h('b', {}, `${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${t.unit} (${pct} %)`)
-  );
+  ));
 }
 
 // Graphique dédié au score global : échelle fixe 0–100, repères 60/80, pas de statut individuel
@@ -2988,7 +2990,7 @@ function renderHistoryTable() {
       h('td', {}, resultsCell)
     ));
   }
-  el.replaceChildren(h('table', {}, ...rows));
+  el.replaceChildren(h('table', {}, ...nodes(...rows)));
 }
 
 // Construit les nœuds du badge « ⌚ montre » (données importées) pour une session
