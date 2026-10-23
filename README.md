@@ -48,6 +48,12 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 
 **Démo en ligne (GitHub Pages)** : à activer via *Settings → Pages → Deploy from a branch → `main` / racine*. L'URL sera `https://zian74.github.io/HealthTest/`. Tous les chemins (`./sw.js`, `./manifest.webmanifest`, icônes) sont relatifs, donc compatibles avec un sous-chemin.
 
+### Documentation
+
+- [Méthodes de calcul & références scientifiques](docs/methodes-de-calcul.md) : toutes les formules de tous les indicateurs, scores (IPAQ, sommeil, alimentation, score global, Indice FitTrack Global, IMC), alertes et import montre, avec les références publiées (Craig 2003, OMS 2020, Cooper 1968, Léger & Mercier 1983, ACSM, ESC/ESH, ESC 2021/SCORE2, Rikli & Jones 1999, Kodama 2009, PSQI Buysse 1989, NSF, Cappuccio 2011, NOVA Monteiro 2019, Sofi 2010, Widmer 2015, Malik…)
+- [Spécifications fonctionnelles](docs/specs.md)
+- [Points d'évaluation](docs/evaluation-points.md)
+
 ## Roadmap
 
 - [x] Onboarding guidé
