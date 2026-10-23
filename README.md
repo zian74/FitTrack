@@ -28,7 +28,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - 🫁 Test Cooper : estimations croisées **VMA / VO2max** affichées en direct (VMA = distance ÷ 200 ; VO2max = 3,5 × VMA ; VO2max = (distance − 504,9) ÷ 44,73 — formules ACSM / Léger & Mercier citées dans les sources)
 - **Session Cardio flexible** : enregistrement possible avec **uniquement** la VMA, la VO2max ou la distance Cooper (au moins un des 3 champs suffit)
 - **VMA / VO2max dans les repères du Profil** : lignes dédiées (n°17-18) avec seuils sexe (H/F) et valeur courante affichée (« estimé Cooper » ou saisie directe)
-- **Dimension Endurance (IFG)** : priorité **VMA saisie > VO2max saisie > Cooper/demi-Cooper (VMA/VO2max dérivées) > test escalier** — un seul indicateur retenu par session
+- **Dimension Endurance (IFG)** : le Cooper ne sert qu'à produire la VMA/VO2max estimée — on retient la **dernière VMA/VO2max estimée ou renseignée** (par date, VMA préférée à VO2max à date égale), à défaut le test escalier (méthode 1 > 2 > 3) — un seul indicateur retenu
 - Graphiques SVG par indicateur avec zones objectif
 - Export CSV / JSON, données 100 % locales (localStorage)
 - ⌚ **Import montre connectée** : CSV Garmin Connect / générique, TCX, GPX — FC de repos, durée de sommeil, pas, activité (IPAQ estimé), 100 % local (drag & drop ou sélection fichier)
@@ -60,7 +60,7 @@ Aucun build, aucune dépendance. Fonctionne aussi en ouvrant `index.html` direct
 - [x] 🌙 Mode sombre (sélecteur Système / Clair / Sombre dans le Profil, persistant, respecte `prefers-color-scheme`, thème des graphiques SVG et `theme-color` mobile adaptés)
 - [x] CI GitHub Actions (syntaxe + validation JSON)
 - [x] ⏳ Timers compte à rebours : chaise 30 s, escalier 3 min (réglable), Cooper 12/6 min (radios)
-- [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (priorité VMA > VO2max > Cooper > escalier)
+- [x] 🏁 VMA / VO2max estimées (Cooper/demi-Cooper) : affichage croisé, persistance, repères Profil (n°17-18) + dimension Endurance IFG (dernière VMA/VO2max estimée ou renseignée, sinon escalier)
 - [x] CI GitHub Actions : syntaxe JS (`node --check`) + validation JSON (package.json, manifest) à chaque push/PR
 - [x] 🔔 Notifications in-app : toasts non bloquants (succès/erreur/info, `aria-live`) + modale de confirmation maison (`alertdialog`) — remplacent les `alert()`/`confirm()` natifs ; Échap ferme la modale ; le toast se décale au-dessus du chrono/timer
 - [x] 📱 Modales scrollables sur mobile : contenu défile dans la pop-up, bouton « Compris » toujours visible (max-height 100dvh + flex column + overflow-y auto)
