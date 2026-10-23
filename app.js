@@ -2003,16 +2003,16 @@ function updateCooperEstim() {
   const dist = distRaw ? parseFloat(distRaw.replace(',', '.')) : null;
   const vma = vmaRaw ? parseFloat(vmaRaw.replace(',', '.')) : null;
   const vo2 = vo2Raw ? parseFloat(vo2Raw.replace(',', '.')) : null;
-  const lines = [];
+  const lines = []; // chaque entrée = [node <b>, texte]
   const hasVma = vma != null && !isNaN(vma);
   const hasVo2 = vo2 != null && !isNaN(vo2);
   if (hasVma) {
-    lines.push(`<b>VMA renseignée :</b> ${fmt1(vma)} km/h`);
-    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2FromVMA(vma))} ml/kg/min`);
+    lines.push([h('b', {}, 'VMA renseignée :'), ` ${fmt1(vma)} km/h`]);
+    lines.push([h('b', {}, 'VO2max estimée :'), ` ${fmt1(vo2FromVMA(vma))} ml/kg/min`]);
   }
   if (hasVo2) {
-    lines.push(`<b>VO2max renseignée :</b> ${fmt1(vo2)} ml/kg/min`);
-    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaFromVo2(vo2))} km/h`);
+    lines.push([h('b', {}, 'VO2max renseignée :'), ` ${fmt1(vo2)} ml/kg/min`]);
+    lines.push([h('b', {}, 'VMA estimée :'), ` ${fmt1(vmaFromVo2(vo2))} km/h`]);
   }
   // La distance Cooper n'est affichée dans le bloc d'estimation que si ni VMA
   // ni VO2max n'est renseignée (évite la redondance avec les tuiles VMA/VO2max).
@@ -2024,14 +2024,19 @@ function updateCooperEstim() {
     const vmaD = cooperVMAFromDist(dist12);
     const vo2D = vo2FromCooperDist(dist12);
     const distLabel = isHalf
-      ? `<b>Distance saisie (6 min) :</b> ${Math.round(dist)} m → <b>équiv. 12 min : ${Math.round(dist12)} m</b>`
-      : `<b>Distance Cooper (équiv. 12 min) :</b> ${Math.round(dist12)} m`;
+      ? [h('b', {}, 'Distance saisie (6 min) :'), ` ${Math.round(dist)} m → `, h('b', {}, `équiv. 12 min : ${Math.round(dist12)} m`)]
+      : [h('b', {}, 'Distance Cooper (équiv. 12 min) :'), ` ${Math.round(dist12)} m`];
     lines.push(distLabel);
-    lines.push(`<b>VMA estimée :</b> ${fmt1(vmaD)} km/h`);
-    lines.push(`<b>VO2max estimée :</b> ${fmt1(vo2D)} ml/kg/min`);
+    lines.push([h('b', {}, 'VMA estimée :'), ` ${fmt1(vmaD)} km/h`]);
+    lines.push([h('b', {}, 'VO2max estimée :'), ` ${fmt1(vo2D)} ml/kg/min`]);
   }
   if (!lines.length) { out.classList.add('hidden'); out.replaceChildren(); return; }
-  out.innerHTML = lines.join('<br>');
+  const nodes = [];
+  lines.forEach((line, i) => {
+    if (i > 0) nodes.push(h('br'));
+    nodes.push(...line);
+  });
+  out.replaceChildren(...nodes);
   out.classList.remove('hidden');
 }
 
@@ -2367,13 +2372,17 @@ function ifgPalier(score) {
   return IFG_PALIERS.find(p => score <= p.max);
 }
 
-function ifgBarHtml(score) {
-  const palier = ifgPalier(score);
+function ifgBarNodes(score) {
   const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
-  return `<div class="score-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="100" title="${score}/100">
-    <div class="score-bar-track"><div class="score-bar-fill" style="width:${score}%;background:${fill}"></div></div>
-    <div class="score-bar-labels small"><span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span></div>
-  </div>`;
+  return h('div', {
+    class: 'score-bar', role: 'progressbar', 'aria-valuenow': String(score),
+    'aria-valuemin': '0', 'aria-valuemax': '100', title: `${score}/100`
+  },
+    h('div', { class: 'score-bar-track' },
+      h('div', { class: 'score-bar-fill', style: { width: `${score}%`, background: fill } })),
+    h('div', { class: 'score-bar-labels small' },
+      h('span', { text: '0' }), h('span', { text: '20' }), h('span', { text: '40' }),
+      h('span', { text: '60' }), h('span', { text: '80' }), h('span', { text: '100' })));
 }
 
 function renderAnalysis() {
@@ -2383,7 +2392,7 @@ function renderAnalysis() {
   $('#ifg-period-label').textContent = ifgPeriodDesc(periodKey);
   const result = computeIFGPeriod(profile, periodKey);
   if (!result) {
-    $('#ifg-content').innerHTML = '<p>Enregistrez des sessions de test pour calculer votre indice.</p>';
+    $('#ifg-content').replaceChildren(h('p', { text: 'Enregistrez des sessions de test pour calculer votre indice.' }));
     $('#ifg-radar').replaceChildren();
     $('#ifg-radar-legend').textContent = '';
     $('#ifg-strengths').replaceChildren();
@@ -2402,18 +2411,25 @@ function renderAnalysis() {
   const prev = series.length >= 2 ? series[series.length - 2].value : null;
   const delta = prev != null ? result.score - prev : null;
   const palier = ifgPalier(result.score);
-  const deltaHtml = delta == null ? ''
-    : delta > 0 ? `<span class="badge good">▲ +${delta} pts depuis la dernière mesure</span>`
-    : delta < 0 ? `<span class="badge low">▼ ${delta} pts depuis la dernière mesure</span>`
-    : `<span class="badge mid">= stable depuis la dernière mesure</span>`;
-  const periodBadge = periodKey === 'last' ? ''
-    : ` <span class="badge mid">${IFG_PERIODS[periodKey].label}</span>`;
-  $('#ifg-content').innerHTML = `
-    <p style="font-size:2em;font-weight:700;color:${palier.color}">${result.score}<span style="font-size:.6em"> /100</span>
-      <span class="badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}">${palier.label}</span>${periodBadge}</p>
-    ${ifgBarHtml(result.score)}
-    ${deltaHtml}
-    <p class="small">Moyenne pondérée de 7 dimensions : cardio au repos &amp; métabolisme (20 %), endurance (20 %), force (20 %), équilibre &amp; mobilité (15 %), habitudes d'activité (10 %), sommeil &amp; récupération (10 %), alimentation (5 %).</p>`;
+  const deltaBadge = delta == null ? null
+    : delta > 0 ? h('span', { class: 'badge good', text: `▲ +${delta} pts depuis la dernière mesure` })
+    : delta < 0 ? h('span', { class: 'badge low', text: `▼ ${delta} pts depuis la dernière mesure` })
+    : h('span', { class: 'badge mid', text: '= stable depuis la dernière mesure' });
+  const periodBadge = periodKey === 'last' ? null
+    : h('span', { class: 'badge mid', text: IFG_PERIODS[periodKey].label });
+  const scoreP = h('p', { style: { fontSize: '2em', fontWeight: '700', color: palier.color } },
+    String(result.score),
+    h('span', { style: { fontSize: '.6em' } }, ' /100'),
+    ' ',
+    h('span', { class: `badge ${result.score >= 80 ? 'good' : result.score >= 60 ? 'mid' : 'low'}`, text: palier.label }),
+    periodBadge ? ' ' : null,
+    periodBadge);
+  $('#ifg-content').replaceChildren(
+    scoreP,
+    ifgBarNodes(result.score),
+    deltaBadge,
+    h('p', { class: 'small', text: 'Moyenne pondérée de 7 dimensions : cardio au repos & métabolisme (20 %), endurance (20 %), force (20 %), équilibre & mobilité (15 %), habitudes d’activité (10 %), sommeil & récupération (10 %), alimentation (5 %).' })
+  );
 
   // 2. Radar des dimensions (SVG)
   renderIfgRadar(result.dims);
@@ -2421,9 +2437,10 @@ function renderAnalysis() {
   // 3. Points forts / faibles + conseil
   const sorted = result.dims.slice().sort((a, b) => b.score - a.score);
   const best = sorted[0], worst = sorted[sorted.length - 1];
-  $('#ifg-strengths').innerHTML = `
-    <li>💪 <b>Point fort</b> : ${best.icon} ${best.label} — <b>${best.score}/100</b></li>
-    <li>🎯 <b>À travailler</b> : ${worst.icon} ${worst.label} — <b>${worst.score}/100</b></li>`;
+  $('#ifg-strengths').replaceChildren(
+    h('li', {}, '💪 ', h('b', {}, 'Point fort'), ` : ${best.icon} ${best.label} — `, h('b', {}, `${best.score}/100`)),
+    h('li', {}, '🎯 ', h('b', {}, 'À travailler'), ` : ${worst.icon} ${worst.label} — `, h('b', {}, `${worst.score}/100`))
+  );
   const advice = $('#ifg-advice');
   if (worst.score < 60) {
     const tips = {
@@ -2435,7 +2452,11 @@ function renderAnalysis() {
       sleep: 'Visez 7–9 h de sommeil par nuit, avec des horaires réguliers — le sommeil régule l\'appétit et la récupération.',
       nutrition: 'Ciblez 5 portions de fruits & légumes par jour, limitez les boissons sucrées et cuisinez maison la majorité du temps.',
     };
-    advice.innerHTML = `💡 <b>Conseil</b> : ${tips[worst.key] || 'Travaillez cette dimension en priorité.'}`;
+    advice.replaceChildren(
+      '💡 ',
+      h('b', {}, 'Conseil'),
+      ` : ${tips[worst.key] || 'Travaillez cette dimension en priorité.'}`
+    );
     advice.style.display = '';
   } else advice.style.display = 'none';
 
@@ -2487,14 +2508,15 @@ function renderIfgRadar(dims) {
     });
   }
   svg += '</svg>';
-  $('#ifg-radar').innerHTML = svg;
-  $('#ifg-radar-legend').innerHTML = dims.map(d =>
-    `<div class="ifg-legend-item">${d.icon} ${d.label} : <b>${d.score}</b></div>`).join('');
+  $('#ifg-radar').innerHTML = svg; // SVG : innerHTML conservé (pas de createElementNS fiable ici)
+  $('#ifg-radar-legend').replaceChildren(...dims.map(d =>
+    h('div', { class: 'ifg-legend-item' }, `${d.icon} ${d.label} : `, h('b', {}, String(d.score)))
+  ));
 }
 
 function renderIfgChart(series) {
   const data = series;
-  if (!data.length) { $('#ifg-chart').innerHTML = '<p class="small">Pas encore d\'historique.</p>'; $('#ifg-chart-stats').textContent = ''; return; }
+  if (!data.length) { $('#ifg-chart').replaceChildren(h('p', { class: 'small', text: 'Pas encore d’historique.' })); $('#ifg-chart-stats').textContent = ''; return; }
   const W = 700, H = 220, PAD = 40;
   const xs = data.map(d => new Date(d.date).getTime());
   const minT = Math.min(...xs), maxT = Math.max(...xs);
@@ -2517,17 +2539,23 @@ function renderIfgChart(series) {
       svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
-  $('#ifg-chart').innerHTML = svg;
+  $('#ifg-chart').replaceChildren();
+  $('#ifg-chart').insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
   const first = data[0].value, lastV = data[data.length - 1].value;
   const delta = lastV - first;
-  $('#ifg-chart-stats').innerHTML = `Dernière valeur : <b>${lastV}/100</b> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta} pts</b>`;
+  $('#ifg-chart-stats').replaceChildren(
+    'Dernière valeur : ',
+    h('b', {}, `${lastV}/100`),
+    ' · Évolution depuis la 1re mesure : ',
+    h('b', {}, `${delta > 0 ? '+' : ''}${delta} pts`)
+  );
 }
 
 // Tendance d'une dimension : compare la moyenne des sessions des 30 derniers jours
 // à celle de la période précédente (mêmes mesures présentes dans les deux périodes)
 function renderIfgTrends(profile) {
   const sessions = getSessions();
-  if (!sessions.length) { $('#ifg-trends').innerHTML = '<p class="small">Aucune donnée.</p>'; return; }
+  if (!sessions.length) { $('#ifg-trends').replaceChildren(h('p', { class: 'small', text: 'Aucune donnée.' })); return; }
   const today = new Date();
   const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 30);
   const cutoffStr = cutoff.toISOString().slice(0, 10); // « 30 derniers jours » = date >= J-30
@@ -2558,19 +2586,25 @@ function renderIfgTrends(profile) {
     }
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   };
-  let html = '<table><tr><th>Dimension</th><th>Score moyen (30 j)</th><th>Avant</th><th>Tendance</th></tr>';
+  const rows = [h('tr', {},
+    h('th', { text: 'Dimension' }), h('th', { text: 'Score moyen (30 j)' }),
+    h('th', { text: 'Avant' }), h('th', { text: 'Tendance' }))];
   for (const d of IFG_DIMENSIONS) {
     const r = avgDim(recent, d), p = avgDim(previous, d);
     if (r == null && p == null) continue;
     let trend;
-    if (r == null) trend = '<td class="muted">—</td>';
-    else if (p == null) trend = '<td class="muted">nouveau</td>';
-    else if (r > p + 2) trend = '<td class="up">▲ en hausse</td>';
-    else if (r < p - 2) trend = '<td class="down">▼ en baisse</td>';
-    else trend = '<td class="muted">= stable</td>';
-    html += `<tr><td>${d.icon} ${d.label}</td><td><b>${r ?? '—'}</b></td><td>${p ?? '—'}</td>${trend}</tr>`;
+    if (r == null) trend = h('td', { class: 'muted', text: '—' });
+    else if (p == null) trend = h('td', { class: 'muted', text: 'nouveau' });
+    else if (r > p + 2) trend = h('td', { class: 'up', text: '▲ en hausse' });
+    else if (r < p - 2) trend = h('td', { class: 'down', text: '▼ en baisse' });
+    else trend = h('td', { class: 'muted', text: '= stable' });
+    rows.push(h('tr', {},
+      h('td', {}, `${d.icon} ${d.label}`),
+      h('td', {}, h('b', {}, r != null ? String(r) : '—')),
+      h('td', {}, p != null ? String(p) : '—'),
+      trend));
   }
-  $('#ifg-trends').innerHTML = html + '</table>';
+  $('#ifg-trends').replaceChildren(h('table', {}, rows));
 }
 
 // Nuage de points : IPAQ (X) ↔ IFG au moment de la mesure (Y)
@@ -2578,7 +2612,7 @@ function renderIfgTrends(profile) {
 function renderIfgScatter() {
   const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
   const ipaqDates = sessions.filter(s => s.values?.ipaq != null && s.values.ipaq !== '');
-  if (ipaqDates.length < 2) { $('#ifg-scatter').innerHTML = '<p class="small">Effectuez au moins 2 questionnaires IPAQ pour voir la corrélation.</p>'; return; }
+  if (ipaqDates.length < 2) { $('#ifg-scatter').replaceChildren(h('p', { class: 'small', text: 'Effectuez au moins 2 questionnaires IPAQ pour voir la corrélation.' })); return; }
   const points = [];
   for (const s of ipaqDates) {
     // IFG recalculé avec les données disponibles à cette date
@@ -2593,7 +2627,7 @@ function renderIfgScatter() {
     store.set('sessions', snapshotSessions);
     if (res) points.push({ date: s.date, ipaq: s.values.ipaq, ifg: res.score });
   }
-  if (points.length < 2) { $('#ifg-scatter').innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+  if (points.length < 2) { $('#ifg-scatter').replaceChildren(h('p', { class: 'small', text: 'Données insuffisantes.' })); return; }
 
   const W = 420, H = 260, PAD = 44;
   const xs = points.map(p => p.ipaq), ys = points.map(p => p.ifg);
@@ -2616,7 +2650,14 @@ function renderIfgScatter() {
     svg += `<circle cx="${X(p.ipaq)}" cy="${Y(p.ifg)}" r="5" fill="var(--accent)"><title>${p.date.split('-').reverse().join('/')} : IPAQ ${p.ipaq} · IFG ${p.ifg}</title></circle>`;
   });
   svg += '</svg>';
-  $('#ifg-scatter').innerHTML = svg;
+  // Corrélation de Pearson
+  const r = pearsonCorrelation(points.map(p => p.ipaq), points.map(p => p.ifg));
+  const corrP = r != null
+    ? h('p', { class: 'small', style: { marginTop: '6px' } }, '📊 ', correlationLabel(r))
+    : null;
+  $('#ifg-scatter').replaceChildren();
+  $('#ifg-scatter').insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
+  if (corrP) $('#ifg-scatter').appendChild(corrP);
 }
 
 // Coefficient de corrélation de Pearson entre deux séries appariées.
@@ -2656,7 +2697,7 @@ function renderIfgSleepScatter() {
   if (!el) return;
   const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
   const sleepDates = sessions.filter(s => s.values?.sleep_score != null && s.values.sleep_score !== '');
-  if (sleepDates.length < 2) { el.innerHTML = '<p class="small">Enregistrez au moins 2 bilans de sommeil pour voir la corrélation.</p>'; return; }
+  if (sleepDates.length < 2) { el.replaceChildren(h('p', { class: 'small', text: 'Enregistrez au moins 2 bilans de sommeil pour voir la corrélation.' })); return; }
   const points = [];
   for (const s of sleepDates) {
     // IFG recalculé avec les données disponibles à cette date
@@ -2672,7 +2713,7 @@ function renderIfgSleepScatter() {
       ifg: res.score,
     });
   }
-  if (points.length < 2) { el.innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+  if (points.length < 2) { el.replaceChildren(h('p', { class: 'small', text: 'Données insuffisantes.' })); return; }
 
   // Corrélation de Pearson
   const r = pearsonCorrelation(points.map(p => p.sleep), points.map(p => p.ifg));
@@ -2705,10 +2746,12 @@ function renderIfgSleepScatter() {
     svg += `<circle cx="${X(p.sleep)}" cy="${Y(p.ifg)}" r="5" fill="#7c5cbf"><title>${p.date.split('-').reverse().join('/')} : sommeil ${p.sleep}/100${durTxt} · IFG ${p.ifg}</title></circle>`;
   });
   svg += '</svg>';
-  const corrHtml = r != null
-    ? `<p class="small" style="margin-top:6px">📊 ${correlationLabel(r)}</p>`
-    : '';
-  el.innerHTML = svg + corrHtml;
+  const corrP = r != null
+    ? h('p', { class: 'small', style: { marginTop: '6px' } }, '📊 ', correlationLabel(r))
+    : null;
+  el.replaceChildren();
+  el.insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
+  if (corrP) el.appendChild(corrP);
 }
 
 // Nuage de points : Alimentation (X) ↔ IFG au moment de la mesure (Y)
@@ -2718,7 +2761,7 @@ function renderIfgNutritionScatter() {
   if (!el) return;
   const sessions = getSessions().sort((a, b) => a.date < b.date ? -1 : 1);
   const nutDates = sessions.filter(s => s.values?.nutrition_score != null && s.values.nutrition_score !== '');
-  if (nutDates.length < 2) { el.innerHTML = '<p class="small">Enregistrez au moins 2 bilans alimentaires pour voir la corrélation.</p>'; return; }
+  if (nutDates.length < 2) { el.replaceChildren(h('p', { class: 'small', text: 'Enregistrez au moins 2 bilans alimentaires pour voir la corrélation.' })); return; }
   const points = [];
   for (const s of nutDates) {
     // IFG recalculé avec les données disponibles à cette date
@@ -2729,7 +2772,7 @@ function renderIfgNutritionScatter() {
     store.set('sessions', snapshotSessions);
     if (res) points.push({ date: s.date, nutrition: s.values.nutrition_score, ifg: res.score });
   }
-  if (points.length < 2) { el.innerHTML = '<p class="small">Données insuffisantes.</p>'; return; }
+  if (points.length < 2) { el.replaceChildren(h('p', { class: 'small', text: 'Données insuffisantes.' })); return; }
 
   // Corrélation de Pearson
   const r = pearsonCorrelation(points.map(p => p.nutrition), points.map(p => p.ifg));
@@ -2761,10 +2804,12 @@ function renderIfgNutritionScatter() {
     svg += `<circle cx="${X(p.nutrition)}" cy="${Y(p.ifg)}" r="5" fill="#2e8b57"><title>${p.date.split('-').reverse().join('/')} : alimentation ${p.nutrition}/100 · IFG ${p.ifg}</title></circle>`;
   });
   svg += '</svg>';
-  const corrHtml = r != null
-    ? `<p class="small" style="margin-top:6px">📊 ${correlationLabel(r)}</p>`
-    : '';
-  el.innerHTML = svg + corrHtml;
+  const corrP = r != null
+    ? h('p', { class: 'small', style: { marginTop: '6px' } }, '📊 ', correlationLabel(r))
+    : null;
+  el.replaceChildren();
+  el.insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
+  if (corrP) el.appendChild(corrP);
 }
 
 // ---------- Historique & graphiques ----------
@@ -2774,14 +2819,14 @@ function renderHistory() {
   const scores = scoreSeries();
   const withData = TESTS.filter(t => t.id !== 'vma' && t.id !== 'vo2max' && seriesOf(t.id).length > 0);
   const options = [];
-  if (scores.length) options.push('<option value="__score__">★ Score global (/100)</option>');
-  options.push(...withData.map(t => `<option value="${t.id}">${testNum(t.id)}${t.name}</option>`));
+  if (scores.length) options.push(h('option', { value: '__score__', text: '★ Score global (/100)' }));
+  options.push(...withData.map(t => h('option', { value: t.id, text: `${testNum(t.id)}${t.name}` })));
   if (options.length) {
-    sel.innerHTML = options.join('');
+    sel.replaceChildren(...options);
     drawChart(sel.value);
   } else {
-    sel.innerHTML = '<option value="">— aucune donnée —</option>';
-    $('#chart').innerHTML = '<p class="small">Enregistrez une session pour voir les graphiques.</p>';
+    sel.replaceChildren(h('option', { value: '', text: '— aucune donnée —' }));
+    $('#chart').replaceChildren(h('p', { class: 'small', text: 'Enregistrez une session pour voir les graphiques.' }));
     $('#chart-stats').textContent = '';
   }
   renderHistoryTable();
@@ -2837,14 +2882,21 @@ function drawChart(testId) {
       svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
-  $('#chart').innerHTML = svg;
+  $('#chart').replaceChildren();
+  $('#chart').insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
 
   // stats
   const first = data[0].value, lastV = data[data.length - 1].value;
   const delta = lastV - first;
   const pct = (delta / Math.max(first, 1) * 100).toFixed(1);
   const st = statusOf(t, lastV, profile);
-  $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} ${t.unit}</b> ${st ? STATUS_LABEL[st] : ''} · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${t.unit} (${pct} %)</b>`;
+  $('#chart-stats').replaceChildren(
+    'Dernière valeur : ',
+    h('b', {}, `${lastV} ${t.unit}`),
+    st ? ` ${STATUS_LABEL[st]}` : null,
+    ' · Évolution depuis la 1re mesure : ',
+    h('b', {}, `${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${t.unit} (${pct} %)`)
+  );
 }
 
 // Graphique dédié au score global : échelle fixe 0–100, repères 60/80, pas de statut individuel
@@ -2882,14 +2934,22 @@ function drawScoreChart() {
       svg += `<text x="${X(new Date(d.date).getTime())}" y="${H - PAD + 16}" text-anchor="middle" font-size="10" fill="var(--muted)">${d.date.slice(5)}</text>`;
   });
   svg += '</svg>';
-  $('#chart').innerHTML = svg;
+  $('#chart').replaceChildren();
+  $('#chart').insertAdjacentHTML('beforeend', svg); // SVG : innerHTML conservé
 
   // stats
   const first = data[0].value, lastV = data[data.length - 1].value;
   const delta = lastV - first;
   const pct = (delta / Math.max(first, 1) * 100).toFixed(1);
   const st = lastV >= 80 ? 'good' : lastV >= 60 ? 'mid' : 'low';
-  $('#chart-stats').innerHTML = `Dernière valeur : <b>${lastV} /100</b> <span class="badge ${st}">${STATUS_LABEL[st]}</span> · Évolution depuis la 1re mesure : <b>${delta > 0 ? '+' : ''}${delta.toFixed(1)} pts (${pct} %)</b>`;
+  $('#chart-stats').replaceChildren(
+    'Dernière valeur : ',
+    h('b', {}, `${lastV} /100`),
+    ' ',
+    h('span', { class: `badge ${st}` }, STATUS_LABEL[st]),
+    ' · Évolution depuis la 1re mesure : ',
+    h('b', {}, `${delta > 0 ? '+' : ''}${delta.toFixed(1)} pts (${pct} %)`)
+  );
 }
 
 // Le badge « ⌚ montre » est désormais construit en nœuds DOM (voir badgeNodes)
