@@ -224,8 +224,8 @@ const TESTS = [
     info: `<ul>
       <li><b>Méthode 1</b> — <b>Récupération cardiaque</b> : 3 min de montées à allure régulière, puis mesure du pouls 1 min après l'arrêt.</li>
       <li>Échauffez-vous 5 min (marche sur place, montées lentes) avant de commencer.</li>
-      <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b> (un cycle montée+descente toutes les 2,5 s).</li>
-      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider ; le bouton <b>🥁 96 bpm</b> dans le timer active un <b>métronome sonore</b> (1 bip par cycle, 96 bpm = 24 montées/min) qui démarre, pause et s'arrête avec le timer. À la fin des 3 min, un <b>compte à rebours de 1 min</b> se lance automatiquement pour la mesure du pouls.</li>
+      <li>Montez et descendez un escalier à allure régulière : <b>24 montées par minute</b>, soit <b>un aller-retour (montée + descente) toutes les 2,5 s</b>.</li>
+      <li>Durée totale : <b>3 minutes</b> de montée/descente continue. Le bouton <b>⏳</b> ouvre un <b>compte à rebours de 3 min</b> (durée réglable) pour vous guider ; le bouton <b>🥁 96 bpm</b> dans le timer active un <b>métronome sonore</b> : <b>1 bip toutes les 625 ms</b> (96 bpm), soit <b>4 bips = 1 aller-retour</b> (montez sur 2 bips, descendez sur 2 bips) = 24 montées/min. Le métronome démarre, pause et s'arrête avec le timer. À la fin des 3 min, un <b>compte à rebours de 1 min</b> se lance automatiquement pour la mesure du pouls.</li>
       <li>Dès la fin, <b>asseyez-vous immédiatement</b> et prenez votre pouls pendant 60 s, <b>1 minute après l'arrêt</b> (comptez 15 s × 4 et multipliez par 4, ou 60 s complet).</li>
       <li>Notez ce pouls à 1 min : c'est votre résultat. Plus il est bas, meilleure est votre récupération cardiaque.</li>
       <li>Arrêtez en cas de douleur thoracique, vertiges ou essoufflement excessif — consultez un médecin avant de recommencer.</li>
@@ -1648,7 +1648,7 @@ function renderSessionFields() {
                 timerNextMs: '60000',
                 timerNextLabel: 'Escalier — mesure du pouls dans 1 min (asseyez-vous)'
               },
-              title: 'Compte à rebours 3 min pour les montées d’escalier (3 s de préparation avec bip, durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls',
+              title: 'Compte à rebours 3 min pour les montées d’escalier (3 s de préparation avec bip, durée réglable, métronome 96 bpm : 4 bips = 1 aller-retour), puis 1 min auto avant la mesure du pouls',
               text: '⏳'
             })
           : t.id === 'stair_steps'
@@ -2148,7 +2148,8 @@ let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, tim
 let timerLabel = 'Compte à rebours';
 let timerCountdownId = null; // intervalle du compte à rebours avant démarrage auto (ou null)
 // Métronome 96 bpm (24 montées/min) pour le test escalier méthode 1 :
-// bip court toutes les 625 ms, synchronisé avec le timer (démarre/pause/arrêt avec lui).
+// bip court toutes les 625 ms → 4 bips = 1 aller-retour (montée + descente) de 2,5 s,
+// synchronisé avec le timer (démarre/pause/arrêt avec lui).
 let metroId = null, metroAudioCtx = null, metroEnabled = false;
 const METRO_BPM = 96;
 const METRO_INTERVAL_MS = 60000 / METRO_BPM; // 625 ms
@@ -2315,8 +2316,8 @@ function openTimer(durationMs, label, durationEditable = false, next = null, met
     metroBtn.classList.toggle('active', metronome);
     metroBtn.classList.toggle('muted', metronome && !metroEnabled);
     metroBtn.title = metronome
-      ? 'Métronome 96 bpm actif — cliquez pour le couper'
-      : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
+      ? 'Métronome 96 bpm actif (4 bips = 1 aller-retour) — cliquez pour le couper'
+      : 'Métronome 96 bpm (4 bips = 1 aller-retour, 24 montées/min) — cliquez pour l\'activer';
   }
   $('#timer-label').textContent = label;
   // Indice visuel : un timer suivant est prévu (ex. « puis 1 min avant le pouls »)
@@ -2360,8 +2361,8 @@ $('#timer-metronome').addEventListener('click', () => {
   btn.classList.toggle('active', metroEnabled);
   btn.classList.toggle('muted', !metroEnabled); // symbole barré quand coupé
   btn.title = metroEnabled
-    ? 'Métronome 96 bpm actif — cliquez pour le couper'
-    : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
+    ? 'Métronome 96 bpm actif (4 bips = 1 aller-retour) — cliquez pour le couper'
+    : 'Métronome 96 bpm (4 bips = 1 aller-retour, 24 montées/min) — cliquez pour l\'activer';
   if (metroEnabled && timerRunning) metroStart();
   else metroStop();
 });
