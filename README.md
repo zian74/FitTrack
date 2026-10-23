@@ -19,7 +19,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 - Statut automatique 🟢/🟠/🔴 selon repères âge/sexe
 - Score global /100 basé sur les 5 mesures prédictives (préhension, tour de taille, FC repos, cardio sous-max, équilibre), historisé jour par jour et visible en haut des graphiques
 - Alertes de tendance (dégradation/stagnation sur 2 sessions)
-- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 7 dimensions (inclut **Sommeil & récupération** 🌙, 10 %, et **Alimentation** 🍽, 5 %),
+- **Onglet Analyse** : Indice FitTrack Global (/100) pondéré sur 7 dimensions — **calculé uniquement lorsque les 7 dimensions sont connues** (sinon « Complétez les tests », liste « à faire ») — inclut **Sommeil & récupération** 🌙, 10 %, et **Alimentation** 🍽, 5 %),
   radar, priorités, évolution, corrélation activité ↔ forme et
   nuages Sommeil ↔ IFG et Alimentation ↔ IFG avec coefficient de Pearson (r, libellé qualitatif)
 - Calendrier de re-test (mensuel / trimestriel)

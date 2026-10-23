@@ -71,6 +71,13 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
   7 dimensions — cardio au repos & métabolisme (20 %), endurance (20 %),
   force (20 %), équilibre & mobilité (15 %), habitudes d'activité (10 %),
   sommeil & récupération (10 %), alimentation (5 %) ;
+  **règle 7/7 : aucune valeur IFG tant que les 7 dimensions ne sont pas connues**
+  (au moins une mesure scorée par dimension) — l'onglet affiche alors
+  « Complétez les tests pour connaître votre Indice FitTrack Global (X/7
+  dimensions connues) » avec la liste « à faire » (radar : croix grise au centre,
+  légende : badge « à faire ») ; l'historique IFG, les nuages de corrélation
+  (IPAQ/sommeil/alimentation ↔ IFG) et les périodes de calcul appliquent la
+  même règle ;
   historisé 1×/jour ; radar des dimensions, point fort/faible + conseil,
   courbe d'évolution, tendances 30 jours, nuage de points IPAQ ↔ IFG,
   nuage Sommeil ↔ IFG (score sommeil/100 en X, IFG recalculé à chaque date

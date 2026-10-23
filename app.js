@@ -803,22 +803,31 @@ function scoredTestsForDim(d, lv) {
   return d.tests.filter(id => lv[id]);
 }
 
-// IFG calculé sur une période donnée (même pondération que computeIFG)
-function computeIFGPeriod(profile, periodKey) {
-  const lv = valuesForPeriod(periodKey);
+// Disponibilité de l'IFG : les 7 dimensions doivent être connues (au moins une
+// mesure scorée par dimension). Retourne { ready, missing, dims } — missing =
+// dimensions sans aucune donnée (affichées « à faire » dans l'onglet Analyse).
+function ifgReadiness(lv, profile) {
+  const missing = [];
   const dims = [];
-  let total = 0, totalWeight = 0;
   for (const d of IFG_DIMENSIONS) {
     const scored = scoredTestsForDim(d, lv);
-    if (!scored.length) continue;
+    if (!scored.length) { missing.push(d); continue; }
     const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
     const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
     dims.push({ ...d, score: avg, count: scored.length });
-    total += avg * d.weight;
-    totalWeight += d.weight;
   }
-  if (!dims.length) return null;
-  return { score: Math.round(total / totalWeight), dims };
+  return { ready: missing.length === 0 && dims.length > 0, missing, dims };
+}
+
+// IFG calculé sur une période donnée (même pondération que computeIFG).
+// Règle 7/7 : aucune valeur tant que les 7 dimensions ne sont pas connues.
+function computeIFGPeriod(profile, periodKey) {
+  const lv = valuesForPeriod(periodKey);
+  const { ready, missing, dims } = ifgReadiness(lv, profile);
+  if (!ready) return { score: null, dims, missing };
+  let total = 0;
+  for (const d of dims) total += d.score * d.weight;
+  return { score: Math.round(total), dims, missing: [] };
 }
 
 // Libellé de la période affichée à côté du sélecteur
@@ -961,27 +970,22 @@ const IFG_DIMENSIONS = [
     tests: ['nutrition_score'] },
 ];
 
+// Règle 7/7 : l'IFG n'est proposé que lorsque les 7 dimensions sont connues.
+// Retourne { score, dims, missing } — score = null si des dimensions manquent.
 function computeIFG(profile) {
   const lv = latestValues();
-  const dims = [];
-  let total = 0, totalWeight = 0;
-  for (const d of IFG_DIMENSIONS) {
-    const scored = scoredTestsForDim(d, lv);
-    if (!scored.length) continue; // dimension sans donnée : exclue du calcul
-    const pts = scored.map(id => SCORE_PTS[statusOf(byId(id), lv[id].value, profile)]);
-    const avg = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
-    dims.push({ ...d, score: avg, count: scored.length });
-    total += avg * d.weight;
-    totalWeight += d.weight;
-  }
-  if (!dims.length) return null;
-  return { score: Math.round(total / totalWeight), dims };
+  const { ready, missing, dims } = ifgReadiness(lv, profile);
+  if (!ready) return { score: null, dims, missing };
+  let total = 0;
+  for (const d of dims) total += d.score * d.weight;
+  return { score: Math.round(total), dims, missing: [] };
 }
 
-// Persiste l'IFG du jour (1 valeur par date, la dernière écrase)
+// Persiste l'IFG du jour (1 valeur par date, la dernière écrase).
+// Règle 7/7 : rien n'est enregistré tant que les 7 dimensions ne sont pas connues.
 function recordIFG() {
   const result = computeIFG(getProfile());
-  if (!result) return;
+  if (!result || result.score == null) return;
   const history = store.get('ifgHistory', []);
   const today = todayStr();
   const existing = history.find(h => h.date === today);
@@ -1818,14 +1822,14 @@ const STATIC_INFOS = {
       <li>Formule : <b>8 × min intense + 4 × min modérées + 3,3 × min de marche</b> (en multipliant d'abord par le nombre de jours).</li>
       <li><b>Niveaux</b> : &lt; 600 = faible (sédentaire) · 600–2999 = modéré · ≥ 3000 = élevé (actif).</li>
       <li><b>Repère OMS</b> : ≥ 600 MET-min/sem, soit environ 150 min d'activité modérée par semaine.</li>
-      <li>Dans ce graphique, chaque point croise votre score IPAQ (activité déclarée) avec votre IFG (forme mesurée) à la même date — un écart important signale un déséquilibre à creuser.</li>
+      <li>Dans ce graphique, chaque point croise votre score IPAQ (activité déclarée) avec votre IFG (forme mesurée) à la même date — un écart important signale un déséquilibre à creuser. L'IFG n'est calculé que lorsque les 7 dimensions sont connues (règle 7/7).</li>
     </ul>`
   },
   __sleep__: {
     name: 'Score de sommeil ↔ Indice FitTrack Global',
     info: `<ul>
       <li>Ce graphique croise votre <b>score de sommeil</b> (/100, axe horizontal) avec votre <b>Indice FitTrack Global</b> (IFG, axe vertical) à la même date.</li>
-      <li>Chaque point est une date où un bilan de sommeil a été enregistré. L'IFG est recalculé avec toutes les données disponibles à cette date.</li>
+      <li>Chaque point est une date où un bilan de sommeil a été enregistré. L'IFG est recalculé avec les données disponibles à cette date (règle 7/7 : les 7 dimensions doivent être connues).</li>
       <li><b>Repères verticaux</b> : <span style="color:var(--ok)">80 = bon sommeil</span> (ligne pleine) · <span style="color:var(--warn)">60 = seuil moyen</span> (ligne pointillée).</li>
       <li><b>Corrélation de Pearson</b> (r entre −1 et +1) : mesure la force du lien linéaire entre les deux séries.
         <ul>
@@ -1852,7 +1856,7 @@ const STATIC_INFOS = {
     name: 'Score alimentaire ↔ Indice FitTrack Global',
     info: `<ul>
       <li>Ce graphique croise votre <b>score alimentaire</b> (/100, axe horizontal) avec votre <b>Indice FitTrack Global</b> (IFG, axe vertical) à la même date.</li>
-      <li>Chaque point est une date où un bilan alimentaire a été enregistré. L'IFG est recalculé avec toutes les données disponibles à cette date.</li>
+      <li>Chaque point est une date où un bilan alimentaire a été enregistré. L'IFG est recalculé avec les données disponibles à cette date (règle 7/7 : les 7 dimensions doivent être connues).</li>
       <li><b>Repères verticaux</b> : <span style="color:var(--ok)">80 = alimentation équilibrée</span> (ligne pleine) · <span style="color:var(--warn)">60 = seuil moyen</span> (ligne pointillée).</li>
       <li><b>Corrélation de Pearson</b> (r entre −1 et +1) : mesure la force du lien linéaire entre les deux séries.
         <ul>
@@ -2530,7 +2534,8 @@ function renderAnalysis() {
   const periodKey = (document.querySelector('input[name="ifg-period"]:checked') || {}).value || 'last';
   $('#ifg-period-label').textContent = ifgPeriodDesc(periodKey);
   const result = computeIFGPeriod(profile, periodKey);
-  if (!result) {
+  // État vide : aucune donnée → incitation à enregistrer des sessions
+  if (!result || (result.score == null && !result.dims.length)) {
     $('#ifg-content').replaceChildren(h('p', { text: 'Enregistrez des sessions de test pour calculer votre indice.' }));
     $('#ifg-radar').replaceChildren();
     $('#ifg-radar-legend').textContent = '';
@@ -2542,6 +2547,29 @@ function renderAnalysis() {
     $('#ifg-scatter').replaceChildren();
     $('#ifg-sleep-scatter').replaceChildren();
     $('#ifg-nutrition-scatter').replaceChildren();
+    return;
+  }
+  // État incomplet (règle 7/7) : pas de valeur IFG tant que les 7 dimensions
+  // ne sont pas connues — on liste les dimensions « à faire ».
+  if (result.score == null) {
+    const done = result.dims.length, total = IFG_DIMENSIONS.length;
+    $('#ifg-content').replaceChildren(...nodes(
+      h('p', { style: { fontSize: '1.4em', fontWeight: '700' } }, 'Indice FitTrack Global'),
+      h('p', {}, 'Complétez les tests pour connaître votre ', h('b', {}, 'Indice FitTrack Global'), ` (${done}/${total} dimensions connues).`),
+      h('p', { class: 'small', text: 'L’indice n’est calculé que lorsque les 7 dimensions sont renseignées — voir la liste « à faire » ci-dessous.' })
+    ));
+    renderIfgRadar(result.dims, result.missing);
+    $('#ifg-strengths').replaceChildren(
+      h('li', {}, '⏳ ', h('b', {}, 'À faire'), ' : ', ...nodes(...result.missing.map(d =>
+        h('span', { class: 'ifg-todo' }, `${d.icon} ${d.label}`)
+      )))
+    );
+    $('#ifg-advice').style.display = 'none';
+    renderIfgChart(ifgSeries());
+    renderIfgTrends(profile);
+    renderIfgScatter();
+    renderIfgSleepScatter();
+    renderIfgNutritionScatter();
     return;
   }
 
@@ -2567,7 +2595,7 @@ function renderAnalysis() {
     scoreP,
     ifgBarNodes(result.score),
     deltaBadge,
-    h('p', { class: 'small', text: 'Moyenne pondérée de 7 dimensions : cardio au repos & métabolisme (20 %), endurance (20 %), force (20 %), équilibre & mobilité (15 %), habitudes d’activité (10 %), sommeil & récupération (10 %), alimentation (5 %).' })
+    h('p', { class: 'small', text: 'Moyenne pondérée des 7 dimensions (toutes requises) : cardio au repos & métabolisme (20 %), endurance (20 %), force (20 %), équilibre & mobilité (15 %), habitudes d’activité (10 %), sommeil & récupération (10 %), alimentation (5 %).' })
   ));
 
   // 2. Radar des dimensions (SVG)
@@ -2619,12 +2647,13 @@ function renderAnalysis() {
 document.querySelectorAll('input[name="ifg-period"]').forEach(r =>
   r.addEventListener('change', () => renderAnalysis()));
 
-function renderIfgRadar(dims) {
+function renderIfgRadar(dims, missing = []) {
   const W = 320, H = 280, CX = W / 2, CY = H / 2 + 6, R = 100;
   const n = IFG_DIMENSIONS.length;
   const angle = i => -Math.PI / 2 + i * 2 * Math.PI / n;
   const pt = (i, ratio) => `${CX + Math.cos(angle(i)) * R * ratio},${CY + Math.sin(angle(i)) * R * ratio}`;
   const dimByKey = Object.fromEntries(dims.map(d => [d.key, d]));
+  const missingKeys = new Set(missing.map(d => d.key));
   let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:340px">`;
   // anneaux de fond 25/50/75/100
   for (const r of [0.25, 0.5, 0.75, 1]) {
@@ -2646,11 +2675,23 @@ function renderIfgRadar(dims) {
       svg += `<circle cx="${px}" cy="${py}" r="4" fill="var(--accent)"/>`;
     });
   }
+  // marqueurs « à faire » (croix grise) pour les dimensions manquantes
+  IFG_DIMENSIONS.forEach((d, i) => {
+    if (!missingKeys.has(d.key)) return;
+    const [px, py] = pt(i, 0).split(',');
+    svg += `<circle cx="${px}" cy="${py}" r="5" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-dasharray="2 2"/>`;
+    svg += `<text x="${px}" y="${py + 3.5}" text-anchor="middle" font-size="9" fill="var(--faint)">✕</text>`;
+  });
   svg += '</svg>';
   $('#ifg-radar').innerHTML = svg; // SVG : innerHTML conservé (pas de createElementNS fiable ici)
-  $('#ifg-radar-legend').replaceChildren(...nodes(...dims.map(d =>
-    h('div', { class: 'ifg-legend-item' }, `${d.icon} ${d.label} : `, h('b', {}, String(d.score)))
-  )));
+  // Légende : scores des dimensions connues + « à faire » pour les manquantes
+  const legendItems = IFG_DIMENSIONS.map(d => {
+    const known = dimByKey[d.key];
+    return known
+      ? h('div', { class: 'ifg-legend-item' }, `${d.icon} ${d.label} : `, h('b', {}, String(known.score)))
+      : h('div', { class: 'ifg-legend-item muted' }, `${d.icon} ${d.label} : `, h('span', { class: 'badge low', text: 'à faire' }));
+  });
+  $('#ifg-radar-legend').replaceChildren(...nodes(...legendItems));
 }
 
 function renderIfgChart(series) {
@@ -2764,7 +2805,7 @@ function renderIfgScatter() {
     store.set('sessions', upTo);
     const res = computeIFG(getProfile());
     store.set('sessions', snapshotSessions);
-    if (res) points.push({ date: s.date, ipaq: s.values.ipaq, ifg: res.score });
+    if (res && res.score != null) points.push({ date: s.date, ipaq: s.values.ipaq, ifg: res.score }); // règle 7/7
   }
   if (points.length < 2) { $('#ifg-scatter').replaceChildren(h('p', { class: 'small', text: 'Données insuffisantes.' })); return; }
 
@@ -2845,9 +2886,9 @@ function renderIfgSleepScatter() {
     store.set('sessions', upTo);
     const res = computeIFG(getProfile());
     store.set('sessions', snapshotSessions);
-    if (res) points.push({
+    if (res && res.score != null) points.push({
       date: s.date,
-      sleep: s.values.sleep_score,
+      sleep: s.values.sleep_score, // règle 7/7
       sleepHours: s.values.sleep_hours ?? null,
       ifg: res.score,
     });
@@ -2909,7 +2950,7 @@ function renderIfgNutritionScatter() {
     store.set('sessions', upTo);
     const res = computeIFG(getProfile());
     store.set('sessions', snapshotSessions);
-    if (res) points.push({ date: s.date, nutrition: s.values.nutrition_score, ifg: res.score });
+    if (res && res.score != null) points.push({ date: s.date, nutrition: s.values.nutrition_score, ifg: res.score }); // règle 7/7
   }
   if (points.length < 2) { el.replaceChildren(h('p', { class: 'small', text: 'Données insuffisantes.' })); return; }
 

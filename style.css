@@ -328,6 +328,8 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 
 /* ---------- Légende du radar (onglet Analyse) ---------- */
 .ifg-legend-item { padding: 2px 0; }
+.ifg-legend-item.muted { color: var(--faint); }
+.ifg-todo { display: inline-block; margin: 0 4px 2px 0; color: var(--muted); }
 
 /* ---------- Barre de niveau du score global ---------- */
 .score-bar { margin: 6px 0 10px; }
