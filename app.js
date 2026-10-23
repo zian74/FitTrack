@@ -881,32 +881,41 @@ function showView(name) {
 const PREDICTIVE = ['fc', 'waist', 'grip', 'stair_pulse', 'balance_open'];
 const SCORE_PTS = { good: 100, mid: 60, low: 25 };
 
+// Score global : les 5 mesures prédictives sont TOUJOURS affichées (même sans valeur,
+// avec un badge « à faire »). Le score /100 n'est calculé que sur celles qui ont une valeur.
 function computeGlobalScore(profile) {
   const lv = latestValues();
-  // Remplace stair_pulse par l'indicateur escalier effectivement disponible (3 méthodes)
-  const predictive = PREDICTIVE.map(id => {
-    if (id !== 'stair_pulse') return id;
-    const stair = stairIndicator(lv);
-    return stair ? stair.id : null;
-  }).filter(Boolean);
+  // Remplace stair_pulse par l'indicateur escalier effectivement disponible (3 méthodes) ;
+  // s'il n'y a aucun escalier, on garde stair_pulse pour afficher la mesure « à faire ».
+  const stair = stairIndicator(lv);
+  const predictive = PREDICTIVE.map(id => (id === 'stair_pulse' && stair ? stair.id : id));
   const scored = predictive.filter(id => lv[id]);
-  if (!scored.length) return null;
-  const avg = Math.round(scored.reduce((a, id) => a + SCORE_PTS[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length);
-  const rows = scored.map(id => {
+  // Toutes les mesures (avec ou sans valeur) pour l'affichage
+  const rows = predictive.map(id => {
     const t = byId(id);
-    const st = statusOf(t, lv[id].value, profile);
+    const entry = lv[id];
+    if (!entry) {
+      return h('li', {},
+        `${t.name} — `,
+        h('span', { class: 'badge low' }, 'à faire')
+      );
+    }
+    const st = statusOf(t, entry.value, profile);
     return h('li', {},
-      `${t.name} — ${lv[id].value} ${t.unit} `,
+      `${t.name} — ${entry.value} ${t.unit} `,
       h('span', { class: `badge ${st}` }, STATUS_LABEL[st])
     );
   });
+  // Pas de valeur du tout → pas de score, mais on affiche quand même les 5 mesures « à faire »
+  if (!scored.length) return { score: null, rows };
+  const avg = Math.round(scored.reduce((a, id) => a + SCORE_PTS[statusOf(byId(id), lv[id].value, profile)], 0) / scored.length);
   return { score: avg, rows };
 }
 
 // Persiste le score global du jour (1 valeur par date, la dernière écrase)
 function recordGlobalScore() {
   const result = computeGlobalScore(getProfile());
-  if (!result) return;
+  if (!result || result.score == null) return; // pas de valeur → pas de score à persister
   const history = store.get('scoreHistory', []);
   const today = todayStr();
   const existing = history.find(h => h.date === today);
@@ -988,14 +997,17 @@ function renderDashboard() {
   const lv = latestValues();
   const scoreEl = $('#score-global-content');
   const result = computeGlobalScore(profile);
-  if (!result) {
+  // Les 5 mesures prédictives sont toujours affichées (badge « à faire » si pas de valeur).
+  // Le score /100 et la barre ne s'affichent que si au moins une valeur existe.
+  const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
+  if (result.score == null) {
     scoreEl.replaceChildren(
-      h('p', {}, 'Aucune mesure enregistrée. Commencez par une ', h('b', {}, 'session de test'), '.')
+      h('p', {}, 'Aucune mesure enregistrée. Commencez par une ', h('b', {}, 'session de test'), ' — voici les 5 mesures du score :'),
+      h('ul', { class: 'list' }, ...nodes(...result.rows))
     );
   } else {
     // Barre de niveau : 5 paliers colorés, le remplissage correspond au score /100
     const pct = Math.max(0, Math.min(100, result.score));
-    const fill = `linear-gradient(to right, var(--bad) 0%, var(--bad) 20%, var(--warn) 20%, var(--warn) 40%, #f9a825 40%, #f9a825 60%, #9e9d24 60%, #9e9d24 80%, var(--ok) 80%, var(--ok) 100%)`;
     scoreEl.replaceChildren(
       h('p', { style: { fontSize: '2em', fontWeight: '700', color: 'var(--accent)' } },
         String(result.score),
@@ -1011,7 +1023,7 @@ function renderDashboard() {
         )
       ),
       h('p', { class: 'small' }, 'Basé sur les 5 mesures les plus prédictives selon la littérature scientifique.'),
-      h('ul', { class: 'list' }, result.rows)
+      h('ul', { class: 'list' }, ...nodes(...result.rows))
     );
   }
 
@@ -2145,13 +2157,14 @@ function metroStop() {
 // Chaînage automatique : quand un timer se termine, lance le suivant (ex. escalier :
 // 3 min de montées → 1 min de pause avant la mesure du pouls). { ms, label } ou null.
 let timerNext = null;
+// Timer en minutes:secondes (M:SS ou MM:SS), sans les dixièmes de seconde
 function timerFmt(ms) {
   const total = Math.max(0, ms);
   const m = Math.floor(total / 60000);
-  const s = (total % 60000) / 1000;
+  const s = Math.floor((total % 60000) / 1000);
   return m > 0
-    ? `${m}:${String(Math.floor(s)).padStart(2, '0')},${Math.floor((s % 1) * 10)}`
-    : `${s.toFixed(1).replace('.', ',')} s`;
+    ? `${m}:${String(s).padStart(2, '0')}`
+    : `${s} s`;
 }
 function timerBeep() {
   try {
@@ -2305,10 +2318,12 @@ document.addEventListener('click', e => {
   const metronome = b.dataset.timerMetronome === '1';
   openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next, metronome);
 });
+// Chrono en minutes:secondes (MM:SS), sans les dixièmes de seconde
 function chronoFmt(ms) {
-  const s = ms / 1000;
-  const m = Math.floor(s / 60);
-  return `${String(m).padStart(2, '0')}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+  const totalS = Math.round(ms / 1000);
+  const m = Math.floor(totalS / 60);
+  const s = totalS % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 // Chaque bouton ⏱ ouvre un chrono dédié à son test (cible mémorisée, plus de sélecteur)
 function openChrono(targetId) {
@@ -2341,7 +2356,7 @@ function chronoToggle() {
 }
 function chronoReset() {
   clearInterval(chronoTimer); chronoTimer = null; chronoElapsed = 0;
-  $('#chrono-display').textContent = '00:00.0';
+  $('#chrono-display').textContent = '00:00';
   chronoSetToggleBtn(false);
 }
 $('#chrono-startstop').addEventListener('click', chronoToggle);
@@ -2349,7 +2364,7 @@ $('#chrono-reset').addEventListener('click', chronoReset);
 $('#chrono-send').addEventListener('click', () => {
   const inp = $(`#session-fields input[data-test="${chronoTargetId}"]`);
   if (inp) {
-    inp.value = Math.round(chronoElapsed / 100) / 10;
+    inp.value = Math.round(chronoElapsed / 1000); // report en secondes entières (plus de 1/10)
     inp.dispatchEvent(new Event('input', { bubbles: true }));
   }
   $('#chrono').classList.add('hidden');
