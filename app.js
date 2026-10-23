@@ -342,8 +342,15 @@ function derivedVO2(lvArg) {
 
 // Entoure les segments entre parenthèses d'un <span class="paren"> pour les
 // afficher plus petits et en italique (explications, ex. « (course, vélo rapide…) »)
+// Entoure les segments entre parenthèses d'un <span class="paren"> (petit, italique).
+// Retourne un tableau de nœuds/strings (migration innerHTML → DOM).
 function wrapParens(text) {
-  return text.replace(/\(([^()]*)\)/g, '<span class="paren">($1)</span>');
+  const parts = String(text).split(/(\([^()]*\))/g);
+  return parts.map(p =>
+    p.length > 1 && p.startsWith('(') && p.endsWith(')')
+      ? h('span', { class: 'paren' }, p)
+      : p
+  );
 }
 
 // ---------- Questionnaire IPAQ court (évaluation de la sédentarité) ----------
@@ -1262,24 +1269,27 @@ function renderIpaqBlock(block) {
   const last = latestValues();
   const lastIpaq = last['ipaq']?.value;
   const lastSit = last['sit']?.value;
-  block.innerHTML += `
-    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 7 questions, le score se calcule automatiquement.</p>
-    <div id="ipaq-questions"></div>
-    <div id="ipaq-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
-    <input type="hidden" data-test="ipaq" id="ipaq-score-input">
-    <input type="hidden" data-test="sit" id="ipaq-sit-input">`;
-  const qWrap = block.querySelector('#ipaq-questions');
+  const qWrap = h('div', { id: 'ipaq-questions' });
+  const resultEl = h('div', { id: 'ipaq-result', class: 'card', style: { background: 'var(--accent-light)', marginTop: '10px' } });
+  const scoreInput = h('input', { type: 'hidden', dataset: { test: 'ipaq' }, id: 'ipaq-score-input' });
+  const sitInput = h('input', { type: 'hidden', dataset: { test: 'sit' }, id: 'ipaq-sit-input' });
+  block.append(
+    h('p', { class: 'small' }, 'Pensez aux ', h('b', {}, '7 derniers jours'), '. Répondez aux 7 questions, le score se calcule automatiquement.'),
+    qWrap,
+    resultEl,
+    scoreInput,
+    sitInput
+  );
   const answers = {};
   IPAQ_QUESTIONS.forEach(q => {
-    const row = document.createElement('div');
-    row.className = 'field-row';
-    row.innerHTML = `
-      <label>${wrapParens(q.label)}
-        <input type="number" step="1" min="${q.min}" max="${q.max}"
-               data-ipaq="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
-      </label>`;
+    const inp = h('input', {
+      type: 'number', step: '1', min: String(q.min), max: String(q.max),
+      dataset: { ipaq: q.id }, placeholder: q.unit, style: { width: '110px' },
+    });
+    const row = h('div', { class: 'field-row' },
+      h('label', {}, ...wrapParens(q.label), inp, ' ', h('span', { class: 'small' }, q.unit))
+    );
     qWrap.appendChild(row);
-    const inp = row.querySelector('input[data-ipaq]');
     inp.addEventListener('input', () => {
       const raw = inp.value.trim();
       const num = raw === '' ? null : parseInt(raw, 10);
@@ -1292,37 +1302,55 @@ function renderIpaqBlock(block) {
   });
   updateIpaqResult(answers);
   function updateIpaqResult(a) {
-    const resultEl = block.querySelector('#ipaq-result');
     const answered = IPAQ_QUESTIONS.filter(q => a[q.id] != null).length;
     const complete = answered === IPAQ_QUESTIONS.length;
     if (!complete) {
-      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/7) — le score nécessite les 7 réponses.`;
-      block.querySelector('#ipaq-score-input').value = '';
-      block.querySelector('#ipaq-sit-input').value = '';
+      resultEl.replaceChildren(
+        h('b', {}, 'Questionnaire incomplet'),
+        ` (${answered}/7) — le score nécessite les 7 réponses.`
+      );
+      scoreInput.value = '';
+      sitInput.value = '';
       return;
     }
     const met = ipaqScore(a);
     const lvl = ipaqLevel(met);
     const sitH = Math.floor((a.sit_min || 0) / 60), sitM = (a.sit_min || 0) % 60;
-    resultEl.innerHTML = `
-      <b>Score IPAQ : ${met} MET-min/semaine</b> — ${lvl.label}<br>
-      <span class="small">Détail : intense ${Math.round((a.vig_days||0)*(a.vig_min||0))} min/j ×8 · modéré ${Math.round((a.mod_days||0)*(a.mod_min||0))} min/j ×4 · marche ${Math.round((a.walk_days||0)*(a.walk_min||0))} min/j ×3,3 ${wrapParens('(par semaine)')}</span><br>
-      <span class="small">${wrapParens('Temps assis (jour de semaine)')} : <b>${a.sit_min} min</b> ${wrapParens(`(${sitH} h ${String(sitM).padStart(2,'0')})`)}${a.sit_min > 480 ? ' — au-delà de 8 h : pensez à vous lever régulièrement' : ''}</span>
-      <div class="small" style="margin-top:4px">Repères OMS : ≥ 600 MET-min/sem ${wrapParens('(ou 150 min d\'activité modérée/sem)')} · objectif haut : ≥ 3000</div>`;
-    block.querySelector('#ipaq-score-input').value = met;
-    block.querySelector('#ipaq-sit-input').value = a.sit_min;
+    resultEl.replaceChildren(
+      h('b', {}, `Score IPAQ : ${met} MET-min/semaine`),
+      ` — ${lvl.label}`,
+      h('br'),
+      h('span', { class: 'small' },
+        `Détail : intense ${Math.round((a.vig_days || 0) * (a.vig_min || 0))} min/j ×8 · modéré ${Math.round((a.mod_days || 0) * (a.mod_min || 0))} min/j ×4 · marche ${Math.round((a.walk_days || 0) * (a.walk_min || 0))} min/j ×3,3 `,
+        ...wrapParens('(par semaine)')
+      ),
+      h('br'),
+      h('span', { class: 'small' },
+        ...wrapParens('Temps assis (jour de semaine)'),
+        ' : ',
+        h('b', {}, `${a.sit_min} min`),
+        ' ',
+        ...wrapParens(`(${sitH} h ${String(sitM).padStart(2, '0')})`),
+        a.sit_min > 480 ? ' — au-delà de 8 h : pensez à vous lever régulièrement' : ''
+      ),
+      h('div', { class: 'small', style: { marginTop: '4px' } },
+        'Repères OMS : ≥ 600 MET-min/sem ',
+        ...wrapParens("(ou 150 min d'activité modérée/sem)"),
+        ' · objectif haut : ≥ 3000'
+      )
+    );
+    scoreInput.value = met;
+    sitInput.value = a.sit_min;
   }
   if (lastIpaq != null || lastSit != null) {
-    const info = document.createElement('div');
-    info.className = 'field-last';
-    info.innerHTML = 'Dernier : ' + [
-      lastIpaq != null ? `<b>${lastIpaq}</b> MET-min/sem` : null,
-      lastSit != null ? `assis <b>${lastSit}</b> min/j` : null,
-    ].filter(Boolean).join(' · ');
-    block.insertBefore(info, block.querySelector('#ipaq-questions'));
+    const info = h('div', { class: 'field-last' }, 'Dernier : ',
+      lastIpaq != null ? [h('b', {}, String(lastIpaq)), ' MET-min/sem'] : null,
+      lastIpaq != null && lastSit != null ? ' · ' : null,
+      lastSit != null ? ['assis ', h('b', {}, String(lastSit)), ' min/j'] : null
+    );
+    block.insertBefore(info, qWrap);
   }
 }
-
 
 // Bloc questionnaire Sommeil : 5 questions, score /100 calculé en direct.
 // Le score est persisté dans un input hidden data-test="sleep_score" ;
@@ -1331,32 +1359,34 @@ function renderSleepBlock(block) {
   const last = latestValues();
   const lastScore = last['sleep_score']?.value;
   const lastHours = last['sleep_hours']?.value;
-  block.innerHTML += `
-    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 5 questions, le score se calcule automatiquement.</p>
-    <div id="sleep-questions"></div>
-    <div id="sleep-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
-    <input type="hidden" data-test="sleep_score" id="sleep-score-input">
-    <input type="hidden" data-test="sleep_hours" id="sleep-hours-input">`;
-  const qWrap = block.querySelector('#sleep-questions');
+  const qWrap = h('div', { id: 'sleep-questions' });
+  const resultEl = h('div', { id: 'sleep-result', class: 'card', style: { background: 'var(--accent-light)', marginTop: '10px' } });
+  const scoreInput = h('input', { type: 'hidden', dataset: { test: 'sleep_score' }, id: 'sleep-score-input' });
+  const hoursInput = h('input', { type: 'hidden', dataset: { test: 'sleep_hours' }, id: 'sleep-hours-input' });
+  block.append(
+    h('p', { class: 'small' }, 'Pensez aux ', h('b', {}, '7 derniers jours'), '. Répondez aux 5 questions, le score se calcule automatiquement.'),
+    qWrap,
+    resultEl,
+    scoreInput,
+    hoursInput
+  );
   const answers = {};
   SLEEP_QUESTIONS.forEach(q => {
-    const row = document.createElement('div');
-    row.className = 'field-row';
+    const row = h('div', { class: 'field-row' });
     if (q.type === 'stars') {
-      row.innerHTML = `
-        <label>${q.label}
-          <div class="sleep-stars" data-sleep-q="${q.id}">
-            ${[1, 2, 3, 4, 5].map(n =>
-              `<button type="button" class="sleep-star" data-star="${n}" title="${n}/5" aria-label="${n} sur 5">\u2606</button>`
-            ).join('')}
-          </div>
-        </label>`;
+      const starsWrap = h('div', { class: 'sleep-stars', dataset: { sleepQ: q.id } });
+      const starBtns = [1, 2, 3, 4, 5].map(n => h('button', {
+        type: 'button', class: 'sleep-star', dataset: { star: String(n) },
+        title: `${n}/5`, 'aria-label': `${n} sur 5`, text: '\u2606',
+      }));
+      starsWrap.append(...starBtns);
+      row.append(h('label', {}, q.label, starsWrap));
       qWrap.appendChild(row);
-      row.querySelectorAll('.sleep-star').forEach(btn => {
+      starBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const n = parseInt(btn.dataset.star, 10);
           answers[q.id] = n;
-          row.querySelectorAll('.sleep-star').forEach(b => {
+          starBtns.forEach(b => {
             const v = parseInt(b.dataset.star, 10);
             b.classList.toggle('active', v <= n);
             b.textContent = v <= n ? '\u2605' : '\u2606';
@@ -1366,13 +1396,12 @@ function renderSleepBlock(block) {
         });
       });
     } else {
-      row.innerHTML = `
-        <label>${q.label}
-          <input type="number" step="${q.step}" min="${q.min}" max="${q.max}"
-                 data-sleep="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
-        </label>`;
+      const inp = h('input', {
+        type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
+        dataset: { sleep: q.id }, placeholder: q.unit, style: { width: '110px' },
+      });
+      row.append(h('label', {}, q.label, inp, ' ', h('span', { class: 'small' }, q.unit)));
       qWrap.appendChild(row);
-      const inp = row.querySelector('input[data-sleep]');
       inp.addEventListener('input', () => {
         const raw = inp.value.trim();
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
@@ -1386,34 +1415,43 @@ function renderSleepBlock(block) {
   });
   updateSleepResult(answers);
   function updateSleepResult(a) {
-    const resultEl = block.querySelector('#sleep-result');
     const answered = SLEEP_QUESTIONS.filter(q => a[q.id] != null).length;
     const complete = answered === SLEEP_QUESTIONS.length;
     if (!complete) {
-      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/5) \u2014 le score n\u00e9cessite les 5 r\u00e9ponses.`;
-      block.querySelector('#sleep-score-input').value = '';
-      block.querySelector('#sleep-hours-input').value = '';
+      resultEl.replaceChildren(
+        h('b', {}, 'Questionnaire incomplet'),
+        ` (${answered}/5) — le score nécessite les 5 réponses.`
+      );
+      scoreInput.value = '';
+      hoursInput.value = '';
       return;
     }
     const score = sleepScore(a);
     const lvl = sleepLevel(score);
-    const h = a.hours;
-    const hFmt = h % 1 === 0 ? h.toFixed(0) : h.toFixed(1).replace('.', ',');
-    resultEl.innerHTML = `
-      <b>Score de sommeil : ${score}/100</b> \u2014 ${lvl.label}<br>
-      <span class="small">Dur\u00e9e moyenne : <b>${hFmt} h</b> \u00b7 qualit\u00e9 ${a.quality}/5 \u00b7 endormissement ${a.latency} min \u00b7 ${a.awakenings} r\u00e9veil${a.awakenings > 1 ? 's' : ''}/nuit \u00b7 repos\u00e9 ${a.rested}/5</span>
-      <div class="small" style="margin-top:4px">Rep\u00e8res NSF : 7\u20139 h par nuit pour un adulte \u00b7 \u2265 80 bon \u00b7 60\u201379 moyen \u00b7 &lt; 60 perturb\u00e9</div>`;
-    block.querySelector('#sleep-score-input').value = score;
-    block.querySelector('#sleep-hours-input').value = h;
+    const hrs = a.hours;
+    const hFmt = hrs % 1 === 0 ? hrs.toFixed(0) : hrs.toFixed(1).replace('.', ',');
+    resultEl.replaceChildren(
+      h('b', {}, `Score de sommeil : ${score}/100`),
+      ` — ${lvl.label}`,
+      h('br'),
+      h('span', { class: 'small' },
+        'Durée moyenne : ', h('b', {}, `${hFmt} h`),
+        ` · qualité ${a.quality}/5 · endormissement ${a.latency} min · ${a.awakenings} réveil${a.awakenings > 1 ? 's' : ''}/nuit · reposé ${a.rested}/5`
+      ),
+      h('div', { class: 'small', style: { marginTop: '4px' } },
+        'Repères NSF : 7–9 h par nuit pour un adulte · ≥ 80 bon · 60–79 moyen · < 60 perturbé'
+      )
+    );
+    scoreInput.value = score;
+    hoursInput.value = hrs;
   }
   if (lastScore != null || lastHours != null) {
-    const info = document.createElement('div');
-    info.className = 'field-last';
-    info.innerHTML = 'Dernier : ' + [
-      lastScore != null ? `score <b>${lastScore}</b>/100` : null,
-      lastHours != null ? `<b>${lastHours} h</b>` : null,
-    ].filter(Boolean).join(' \u00b7 ');
-    block.insertBefore(info, block.querySelector('#sleep-questions'));
+    const info = h('div', { class: 'field-last' }, 'Dernier : ',
+      lastScore != null ? ['score ', h('b', {}, `${lastScore}`), '/100'] : null,
+      lastScore != null && lastHours != null ? ' · ' : null,
+      lastHours != null ? [h('b', {}, `${lastHours} h`)] : null
+    );
+    block.insertBefore(info, qWrap);
   }
 }
 
@@ -1422,38 +1460,43 @@ function renderSleepBlock(block) {
 function renderNutritionBlock(block) {
   const last = latestValues();
   const lastScore = last['nutrition_score']?.value;
-  block.innerHTML += `
-    <p class="small">Pensez aux <b>7 derniers jours</b>. Répondez aux 6 questions, le score se calcule automatiquement (la question N7 sur l'alcool est facultative et hors score).</p>
-    <div id="nutrition-questions"></div>
-    <div id="nutrition-result" class="card" style="background:var(--accent-light);margin-top:10px"></div>
-    <input type="hidden" data-test="nutrition_score" id="nutrition-score-input">
-    <input type="hidden" data-test="alcohol" id="nutrition-alcohol-input">`;
-  const qWrap = block.querySelector('#nutrition-questions');
+  const qWrap = h('div', { id: 'nutrition-questions' });
+  const resultEl = h('div', { id: 'nutrition-result', class: 'card', style: { background: 'var(--accent-light)', marginTop: '10px' } });
+  const scoreInput = h('input', { type: 'hidden', dataset: { test: 'nutrition_score' }, id: 'nutrition-score-input' });
+  const alcoholInput = h('input', { type: 'hidden', dataset: { test: 'alcohol' }, id: 'nutrition-alcohol-input' });
+  block.append(
+    h('p', { class: 'small' }, 'Pensez aux ', h('b', {}, '7 derniers jours'), '. Répondez aux 6 questions, le score se calcule automatiquement (la question N7 sur l’alcool est facultative et hors score).'),
+    qWrap,
+    resultEl,
+    scoreInput,
+    alcoholInput
+  );
   const answers = {};
   // N7 alcool : informatif — prérempli avec la dernière valeur connue
   const lastAlcohol = latestValues()['alcohol']?.value;
   if (lastAlcohol != null) answers.alcohol = lastAlcohol;
   NUTRITION_QUESTIONS.forEach(q => {
-    const row = document.createElement('div');
-    row.className = 'field-row';
+    const row = h('div', { class: 'field-row' });
     const infoBtn = q.infoKey
-      ? ` <button type="button" class="info-btn" data-info-test="${q.infoKey}" title="${q.infoTitle}" aria-label="${q.infoTitle}">ⓘ</button>`
-      : '';
+      ? h('button', {
+          type: 'button', class: 'info-btn', dataset: { infoTest: q.infoKey },
+          title: q.infoTitle, 'aria-label': q.infoTitle, text: 'ⓘ',
+        })
+      : null;
     if (q.type === 'stars') {
-      row.innerHTML = `
-        <label>${q.label}${infoBtn}
-          <div class="sleep-stars" data-nutrition-q="${q.id}">
-            ${[1, 2, 3, 4, 5].map(n =>
-              `<button type="button" class="sleep-star" data-star="${n}" title="${n}/5" aria-label="${n} sur 5">\u2606</button>`
-            ).join('')}
-          </div>
-        </label>`;
+      const starsWrap = h('div', { class: 'sleep-stars', dataset: { nutritionQ: q.id } });
+      const starBtns = [1, 2, 3, 4, 5].map(n => h('button', {
+        type: 'button', class: 'sleep-star', dataset: { star: String(n) },
+        title: `${n}/5`, 'aria-label': `${n} sur 5`, text: '\u2606',
+      }));
+      starsWrap.append(...starBtns);
+      row.append(h('label', {}, q.label, infoBtn ? ' ' : null, infoBtn, starsWrap));
       qWrap.appendChild(row);
-      row.querySelectorAll('.sleep-star').forEach(btn => {
+      starBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const n = parseInt(btn.dataset.star, 10);
           answers[q.id] = n;
-          row.querySelectorAll('.sleep-star').forEach(b => {
+          starBtns.forEach(b => {
             const v = parseInt(b.dataset.star, 10);
             b.classList.toggle('active', v <= n);
             b.textContent = v <= n ? '\u2605' : '\u2606';
@@ -1463,14 +1506,13 @@ function renderNutritionBlock(block) {
         });
       });
     } else {
-      row.innerHTML = `
-        <label>${q.label}${infoBtn}
-          <input type="number" step="${q.step}" min="${q.min}" max="${q.max}"
-                 data-nutrition="${q.id}" placeholder="${q.unit}" style="width:110px"> <span class="small">${q.unit}</span>
-        </label>`;
-      qWrap.appendChild(row);
-      const inp = row.querySelector('input[data-nutrition]');
+      const inp = h('input', {
+        type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
+        dataset: { nutrition: q.id }, placeholder: q.unit, style: { width: '110px' },
+      });
       if (q.id === 'alcohol' && lastAlcohol != null) inp.value = lastAlcohol;
+      row.append(h('label', {}, q.label, infoBtn ? ' ' : null, infoBtn, inp, ' ', h('span', { class: 'small' }, q.unit)));
+      qWrap.appendChild(row);
       inp.addEventListener('input', () => {
         const raw = inp.value.trim();
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
@@ -1484,32 +1526,39 @@ function renderNutritionBlock(block) {
   });
   updateNutritionResult(answers);
   function updateNutritionResult(a) {
-    const resultEl = block.querySelector('#nutrition-result');
     // Le score porte sur les 6 questions pondérées ; N7 (alcool) est informatif et optionnel
     const scored = NUTRITION_QUESTIONS.filter(q => !q.contextual);
     const answered = scored.filter(q => a[q.id] != null).length;
     const complete = answered === scored.length;
     if (!complete) {
-      resultEl.innerHTML = `<b>Questionnaire incomplet</b> (${answered}/6) \u2014 le score n\u00e9cessite les 6 r\u00e9ponses.`;
-      block.querySelector('#nutrition-score-input').value = '';
+      resultEl.replaceChildren(
+        h('b', {}, 'Questionnaire incomplet'),
+        ` (${answered}/6) — le score nécessite les 6 réponses.`
+      );
+      scoreInput.value = '';
     } else {
       const score = nutritionScore(a);
       const lvl = nutritionLevel(score);
-      const alcoholTxt = a.alcohol != null ? ` \u00b7 alcool ${a.alcohol} verre${a.alcohol > 1 ? 's' : ''}/sem` : '';
-      resultEl.innerHTML = `
-      <b>Score alimentaire : ${score}/100</b> \u2014 ${lvl.label}<br>
-      <span class="small">Fruits & l\u00e9gumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j \u00b7 boissons sucr\u00e9es ${a.sugary}/j \u00b7 ultra-transform\u00e9s ${a.ultra} fois/sem \u00b7 petit-d\u00e9jeuner ${a.breakfast}/5 \u00b7 maison ${a.homecooked}/5 \u00b7 eau ${a.water} verre${a.water > 1 ? 's' : ''}/j${alcoholTxt}</span>
-      <div class="small" style="margin-top:4px">Rep\u00e8res OMS : \u2265 5 portions de fruits & l\u00e9gumes/jour \u00b7 limiter les boissons sucr\u00e9es \u00b7 \u2265 80 \u00e9quilibr\u00e9 \u00b7 60\u201379 moyen \u00b7 &lt; 60 \u00e0 am\u00e9liorer</div>`;
-      block.querySelector('#nutrition-score-input').value = score;
+      const alcoholTxt = a.alcohol != null ? ` · alcool ${a.alcohol} verre${a.alcohol > 1 ? 's' : ''}/sem` : '';
+      resultEl.replaceChildren(
+        h('b', {}, `Score alimentaire : ${score}/100`),
+        ` — ${lvl.label}`,
+        h('br'),
+        h('span', { class: 'small' },
+          `Fruits & légumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j · boissons sucrées ${a.sugary}/j · ultra-transformés ${a.ultra} fois/sem · petit-déjeuner ${a.breakfast}/5 · maison ${a.homecooked}/5 · eau ${a.water} verre${a.water > 1 ? 's' : ''}/j${alcoholTxt}`
+        ),
+        h('div', { class: 'small', style: { marginTop: '4px' } },
+          'Repères OMS : ≥ 5 portions de fruits & légumes/jour · limiter les boissons sucrées · ≥ 80 équilibré · 60–79 moyen · < 60 à améliorer'
+        )
+      );
+      scoreInput.value = score;
     }
     // N7 alcool persisté dès qu'elle est saisie (hors score, alimente le risque cardio)
-    block.querySelector('#nutrition-alcohol-input').value = a.alcohol != null ? a.alcohol : '';
+    alcoholInput.value = a.alcohol != null ? a.alcohol : '';
   }
   if (lastScore != null) {
-    const info = document.createElement('div');
-    info.className = 'field-last';
-    info.innerHTML = `Dernier : score <b>${lastScore}</b>/100`;
-    block.insertBefore(info, block.querySelector('#nutrition-questions'));
+    const info = h('div', { class: 'field-last' }, 'Dernier : score ', h('b', {}, `${lastScore}`), '/100');
+    block.insertBefore(info, qWrap);
   }
 }
 
@@ -1546,42 +1595,63 @@ function renderSessionFields() {
       if (STAIR_METHODS.includes(t.id)) {
         // Le sélecteur n'est rendu qu'une fois (avec la 1re méthode)
         if (t.id === 'stair_pulse') {
-          const sel = document.createElement('div');
-          sel.className = 'stair-method-select';
-          sel.innerHTML = `
-            <span class="row ifg-period-group" id="stair-method" title="Méthode de mesure" style="margin:0 0 6px">
-              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_pulse" checked> Méthode 1 — Pouls à 1 min</label>
-              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_steps"> Méthode 2 — Marches en 60 s</label>
-              <label class="ifg-period-opt"><input type="radio" name="stair-method" value="stair_4floors"> Méthode 3 — 4 étages chronométrés</label>
-            </span>`;
+          const sel = h('div', { class: 'stair-method-select' },
+            h('span', { class: 'row ifg-period-group', id: 'stair-method', title: 'Méthode de mesure', style: { margin: '0 0 6px' } },
+              h('label', { class: 'ifg-period-opt' },
+                h('input', { type: 'radio', name: 'stair-method', value: 'stair_pulse', checked: true }),
+                ' Méthode 1 — Pouls à 1 min'),
+              h('label', { class: 'ifg-period-opt' },
+                h('input', { type: 'radio', name: 'stair-method', value: 'stair_steps' }),
+                ' Méthode 2 — Marches en 60 s'),
+              h('label', { class: 'ifg-period-opt' },
+                h('input', { type: 'radio', name: 'stair-method', value: 'stair_4floors' }),
+                ' Méthode 3 — 4 étages chronométrés')));
           block.appendChild(sel);
         }
         const row = document.createElement('div');
         row.className = 'field-row stair-method-row';
         row.dataset.stairMethod = t.id;
         const chronoBtn = chronoBtns.includes(t.id)
-          ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+          ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
         // Timer 3 min (méthode 1, avec chaînage 1 min) ou 60 s (méthode 2)
         const stairTimerBtn = t.id === 'stair_pulse'
-          ? `<button class="timer-btn" data-timer-ms="180000" data-timer-editable="1" data-timer-metronome="1" data-timer-label="Test escalier — montées (24/min)" data-timer-next-ms="60000" data-timer-next-label="Escalier — mesure du pouls dans 1 min (asseyez-vous)" title="Compte à rebours 3 min pour les montées d'escalier (durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls">⏳</button>`
+          ? h('button', {
+              class: 'timer-btn',
+              dataset: {
+                timerMs: '180000', timerEditable: '1', timerMetronome: '1',
+                timerLabel: 'Test escalier — montées (24/min)',
+                timerNextMs: '60000',
+                timerNextLabel: 'Escalier — mesure du pouls dans 1 min (asseyez-vous)'
+              },
+              title: 'Compte à rebours 3 min pour les montées d’escalier (durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls',
+              text: '⏳'
+            })
           : t.id === 'stair_steps'
-            ? `<button class="timer-btn" data-timer-ms="60000" data-timer-label="Escalier — marches en 60 s" title="Compte à rebours 60 s pour compter les marches">⏳</button>`
-            : '';
+            ? h('button', {
+                class: 'timer-btn',
+                dataset: { timerMs: '60000', timerLabel: 'Escalier — marches en 60 s' },
+                title: 'Compte à rebours 60 s pour compter les marches',
+                text: '⏳'
+              })
+            : null;
         const infoBtn = t.info
-          ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
+          ? h('button', { class: 'info-btn', dataset: { infoTest: t.id }, title: 'Comment réaliser ce test ?', 'aria-label': `Informations sur ${t.name}`, text: 'ⓘ' }) : null;
         const last = latestValues()[t.id]?.value;
         const lastInfo = last != null
-          ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
-        row.innerHTML = `
-          <label><span class="test-num">${testNum(t.id)}</span>${t.name}
-            ${infoBtn}
-            <div class="field-hint">${t.hint || ''}</div>
-            ${lastInfo}
-          </label>
-          <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
-                 data-test="${t.id}" placeholder="${t.unit}" ${t.id !== 'stair_pulse' ? 'disabled' : ''}>
-          ${chronoBtn}
-          ${stairTimerBtn}`;
+          ? h('div', { class: 'field-last' }, 'Dernier : ', h('b', {}, `${last}`), ` ${t.unit}`) : null;
+        row.replaceChildren(
+          h('label', {},
+            h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
+            infoBtn,
+            h('div', { class: 'field-hint', text: t.hint || '' }),
+            lastInfo),
+          h('input', {
+            type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
+            dataset: { test: t.id }, placeholder: t.unit,
+            ...(t.id !== 'stair_pulse' ? { disabled: true } : {})
+          }),
+          chronoBtn,
+          stairTimerBtn);
         block.appendChild(row);
         const inp = row.querySelector('input[data-test]');
         inp.addEventListener('input', () => updateFieldValidity(t, inp));
@@ -1590,43 +1660,57 @@ function renderSessionFields() {
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
-        ? `<button class="chrono-btn" data-chrono-target="${t.id}">⏱</button>` : '';
+        ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
       // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
-        ? `<button class="timer-btn" data-timer-ms="30000" data-timer-label="Chaise 30 s — répétitions" title="Compte à rebours 30 s pour compter les répétitions">⏳</button>` : '';
+        ? h('button', {
+            class: 'timer-btn',
+            dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions' },
+            title: 'Compte à rebours 30 s pour compter les répétitions',
+            text: '⏳'
+          }) : null;
       const infoBtn = t.info
-        ? `<button class="info-btn" data-info-test="${t.id}" title="Comment réaliser ce test ?" aria-label="Informations sur ${t.name}">ⓘ</button>` : '';
+        ? h('button', { class: 'info-btn', dataset: { infoTest: t.id }, title: 'Comment réaliser ce test ?', 'aria-label': `Informations sur ${t.name}`, text: 'ⓘ' }) : null;
       const last = latestValues()[t.id]?.value;
       const lastInfo = last != null
-        ? `<div class="field-last">Dernier : <b>${last}</b> ${t.unit}</div>` : '';
+        ? h('div', { class: 'field-last' }, 'Dernier : ', h('b', {}, `${last}`), ` ${t.unit}`) : null;
       // Choix de durée pour le Cooper en boutons radio (12 min ou demi-Cooper 6 min, normalisé ×2)
       const cooperSelect = t.id === 'cooper'
-        ? `<span class="row ifg-period-group" id="cooper-duration" title="Durée du test" style="margin:0">
-             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="12" checked> 12 min (complet)</label>
-             <label class="ifg-period-opt"><input type="radio" name="cooper-duration" value="6"> 6 min (demi-Cooper)</label>
-           </span>` : '';
+        ? h('span', { class: 'row ifg-period-group', id: 'cooper-duration', title: 'Durée du test', style: { margin: '0' } },
+            h('label', { class: 'ifg-period-opt' },
+              h('input', { type: 'radio', name: 'cooper-duration', value: '12', checked: true }),
+              ' 12 min (complet)'),
+            h('label', { class: 'ifg-period-opt' },
+              h('input', { type: 'radio', name: 'cooper-duration', value: '6' }),
+              ' 6 min (demi-Cooper)'))
+        : null;
       // Bloc d'estimation VMA / VO2max pour le Cooper (champs optionnels + calculs croisés)
       const cooperEstim = t.id === 'cooper'
-        ? `<div class="cooper-estim">
-             <div class="row" style="margin:6px 0">
-               <label>VMA (km/h) : <input type="number" id="cooper-vma" step="0.1" min="4" max="30" placeholder="ex. 12,5" style="width:90px"></label>
-               <label>VO2max (ml/kg/min) : <input type="number" id="cooper-vo2" step="0.1" min="10" max="90" placeholder="ex. 44" style="width:90px"></label>
-             </div>
-             <div class="field-hint">Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.</div>
-             <div id="cooper-estim-result" class="estimation-box hidden"></div>
-           </div>` : '';
-      row.innerHTML = `
-        <label><span class="test-num">${testNum(t.id)}</span>${t.name}
-          ${infoBtn}
-          <div class="field-hint">${t.hint || ''}</div>
-          ${lastInfo}
-        </label>
-        ${cooperSelect}
-        <input type="number" step="any" min="${t.min ?? 0}" max="${t.max ?? 999}"
-               data-test="${t.id}" placeholder="${t.unit}">
-        ${chronoBtn}
-        ${chairTimerBtn}
-        ${cooperEstim}`;
+        ? h('div', { class: 'cooper-estim' },
+            h('div', { class: 'row', style: { margin: '6px 0' } },
+              h('label', {},
+                'VMA (km/h) : ',
+                h('input', { type: 'number', id: 'cooper-vma', step: '0.1', min: '4', max: '30', placeholder: 'ex. 12,5', style: { width: '90px' } })),
+              h('label', {},
+                'VO2max (ml/kg/min) : ',
+                h('input', { type: 'number', id: 'cooper-vo2', step: '0.1', min: '10', max: '90', placeholder: 'ex. 44', style: { width: '90px' } }))),
+            h('div', { class: 'field-hint', text: 'Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.' }),
+            h('div', { id: 'cooper-estim-result', class: 'estimation-box hidden' }))
+        : null;
+      row.replaceChildren(
+        h('label', {},
+          h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
+          infoBtn,
+          h('div', { class: 'field-hint', text: t.hint || '' }),
+          lastInfo),
+        cooperSelect,
+        h('input', {
+          type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
+          dataset: { test: t.id }, placeholder: t.unit
+        }),
+        chronoBtn,
+        chairTimerBtn,
+        cooperEstim);
       block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
       inp.addEventListener('input', () => updateFieldValidity(t, inp));
@@ -1640,9 +1724,11 @@ function renderSessionFields() {
   const profile = getProfile();
   if (type === 'cardio' && hasMajorRisk(profile)) {
     const n = riskFactors(profile).filter(f => f.major).length;
-    const w = document.createElement('div');
-    w.className = 'warning';
-    w.innerHTML = `⚠️ <b>Test de Cooper déconseillé</b> : ${n} facteur${n > 1 ? 's' : ''} de risque cardio majeur${n > 1 ? 's' : ''} déclaré${n > 1 ? 's' : ''} dans votre profil. Avis médical recommandé avant un test maximal (privilégiez le test de l'escalier, sous-maximal).`;
+    const s = n > 1 ? 's' : '';
+    const w = h('div', { class: 'warning' },
+      '⚠️ ',
+      h('b', {}, 'Test de Cooper déconseillé'),
+      ` : ${n} facteur${s} de risque cardio majeur${s} déclaré${s} dans votre profil. Avis médical recommandé avant un test maximal (privilégiez le test de l’escalier, sous-maximal).`);
     container.prepend(w);
   }
 }
