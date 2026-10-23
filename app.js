@@ -282,12 +282,12 @@ const TESTS = [
     gender: { H: { good: 8, mid: 7 }, F: { good: 8, mid: 7 } } },
   // --- Groupe Alimentation (questionnaire 7 derniers jours, score calculé) ---
   { id: 'nutrition_score', name: 'Score alimentaire', unit: '/100', group: 'nutrition',
-    hint: 'Score calculé automatiquement depuis le questionnaire (6 questions scorées + alcool N7 contextuel, sur les 7 derniers jours)',
+    hint: 'Score calculé automatiquement depuis le questionnaire (7 questions, alcool N7 inclus, sur les 7 derniers jours)',
     good: 80, mid: 60, max: 100, min: 0,
     info: `<ul>
-      <li>Le <b>score alimentaire</b> (/100) est calculé automatiquement à partir de <b>6 questions</b> sur vos 7 derniers jours : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation. La question <b>N7 (alcool)</b> est <b>contextuelle</b> : elle n'entre pas dans le score mais alimente le récapitulatif des facteurs de risque cardio (onglet Profil).</li>
+      <li>Le <b>score alimentaire</b> (/100) est calculé automatiquement à partir de <b>7 questions</b> sur vos 7 derniers jours : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison, hydratation et alcool.</li>
       <li><b>Interprétation</b> : ≥ 80 alimentation équilibrée · 60–79 moyenne, marge d'amélioration · &lt; 60 alimentation à améliorer.</li>
-      <li><b>Repères OMS</b> : au moins 400 g de fruits et légumes par jour (5 portions), limiter les boissons sucrées et les aliments ultra-transformés.</li>
+      <li><b>Repères OMS</b> : au moins 400 g de fruits et légumes par jour (5 portions), limiter les boissons sucrées et les aliments ultra-transformés, et limiter l'alcool (≤ 10 verres/semaine).</li>
     </ul>` },
   // --- Indicateurs dérivés (non saisis directement) ---
   // VMA et VO2max estimées : calculées depuis la dernière session Cooper/demi-Cooper
@@ -313,13 +313,13 @@ const TESTS = [
       <li>Repères indicatifs (adultes) : ≥ 45 (H) / ≥ 38 (F) ml/kg/min = bonne forme ; 35–44,9 (H) / 30–37,9 (F) = moyenne.</li>
       <li>Une VO2max élevée est associée à une meilleure santé cardiovasculaire et une mortalité réduite (Kodama et al., JAMA 2009).</li>
     </ul>` },
-  // --- Mesure contextuelle (hors score, alimente le risque cardio) ---
+  // --- Mesure déclarée dans le questionnaire Alimentation (N7) ---
   { id: 'alcohol', name: 'Alcool (verres/semaine)', unit: 'verres/sem', group: 'nutrition', rev: true,
-    hint: 'Saisi dans le questionnaire Alimentation (N7) — informatif, hors score alimentaire',
+    hint: 'Saisi dans le questionnaire Alimentation (N7) — entre dans le score alimentaire et alimente le risque cardio',
     good: 0, mid: 7, max: 60, min: 0,
     info: `<ul>
       <li>Consommation d'alcool déclarée dans le <b>questionnaire Alimentation</b> (question N7, sur les 7 derniers jours).</li>
-      <li>Cette mesure est <b>contextuelle</b> : elle ne participe pas au score alimentaire, mais alimente le <b>recapitulatif des facteurs de risque cardiovasculaire</b> (onglet Profil).</li>
+      <li>Elle <b>participe au score alimentaire</b> (poids 10/110) et alimente le <b>récapitulatif des facteurs de risque cardiovasculaire</b> (onglet Profil).</li>
       <li>Repères OMS : au-delà de <b>14 verres/semaine</b>, la consommation est considérée comme à risque (facteur majeur).</li>
     </ul>` },
 ];
@@ -452,11 +452,12 @@ function sleepLevel(score) {
 }
 
 // ---------- Questionnaire Alimentation (évaluation des habitudes alimentaires) ----------
-// 6 questions sur les 7 derniers jours. Score /100 pondéré :
-//   fruits & légumes 25 % · boissons sucrées 20 % · ultra-transformés 20 %
-//   petit-déjeuner 10 % · repas maison 15 % · hydratation 10 %
+// 7 questions sur les 7 derniers jours. Score /100 pondéré (poids total 110) :
+//   fruits & légumes 25 · boissons sucrées 20 · ultra-transformés 20
+//   petit-déjeuner 10 · repas maison 15 · hydratation 10 · alcool 10
 // Repères OMS : ≥ 400 g/j de fruits & légumes (5 portions), limiter les boissons
-// sucrées et les aliments ultra-transformés (classification NOVA, Monteiro 2019).
+// sucrées et les aliments ultra-transformés (classification NOVA, Monteiro 2019),
+// et limiter l'alcool (repère OMS/SPF : ≤ 10 verres/semaine).
 const NUTRITION_QUESTIONS = [
   { id: 'veg', label: 'N1 — En moyenne, combien de portions de fruits & légumes par jour ?', unit: 'portions', type: 'number', min: 0, max: 15, step: 0.5, weight: 25,
     infoKey: '__portion__', infoTitle: 'Qu’est-ce qu’une portion de fruits & légumes ?' },
@@ -465,7 +466,7 @@ const NUTRITION_QUESTIONS = [
   { id: 'breakfast', label: 'N4 — Prenez-vous un petit-déjeuner régulièrement ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 10 },
   { id: 'homecooked', label: 'N5 — Vos repas sont-ils majoritairement préparés maison ?', unit: '/5', type: 'stars', min: 1, max: 5, weight: 15 },
   { id: 'water', label: 'N6 — Combien de verres d’eau buvez-vous par jour ?', unit: 'verres', type: 'number', min: 0, max: 20, step: 1, weight: 10 },
-  { id: 'alcohol', label: 'N7 — Combien de verres d’alcool consommez-vous par semaine ?', unit: 'verres/sem', type: 'number', min: 0, max: 60, step: 1, weight: 0, contextual: true },
+  { id: 'alcohol', label: 'N7 — Combien de verres d’alcool consommez-vous par semaine ?', unit: 'verres/sem', type: 'number', min: 0, max: 60, step: 1, weight: 10 },
 ];
 
 // Score d'un item individuel (0–100) puis pondération pour le score global /100.
@@ -505,16 +506,25 @@ function nutritionItemScore(q, value) {
       if (value >= 3) return 60;
       if (value >= 1) return 40;
       return 20;
+    case 'alcohol':
+      // Repère OMS/SPF : ≤ 10 verres/semaine · 0 = 100 · ≤ 2 = 90 · ≤ 5 = 80
+      // ≤ 7 = 60 · ≤ 10 = 40 · ≤ 13 = 20 · ≥ 14 = 0 (seuil risque, facteur majeur cardio)
+      if (value === 0) return 100;
+      if (value <= 2) return 90;
+      if (value <= 5) return 80;
+      if (value <= 7) return 60;
+      if (value <= 10) return 40;
+      if (value <= 13) return 20;
+      return 0;
     default:
       return 0;
   }
 }
 
-// Score alimentaire /100 (moyenne pondérée des 6 items, poids total = 100).
+// Score alimentaire /100 (moyenne pondérée des 7 items, poids total = 110).
 function nutritionScore(a) {
   let total = 0, weight = 0;
   for (const q of NUTRITION_QUESTIONS) {
-    if (q.contextual) continue; // N7 alcool : informatif, hors score
     const v = a[q.id];
     if (v == null) continue;
     total += nutritionItemScore(q, v) * q.weight;
@@ -1471,7 +1481,7 @@ function renderSleepBlock(block) {
   }
 }
 
-// Bloc questionnaire Alimentation : 6 questions scorées + N7 alcool (contextuelle), score /100 calculé en direct.
+// Bloc questionnaire Alimentation : 7 questions scorées (dont N7 alcool), score /100 calculé en direct.
 // Le score est persisté dans un input hidden data-test="nutrition_score".
 function renderNutritionBlock(block) {
   const last = latestValues();
@@ -1481,14 +1491,14 @@ function renderNutritionBlock(block) {
   const scoreInput = h('input', { type: 'hidden', dataset: { test: 'nutrition_score' }, id: 'nutrition-score-input' });
   const alcoholInput = h('input', { type: 'hidden', dataset: { test: 'alcohol' }, id: 'nutrition-alcohol-input' });
   block.append(
-    h('p', { class: 'small' }, 'Pensez aux ', h('b', {}, '7 derniers jours'), '. Répondez aux 6 questions, le score se calcule automatiquement (la question N7 sur l’alcool est facultative et hors score).'),
+    h('p', { class: 'small' }, 'Pensez aux ', h('b', {}, '7 derniers jours'), '. Répondez aux 7 questions, le score se calcule automatiquement.'),
     qWrap,
     resultEl,
     scoreInput,
     alcoholInput
   );
   const answers = {};
-  // N7 alcool : informatif — prérempli avec la dernière valeur connue
+  // N7 alcool : prérempli avec la dernière valeur connue
   const lastAlcohol = latestValues()['alcohol']?.value;
   if (lastAlcohol != null) answers.alcohol = lastAlcohol;
   NUTRITION_QUESTIONS.forEach(q => {
@@ -1542,34 +1552,33 @@ function renderNutritionBlock(block) {
   });
   updateNutritionResult(answers);
   function updateNutritionResult(a) {
-    // Le score porte sur les 6 questions pondérées ; N7 (alcool) est informatif et optionnel
-    const scored = NUTRITION_QUESTIONS.filter(q => !q.contextual);
+    // Le score porte sur les 7 questions pondérées (alcool N7 inclus)
+    const scored = NUTRITION_QUESTIONS;
     const answered = scored.filter(q => a[q.id] != null).length;
     const complete = answered === scored.length;
     if (!complete) {
       resultEl.replaceChildren(
         h('b', {}, 'Questionnaire incomplet'),
-        ` (${answered}/6) — le score nécessite les 6 réponses.`
+        ` (${answered}/7) — le score nécessite les 7 réponses.`
       );
       scoreInput.value = '';
     } else {
       const score = nutritionScore(a);
       const lvl = nutritionLevel(score);
-      const alcoholTxt = a.alcohol != null ? ` · alcool ${a.alcohol} verre${a.alcohol > 1 ? 's' : ''}/sem` : '';
       resultEl.replaceChildren(
         h('b', {}, `Score alimentaire : ${score}/100`),
         ` — ${lvl.label}`,
         h('br'),
         h('span', { class: 'small' },
-          `Fruits & légumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j · boissons sucrées ${a.sugary}/j · ultra-transformés ${a.ultra} fois/sem · petit-déjeuner ${a.breakfast}/5 · maison ${a.homecooked}/5 · eau ${a.water} verre${a.water > 1 ? 's' : ''}/j${alcoholTxt}`
+          `Fruits & légumes ${a.veg} portion${a.veg > 1 ? 's' : ''}/j · boissons sucrées ${a.sugary}/j · ultra-transformés ${a.ultra} fois/sem · petit-déjeuner ${a.breakfast}/5 · maison ${a.homecooked}/5 · eau ${a.water} verre${a.water > 1 ? 's' : ''}/j · alcool ${a.alcohol} verre${a.alcohol > 1 ? 's' : ''}/sem`
         ),
         h('div', { class: 'small', style: { marginTop: '4px' } },
-          'Repères OMS : ≥ 5 portions de fruits & légumes/jour · limiter les boissons sucrées · ≥ 80 équilibré · 60–79 moyen · < 60 à améliorer'
+          'Repères OMS : ≥ 5 portions de fruits & légumes/jour · limiter les boissons sucrées · limiter l’alcool (≤ 10 verres/sem) · ≥ 80 équilibré · 60–79 moyen · < 60 à améliorer'
         )
       );
       scoreInput.value = score;
     }
-    // N7 alcool persisté dès qu'elle est saisie (hors score, alimente le risque cardio)
+    // N7 alcool persisté dès qu'elle est saisie (alimente aussi le risque cardio)
     alcoholInput.value = a.alcohol != null ? a.alcohol : '';
   }
   if (lastScore != null) {
@@ -1877,7 +1886,7 @@ const STATIC_INFOS = {
       <li><b>Durée de sommeil recommandée</b> : <b>NSF (National Sleep Foundation)</b> — 7–9 h par nuit pour un adulte (18–64 ans), 7–8 h pour 65 ans et +. <b>OMS</b> : le sommeil insuffisant (&lt; 6 h) est associé à un risque accru de maladies cardiovasculaires, d'obésité et de troubles métaboliques.</li>
       <li><b>Import montre connectée</b> : les formats CSV (Garmin Connect, générique), TCX (Training Center XML) et GPX sont lus localement (FileReader). Le mapping estime la FC de repos (min de la journée), la durée de sommeil et un score provisoire, ainsi qu'un score IPAQ approximatif depuis les pas, la durée et la FC moyenne (3,3 MET×marche + 4×modérée + 8×intense, protocole IPAQ court Craig 2003).</li>
       <li><b>Sommeil et récupération</b> : un sommeil de qualité est un pilier de la récupération musculaire et de la régulation hormonale (métabolisme, sensibilité à l'insuline). Les méta-analyses associent un sommeil court ou de mauvaise qualité à une mortalité cardiovasculaire et toutes causes accrue (ex. : Cappuccio FP et al., <i>European Heart Journal</i>, 2011).</li>
-      <li><b>Score alimentaire (questionnaire 6 items)</b> : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison et hydratation — inspiré des repères <b>OMS</b> (≥ 400 g/j de fruits &amp; légumes, limiter les boissons sucrées) et de la classification <b>NOVA</b> des aliments ultra-transformés (Monteiro CA et al., 2019). Pondération : fruits &amp; légumes 25 %, boissons sucrées 20 %, ultra-transformés 20 %, petit-déjeuner 10 %, repas maison 15 %, hydratation 10 %.</li>
+      <li><b>Score alimentaire (questionnaire 7 items)</b> : fruits &amp; légumes, boissons sucrées, produits ultra-transformés, petit-déjeuner, repas maison, hydratation et alcool — inspiré des repères <b>OMS</b> (≥ 400 g/j de fruits &amp; légumes, limiter les boissons sucrées, limiter l'alcool à ≤ 10 verres/semaine) et de la classification <b>NOVA</b> des aliments ultra-transformés (Monteiro CA et al., 2019). Pondération (total 110) : fruits &amp; légumes 25, boissons sucrées 20, ultra-transformés 20, petit-déjeuner 10, repas maison 15, hydratation 10, alcool 10.</li>
       <li><b>Alimentation et santé cardiovasculaire</b> : les méta-analyses associent le régime méditerranéen et une alimentation riche en fruits/légumes à une réduction du risque cardiovasculaire (Sofi F et al., <i>Am J Clin Nutr</i>, 2010 ; Widmer RJ et al., <i>Am J Med</i>, 2015) ; les boissons sucrées sont associées au surpoids et au diabète de type 2 (Malik VS et al., méta-analyses).</li>
     </ul>
     <p class="small" style="margin-top:8px">Ces repères sont indicatifs : ils situent vos résultats dans des fourchettes publiées, sans remplacer un avis médical. L'app compare avant tout vos mesures à vous-même dans le temps.</p>`,

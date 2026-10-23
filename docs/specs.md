@@ -58,11 +58,12 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - Questionnaire **IPAQ court** (7 questions sur les 7 derniers jours) : score calculé
   automatiquement en MET-min/semaine (8×intensif + 4×modéré + 3,3×marche), niveau
   faible/modéré/élevé selon seuils 600/3000, et temps assis quotidien (Q7)
-- Questionnaire **Alimentation** (6 questions scorées + N7 alcool contextuelle sur les 7 derniers jours) : score /100
-  calculé automatiquement (fruits & légumes 25 %, boissons sucrées 20 %,
-  ultra-transformés 20 %, petit-déjeuner 10 %, repas maison 15 %, hydratation 10 %),
+- Questionnaire **Alimentation** (7 questions scorées sur les 7 derniers jours, alcool N7 inclus) : score /100
+  calculé automatiquement (poids total 110 : fruits & légumes 25, boissons sucrées 20,
+  ultra-transformés 20, petit-déjeuner 10, repas maison 15, hydratation 10, alcool 10),
   niveau équilibré/moyen/à améliorer selon seuils 80/60 ; repères OMS (≥ 5 portions
-  de fruits & légumes/jour, limiter les boissons sucrées et les ultra-transformés NOVA)
+  de fruits & légumes/jour, limiter les boissons sucrées, les ultra-transformés NOVA
+  et l'alcool ≤ 10 verres/semaine)
 - Statut automatique par mesure selon repères sexe/âge
 - Score global /100 : moyenne des 5 tests prédictifs
 - Historique du score global (1 valeur/jour) consultable dans les graphiques par indicateur
