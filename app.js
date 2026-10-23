@@ -1634,12 +1634,12 @@ function renderSessionFields() {
           ? h('button', {
               class: 'timer-btn',
               dataset: {
-                timerMs: '180000', timerEditable: '1', timerMetronome: '1',
+                timerMs: '180000', timerEditable: '1', timerMetronome: '1', timerCountdown: '1',
                 timerLabel: 'Test escalier — montées (24/min)',
                 timerNextMs: '60000',
                 timerNextLabel: 'Escalier — mesure du pouls dans 1 min (asseyez-vous)'
               },
-              title: 'Compte à rebours 3 min pour les montées d’escalier (durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls',
+              title: 'Compte à rebours 3 min pour les montées d’escalier (3 s de préparation avec bip, durée réglable, métronome 96 bpm disponible), puis 1 min auto avant la mesure du pouls',
               text: '⏳'
             })
           : t.id === 'stair_steps'
@@ -1681,8 +1681,8 @@ function renderSessionFields() {
       const chairTimerBtn = t.id === 'chair'
         ? h('button', {
             class: 'timer-btn',
-            dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions' },
-            title: 'Compte à rebours 30 s pour compter les répétitions',
+            dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions', timerCountdown: '1' },
+            title: 'Compte à rebours 30 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
             text: '⏳'
           }) : null;
       const infoBtn = t.info
@@ -1926,6 +1926,7 @@ document.addEventListener('keydown', e => {
   else if (!$('#edit-modal').classList.contains('hidden')) closeEditModal();
   else if (!$('#confirm-modal').classList.contains('hidden')) $('#confirm-modal-cancel').click();
   else if (!$('#chrono').classList.contains('hidden')) chronoClose();
+  else if (!$('#timer').classList.contains('hidden')) $('#timer-close').click();
 });
 
 function updateFieldValidity(t, inp) {
@@ -2129,9 +2130,14 @@ let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = nul
 // Utilisé par les tests à durée fixe : chaise 30 s (compter les répétitions),
 // escalier 3 min (montées à 24/min), Cooper 12 min (ou 6 min demi-Cooper).
 // Le timer démarre/pause/reset manuellement, s'arrête seul à 00:00 avec un bip.
+// Certains tests (chaise 30 s, escalier méthode 1) lancent un compte à rebours de 3 s
+// avec bip sonore avant le démarrage automatique du timer.
 const DEFAULT_TIMER_MS = 30000; // 30 s (chaise)
+// data-timer-countdown="1" sur le bouton ⏳ : compte à rebours 3 s + bip avant démarrage auto
+const TIMER_COUNTDOWN_MS = 3000;
 let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, timerDuration = DEFAULT_TIMER_MS;
 let timerLabel = 'Compte à rebours';
+let timerCountdownId = null; // intervalle du compte à rebours avant démarrage auto (ou null)
 // Métronome 96 bpm (24 montées/min) pour le test escalier méthode 1 :
 // bip court toutes les 625 ms, synchronisé avec le timer (démarre/pause/arrêt avec lui).
 let metroId = null, metroAudioCtx = null, metroEnabled = false;
@@ -2160,6 +2166,53 @@ function metroStop() {
 // Chaînage automatique : quand un timer se termine, lance le suivant (ex. escalier :
 // 3 min de montées → 1 min de pause avant la mesure du pouls). { ms, label } ou null.
 let timerNext = null;
+// Compte à rebours de 3 s (bip à chaque seconde) avant démarrage automatique du timer.
+// Annulé si l'utilisateur ferme le timer, fait reset, ou appuie sur Échap.
+// Le bouton start reste CLIQUABLE pendant le countdown : un clic annule le décompte
+// (les navigateurs ne délivrent pas les clics sur un bouton disabled).
+function startTimerCountdown() {
+  cancelTimerCountdown();
+  let remaining = Math.round(TIMER_COUNTDOWN_MS / 1000); // 3
+  const disp = $('#timer-display');
+  const btn = $('#timer-startstop');
+  btn.textContent = '✕'; // croix = annuler le décompte
+  btn.title = 'Annuler la préparation';
+  btn.classList.add('countdown');
+  const tick = () => {
+    timerBeep();
+    disp.textContent = `0:${String(remaining).padStart(2, '0')}`;
+    disp.classList.add('countdown');
+    remaining--;
+    if (remaining < 0) {
+      // Fin du compte à rebours : bip final + démarrage du timer
+      cancelTimerCountdown();
+      disp.classList.remove('countdown');
+      timerBeep();
+      timerRemaining = timerDuration;
+      disp.textContent = timerFmt(timerRemaining);
+      timerRunning = true;
+      btn.classList.remove('countdown');
+      timerSetBtn(true);
+      $('#timer').classList.remove('finished');
+      timerId = setInterval(timerUpdate, 100);
+      if (metroEnabled) metroStart(); // le métronome démarre avec le timer
+    }
+  };
+  tick(); // bip immédiat + affichage « 0:03 »
+  timerCountdownId = setInterval(tick, 1000);
+}
+function cancelTimerCountdown() {
+  if (timerCountdownId) { clearInterval(timerCountdownId); timerCountdownId = null; }
+  const disp = $('#timer-display');
+  disp?.classList.remove('countdown');
+  const btn = $('#timer-startstop');
+  if (btn && !timerId) {
+    btn.classList.remove('countdown');
+    timerSetBtn(false);
+    // Restaure l'affichage de la durée (le countdown l'avait remplacé par « 0:0X »)
+    if (disp && !timerRunning) disp.textContent = timerFmt(timerRemaining);
+  }
+}
 // Timer en minutes:secondes (M:SS ou MM:SS), sans les dixièmes de seconde
 function timerFmt(ms) {
   const total = Math.max(0, ms);
@@ -2203,6 +2256,7 @@ function timerSetBtn(running) {
   b.classList.toggle('running', running);
 }
 function timerStop(finished = false) {
+  cancelTimerCountdown();
   clearInterval(timerId);
   timerId = null;
   timerRunning = false;
@@ -2212,6 +2266,7 @@ function timerStop(finished = false) {
   if (finished) timerBeep();
 }
 function timerToggle() {
+  if (timerCountdownId) { cancelTimerCountdown(); return; } // clic pendant le countdown : annule
   if (timerId) {
     clearInterval(timerId); timerId = null; timerRunning = false;
     timerSetBtn(false);
@@ -2226,6 +2281,7 @@ function timerToggle() {
   }
 }
 function timerReset() {
+  cancelTimerCountdown();
   clearInterval(timerId); timerId = null; timerRunning = false;
   timerRemaining = timerDuration;
   $('#timer-display').textContent = timerFmt(timerRemaining);
@@ -2236,7 +2292,8 @@ function timerReset() {
 }
 // Ouvre le timer pour un test donné : durée en ms, libellé, et mode de saisie de la durée.
 // durationEditable=true → l'utilisateur peut régler la durée (en minutes) avant de lancer.
-function openTimer(durationMs, label, durationEditable = false, next = null, metronome = false) {
+// countdown=true → compte à rebours de 3 s avec bip sonore avant démarrage automatique.
+function openTimer(durationMs, label, durationEditable = false, next = null, metronome = false, countdown = false) {
   const el = $('#timer');
   if (!el) return;
   timerDuration = durationMs;
@@ -2247,6 +2304,7 @@ function openTimer(durationMs, label, durationEditable = false, next = null, met
   if (metroBtn) {
     metroBtn.classList.toggle('hidden', !metronome);
     metroBtn.classList.toggle('active', metronome);
+    metroBtn.classList.toggle('muted', metronome && !metroEnabled);
     metroBtn.title = metronome
       ? 'Métronome 96 bpm actif — cliquez pour le couper'
       : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
@@ -2272,11 +2330,13 @@ function openTimer(durationMs, label, durationEditable = false, next = null, met
     timerRemaining = timerDuration;
     $('#timer-display').textContent = timerFmt(timerRemaining);
   }
+  // Compte à rebours de 3 s (bip) avant démarrage auto — chaise 30 s, escalier méthode 1
+  if (countdown && !timerRunning) startTimerCountdown();
 }
 $('#timer-startstop').addEventListener('click', timerToggle);
 $('#timer-reset').addEventListener('click', timerReset);
 $('#timer-close').addEventListener('click', () => {
-  timerStop();
+  timerStop(); // annule aussi un éventuel countdown en cours
   timerNext = null; // fermeture annule aussi le chaînage prévu
   metroEnabled = false; // fermeture désactive le métronome
   $('#timer-metronome')?.classList.add('hidden');
@@ -2289,6 +2349,7 @@ $('#timer-metronome').addEventListener('click', () => {
   metroEnabled = !metroEnabled;
   const btn = $('#timer-metronome');
   btn.classList.toggle('active', metroEnabled);
+  btn.classList.toggle('muted', !metroEnabled); // symbole barré quand coupé
   btn.title = metroEnabled
     ? 'Métronome 96 bpm actif — cliquez pour le couper'
     : 'Métronome 96 bpm (24 montées/min) — cliquez pour l\'activer';
@@ -2319,7 +2380,9 @@ document.addEventListener('click', e => {
     : null;
   // data-timer-metronome="1" : active le métronome 96 bpm (test escalier méthode 1)
   const metronome = b.dataset.timerMetronome === '1';
-  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next, metronome);
+  // data-timer-countdown="1" : compte à rebours 3 s + bip avant démarrage auto (chaise, escalier méthode 1)
+  const countdown = b.dataset.timerCountdown === '1';
+  openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next, metronome, countdown);
 });
 // Chrono en minutes:secondes (MM:SS), sans les dixièmes de seconde
 function chronoFmt(ms) {

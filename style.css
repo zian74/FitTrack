@@ -195,7 +195,17 @@ tr:nth-child(even) td { background: var(--surface-alt); }
   box-shadow: 0 4px 12px var(--shadow-strong); z-index: 20;
 }
 #timer-display { font-size: 1.5em; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 60px; }
+#timer-display.countdown { color: var(--warn); animation: chrono-pulse 1s ease-in-out infinite; }
 #timer-startstop.running { background: var(--bad); color: #fff; }
+/* Bouton start pendant le compte à rebours : croix « annuler la préparation » */
+#timer-startstop.countdown { background: var(--warn); color: #fff; }
+/* Métronome : symbole barré quand coupé (classe .muted) */
+#timer-metronome { position: relative; }
+#timer-metronome.muted { opacity: .55; }
+#timer-metronome.muted::after {
+  content: ''; position: absolute; left: 15%; right: 15%; top: 50%;
+  border-top: 2px solid var(--bad); transform: rotate(-20deg);
+}
 #timer.finished { border-color: var(--ok); }
 #timer.finished #timer-display { color: var(--ok); }
 /* Timer suivant enchaîné automatiquement (ex. escalier → mesure du pouls 1 min) */
