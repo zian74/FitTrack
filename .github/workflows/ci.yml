@@ -14,6 +14,10 @@ jobs:
           node-version: 20
       - name: Syntaxe JS
         run: node --check app.js && node --check sw.js
+      - name: Smoke tests (jsdom)
+        run: |
+          npm ci
+          npm test
       - name: Fichiers essentiels
         run: |
           test -f index.html
