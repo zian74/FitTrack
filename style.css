@@ -300,31 +300,33 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #chart { width: 100%; min-height: 260px; }
 #chart svg { width: 100%; height: auto; }
 /* Tableau « Dernière session » (2 sessions + delta) */
-.last3-table { table-layout: fixed; }
+.last3-table { table-layout: auto; }  /* auto : la colonne Test s'adapte au contenu */
 .last3-table th:first-child,
-.last3-table th.test-name { width: 34%; text-align: left; font-weight: 600; }
+.last3-table th.test-name { text-align: left; font-weight: 600; white-space: nowrap; }  /* 1 ligne */
 .last3-table th:not(:first-child),
 .last3-table td.num {
-  width: 22%; text-align: right; white-space: nowrap;
+  text-align: right; white-space: nowrap; padding-left: 16px;
 }
 .last3-table th { white-space: nowrap; }
-/* 1re colonne (noms de test) : retour à la ligne autorisé pour ne pas déborder */
-.last3-table th:first-child,
-.last3-table th.test-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .last3-table td.muted { color: var(--faint); text-align: center; }
 .last3-table td.up { color: var(--ok); font-weight: 600; }
 .last3-table td.down { color: var(--bad); font-weight: 600; }
 /* Tableau « Tendances par dimension » (onglet Analyse) */
 #ifg-trends table { table-layout: fixed; }
-#ifg-trends th:first-child { width: 34%; }
-#ifg-trends th:not(:first-child), #ifg-trends td:not(:first-child) { width: 22%; }
+/* Dimension élargie (30%) pour ne pas couper métabolisme/récupération/Alimentation.
+   « Score moyen (30 j) » (20%) : retour à la ligne entre les mots → max 2 lignes.
+   Avant (15%) et Tendance (20%) : valeurs courtes + libellé « ▲ en hausse ». */
+#ifg-trends th:first-child { width: 30%; min-width: 150px; }
+#ifg-trends th:nth-child(2), #ifg-trends td:nth-child(2) { width: 20%; }
+#ifg-trends th:nth-child(3), #ifg-trends td:nth-child(3) { width: 15%; }
+#ifg-trends th:nth-child(4), #ifg-trends td:nth-child(4) { width: 20%; }
 #ifg-trends th {
   white-space: normal;          /* autorise le retour à la ligne */
   line-height: 1.25;
   vertical-align: bottom;
 }
 /* Coupe propre uniquement sur les en-têtes de colonne (pas les th de ligne) */
-#ifg-trends th[scope="col"] { overflow-wrap: anywhere; }
+#ifg-trends th[scope="col"] { overflow-wrap: break-word; }  /* coupe entre les mots, max 2 lignes */
 /* Colonne Dimension (th de ligne) : retour à la ligne entre les mots, pas au milieu */
 #ifg-trends th[scope="row"] { overflow-wrap: break-word; text-align: left; }
 #ifg-trends td { text-align: center; }
@@ -332,19 +334,21 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #ifg-trends td.up { color: var(--ok); font-weight: 600; }
 #ifg-trends td.down { color: var(--bad); font-weight: 600; }
 
-/* Tableau « Repères applicables » (Profil) : colonne Test lisible */
-#reference-table table { table-layout: fixed; }
+/* Tableau « Repères applicables » (Profil) : colonne Test sur 1 ligne */
+#reference-table table { table-layout: auto; }  /* auto : la colonne Test s'adapte au contenu */
 #reference-table th:first-child,
-#reference-table td:first-child { width: 34%; text-align: left; }
+#reference-table td:first-child { text-align: left; white-space: nowrap; }  /* 1 ligne */
 #reference-table th:not(:first-child),
-#reference-table td:not(:first-child) { width: 22%; text-align: right; white-space: nowrap; }
+#reference-table td:not(:first-child) { text-align: right; white-space: nowrap; padding-left: 16px; }
 
-/* Tableau « Toutes les mesures » (Historique) : colonne Date sur une ligne */
+/* Tableau « Toutes les mesures » (Historique) : Date et Type sur 1 ligne */
 #history-table table { table-layout: fixed; }
 #history-table th:first-child,
-#history-table td:first-child { width: 110px; white-space: nowrap; }
-#history-table th:not(:first-child),
-#history-table td:not(:first-child) { width: auto; }
+#history-table td:first-child { width: 110px; white-space: nowrap; }  /* Date : 2025-01-10 */
+#history-table th:nth-child(2),
+#history-table td:nth-child(2) { width: 190px; white-space: nowrap; }  /* Type : « Activité & sédentarité » */
+#history-table th:nth-child(3),
+#history-table td:nth-child(3) { width: auto; }  /* Résultats : prend le reste */
 
 /* Bouton crayon d'édition dans les tableaux */
 .edit-btn {
