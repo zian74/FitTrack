@@ -46,17 +46,17 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Accepter les licences SDK + installer les composants
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
-
       - name: Configurer le SDK Android (env)
         run: |
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
           echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Accepter les licences SDK + installer les composants
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Installer les dépendances npm (Capacitor)
         run: npm ci
