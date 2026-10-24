@@ -4,9 +4,16 @@
   "description": "App de suivi de la condition physique — plan de test complet",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node tests/smoke/run.js"
+    "test": "node tests/smoke/run.js",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/local-notifications": "^8.3.1",
     "jsdom": "^24.1.0"
   }
 }

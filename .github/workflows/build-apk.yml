@@ -1,0 +1,99 @@
+name: Build APK (Android)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'style.css'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'icon-*.png'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/build-android.sh'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'style.css'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'icon-*.png'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/build-android.sh'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer le JDK 21 (requis par Capacitor 8 / AGP 8.13)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Configurer le SDK Android (env)
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Accepter les licences SDK + installer les composants
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Installer les dépendances npm (Capacitor)
+        run: npm ci
+
+      - name: Ajouter la plateforme Android
+        run: npx cap add android
+
+      - name: Générer le dossier public/ + synchroniser
+        run: ./scripts/build-android.sh
+
+      - name: Générer les icônes Android (ImageMagick)
+        run: |
+          RES=android/app/src/main/res
+          sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
+          for size in 48:mdpi 72:hdpi 96:xhdpi 144:xxhdpi 192:xxxhdpi; do
+            px=${size%%:*}; dpi=${size##*:}
+            mkdir -p "$RES/mipmap-$dpi"
+            convert icon-512.png -resize ${px}x${px} "$RES/mipmap-$dpi/ic_launcher.png"
+            cp "$RES/mipmap-$dpi/ic_launcher.png" "$RES/mipmap-$dpi/ic_launcher_round.png"
+            cp "$RES/mipmap-$dpi/ic_launcher.png" "$RES/mipmap-$dpi/ic_launcher_foreground.png"
+          done
+
+      - name: Build APK debug
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fittrack-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Résumé
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          echo "APK généré : $APK ($(du -h "$APK" | cut -f1))"
+          echo "Téléchargement : artifact 'fittrack-debug-apk' dans l'onglet Actions du run"
