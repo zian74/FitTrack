@@ -55,11 +55,17 @@ check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,200}?overflow-wrap:\s*normal/.tes
   'ifg-trends : colonne Dimension (th[scope="row"]) overflow-wrap:normal (pas de coupure mid-mot)');
 check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,250}?hyphens:\s*none/.test(css),
   'ifg-trends : colonne Dimension (th[scope="row"]) hyphens:none (pas de césure auto fr)');
-// history-table : colonnes Date et Type ajustées (1 ligne chacune)
+// history-table : table-layout auto, Date et Type s'adaptent à leur contenu (nowrap)
+check(/#history-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
+  'history-table : table-layout auto (colonnes = largeur du contenu)');
 check(/#history-table\s+th:first-child[\s\S]{0,100}?white-space:\s*nowrap/.test(css),
-  'history-table : colonne Date en nowrap (pas de saut de ligne)');
-check(/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?width:\s*190px/.test(css),
-  'history-table : colonne Type à 190px (Type le plus long sur 1 ligne)');
+  'history-table : colonne Date en nowrap (largeur exacte de la date)');
+check(/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?white-space:\s*nowrap/.test(css),
+  'history-table : colonne Type en nowrap (largeur du plus long libellé)');
+check(!/#history-table\s+th:first-child[\s\S]{0,100}?width:\s*110px/.test(css),
+  'history-table : colonne Date sans width fixe (s\'adapte au contenu)');
+check(!/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?width:\s*190px/.test(css),
+  'history-table : colonne Type sans width fixe (s\'adapte au contenu)');
 // reference-table : colonne Test sur 1 ligne (nowrap)
 check(/#reference-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
   'reference-table : table-layout auto (colonne Test s\'adapte au contenu)');
@@ -217,7 +223,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v66/.test(sw), 'Service Worker : cache fittrack-v66 (bump hyphens:none + largeur Dimension 42%)');
+check(/fittrack-v67/.test(sw), 'Service Worker : cache fittrack-v67 (bump hyphens:none ifg-trends + history-table auto)');
 
 summary('a11y-audit');
 exit(true);
