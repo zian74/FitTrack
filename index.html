@@ -176,7 +176,7 @@
   <section id="view-history" class="view">
     <div class="card">
       <h2>Graphiques par indicateur</h2>
-      <select id="chart-metric"></select>
+      <select id="chart-metric" aria-label="Indicateur à afficher dans le graphique"></select>
       <div id="chart"></div>
       <div id="chart-stats" class="small"></div>
     </div>
@@ -187,7 +187,7 @@
         <button id="export-json">⬇️ Export JSON</button>
         <button id="export-pdf">🖨️ Fiche de score PDF</button>
         <button id="import-btn">⬆️ Importer un fichier</button>
-        <input type="file" id="import-file" accept=".json,.csv" class="hidden">
+        <input type="file" id="import-file" accept=".json,.csv" class="hidden" aria-label="Fichier de sauvegarde FitTrack à importer (JSON ou CSV)">
         <span id="import-msg" class="ok hidden" role="status" aria-live="polite"></span>
       </div>
       <p class="small">L'import fusionne le profil et les mesures du fichier (JSON ou CSV) avec vos données actuelles — utile pour restaurer après un plantage ou changer d'appareil.</p>
@@ -197,7 +197,7 @@
         Les données sont lues <b>100 % localement</b> — aucun envoi sur un serveur.</p>
         <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
           <button id="import-watch-btn">⌚ Importer un fichier montre</button>
-          <input type="file" id="import-watch-file" accept=".csv,.tcx,.gpx" class="hidden">
+          <input type="file" id="import-watch-file" accept=".csv,.tcx,.gpx" class="hidden" aria-label="Fichier d'export de montre connectée à importer (CSV, TCX ou GPX)">
           <span class="small" style="color:var(--text-muted)">ou glissez-déposez le fichier ici</span>
         </div>
         <p class="small" style="margin-bottom:0">Données reconnues : <b>FC de repos</b> (min de la journée), <b>durée de sommeil</b>, <b>pas</b>, <b>durée d'activité</b>, <b>calories</b>.
@@ -342,7 +342,7 @@
 <div id="timer" class="hidden">
   <span class="small"><b id="timer-label">Compte à rebours</b> <span id="timer-next-hint" class="hidden"></span></span>
   <span id="timer-duration-wrap" class="hidden">
-    <input type="number" id="timer-duration-min" min="0.5" max="60" step="0.5" value="3" style="width:70px" title="Durée en minutes"> min
+    <input type="number" id="timer-duration-min" min="0.5" max="60" step="0.5" value="3" style="width:70px" title="Durée en minutes" aria-label="Durée du compte à rebours en minutes"> min
   </span>
   <span id="timer-display">30 s</span>
   <button id="timer-startstop" class="primary" title="Démarrer le compte à rebours">▶</button>

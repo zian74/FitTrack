@@ -1994,7 +1994,7 @@ function renderIpaqBlock(block) {
   IPAQ_QUESTIONS.forEach(q => {
     const inp = h('input', {
       type: 'number', step: '1', min: String(q.min), max: String(q.max),
-      dataset: { ipaq: q.id }, placeholder: q.unit, style: { width: '110px' },
+      dataset: { ipaq: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
     });
     const row = h('div', { class: 'field-row' },
       h('label', {}, ...wrapParens(q.label), inp, ' ', h('span', { class: 'small' }, q.unit))
@@ -2005,6 +2005,7 @@ function renderIpaqBlock(block) {
       const num = raw === '' ? null : parseInt(raw, 10);
       const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
       inp.classList.toggle('invalid', invalid);
+      setFieldError(inp, `err-ipaq-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
       answers[q.id] = invalid ? null : num;
       updateIpaqResult(answers);
       updateSaveState();
@@ -2108,7 +2109,7 @@ function renderSleepBlock(block) {
     } else {
       const inp = h('input', {
         type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
-        dataset: { sleep: q.id }, placeholder: q.unit, style: { width: '110px' },
+        dataset: { sleep: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
       });
       row.append(h('label', {}, q.label, inp, ' ', h('span', { class: 'small' }, q.unit)));
       qWrap.appendChild(row);
@@ -2117,6 +2118,7 @@ function renderSleepBlock(block) {
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
         const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
         inp.classList.toggle('invalid', invalid);
+        setFieldError(inp, `err-sleep-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
         answers[q.id] = invalid ? null : num;
         updateSleepResult(answers);
         updateSaveState();
@@ -2218,7 +2220,7 @@ function renderNutritionBlock(block) {
     } else {
       const inp = h('input', {
         type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
-        dataset: { nutrition: q.id }, placeholder: q.unit, style: { width: '110px' },
+        dataset: { nutrition: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
       });
       if (q.id === 'alcohol' && lastAlcohol != null) inp.value = lastAlcohol;
       row.append(h('label', {}, q.label, infoBtn ? ' ' : null, infoBtn, inp, ' ', h('span', { class: 'small' }, q.unit)));
@@ -2228,6 +2230,7 @@ function renderNutritionBlock(block) {
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
         const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
         inp.classList.toggle('invalid', invalid);
+        setFieldError(inp, `err-nutrition-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
         answers[q.id] = invalid ? null : num;
         updateNutritionResult(answers);
         updateSaveState();
@@ -2348,15 +2351,18 @@ function renderSessionFields() {
         const last = latestValues()[t.id]?.value;
         const lastInfo = last != null
           ? h('div', { class: 'field-last' }, 'Dernier : ', h('b', {}, `${last}`), ` ${t.unit}`) : null;
+        const inpId = `inp-${t.id}`;
+        const lblId = `lbl-${t.id}`;
         row.replaceChildren(...nodes(
-          h('label', {},
+          h('label', { id: lblId },
             h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
             infoBtn,
             h('div', { class: 'field-hint', text: t.hint || '' }),
             lastInfo),
           h('input', {
             type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
-            dataset: { test: t.id }, placeholder: t.unit,
+            dataset: { test: t.id }, placeholder: t.unit, 'aria-invalid': 'false',
+            id: inpId, 'aria-labelledby': lblId,
             ...(t.id !== 'stair_pulse' ? { disabled: true } : {})
           }),
           chronoBtn,
@@ -2399,15 +2405,17 @@ function renderSessionFields() {
             h('div', { class: 'row', style: { margin: '6px 0' } },
               h('label', {},
                 'VMA (km/h) : ',
-                h('input', { type: 'number', id: 'cooper-vma', step: '0.1', min: '4', max: '30', placeholder: 'ex. 12,5', style: { width: '90px' } })),
+                h('input', { type: 'number', id: 'cooper-vma', step: '0.1', min: '4', max: '30', placeholder: 'ex. 12,5', style: { width: '90px' }, 'aria-invalid': 'false' })),
               h('label', {},
                 'VO2max (ml/kg/min) : ',
-                h('input', { type: 'number', id: 'cooper-vo2', step: '0.1', min: '10', max: '90', placeholder: 'ex. 44', style: { width: '90px' } }))),
+                h('input', { type: 'number', id: 'cooper-vo2', step: '0.1', min: '10', max: '90', placeholder: 'ex. 44', style: { width: '90px' }, 'aria-invalid': 'false' }))),
             h('div', { class: 'field-hint', text: 'Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.' }),
             h('div', { id: 'cooper-estim-result', class: 'estimation-box hidden' }))
         : null;
+      const inpId = `inp-${t.id}`;
+      const lblId = `lbl-${t.id}`;
       row.replaceChildren(...nodes(
-        h('label', {},
+        h('label', { id: lblId },
           h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
           infoBtn,
           h('div', { class: 'field-hint', text: t.hint || '' }),
@@ -2415,7 +2423,8 @@ function renderSessionFields() {
         cooperSelect,
         h('input', {
           type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
-          dataset: { test: t.id }, placeholder: t.unit
+          dataset: { test: t.id }, placeholder: t.unit, 'aria-invalid': 'false',
+          id: inpId, 'aria-labelledby': lblId
         }),
         chronoBtn,
         chairTimerBtn,
@@ -3174,8 +3183,30 @@ document.addEventListener('keydown', e => {
   else if (!$('#timer').classList.contains('hidden')) $('#timer-close').click();
 });
 
+// Affiche/masque un message d'erreur textuel sous un champ + aria-invalid/aria-describedby.
+// errId doit être unique par champ (ex. `err-${inp.dataset.test}`).
+function setFieldError(inp, errId, message) {
+  inp.setAttribute('aria-invalid', message ? 'true' : 'false');
+  // Le message d'erreur est inséré dans le .field-row (peut contenir label + input + boutons)
+  const row = inp.closest('.field-row') || inp.parentElement;
+  let err = row.querySelector(`[id="${errId}"]`);
+  if (!err) {
+    err = h('span', { class: 'field-error', id: errId, role: 'alert' });
+    row.appendChild(err);
+  }
+  if (message) {
+    err.textContent = message;
+    inp.setAttribute('aria-describedby', [inp.getAttribute('aria-describedby'), errId].filter(Boolean).join(' '));
+  } else {
+    err.textContent = '';
+    const desc = (inp.getAttribute('aria-describedby') || '').split(' ').filter(x => x !== errId);
+    if (desc.length) inp.setAttribute('aria-describedby', desc.join(' '));
+    else inp.removeAttribute('aria-describedby');
+  }
+}
+
 function updateFieldValidity(t, inp) {
-  if (inp.disabled) { inp.classList.remove('invalid'); return; } // méthode escalier inactive
+  if (inp.disabled) { inp.classList.remove('invalid'); setFieldError(inp, `err-${inp.dataset.test}`, ''); return; } // méthode escalier inactive
   const raw = inp.value.trim();
   const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
   // Bornes effectives : attributs min/max du champ (le demi-Cooper les resserre à 100–2500)
@@ -3183,6 +3214,14 @@ function updateFieldValidity(t, inp) {
   const max = inp.max !== '' ? parseFloat(inp.max) : t.max;
   const invalid = raw !== '' && (isNaN(num) || (min != null && num < min) || (max != null && num > max));
   inp.classList.toggle('invalid', invalid);
+  if (invalid) {
+    const borne = [];
+    if (min != null && (isNaN(num) || num < min)) borne.push(`minimum ${min}`);
+    if (max != null && num > max) borne.push(`maximum ${max}`);
+    setFieldError(inp, `err-${inp.dataset.test}`, `Valeur hors bornes (${borne.join(', ')}) ${t.unit}.`);
+  } else {
+    setFieldError(inp, `err-${inp.dataset.test}`, '');
+  }
   updateSaveState();
 }
 
@@ -3195,11 +3234,20 @@ function cooperEstimValid() {
     const el = $(sel);
     if (!el) continue;
     const raw = el.value.trim();
-    if (raw === '') continue;
+    if (raw === '') { el.classList.remove('invalid'); el.setAttribute('aria-invalid', 'false'); setFieldError(el, `err-${el.id}`, ''); continue; }
     const num = parseFloat(raw.replace(',', '.'));
     const min = el.min !== '' ? parseFloat(el.min) : null;
     const max = el.max !== '' ? parseFloat(el.max) : null;
-    if (isNaN(num) || (min != null && num < min) || (max != null && num > max)) { invalid = true; continue; }
+    if (isNaN(num) || (min != null && num < min) || (max != null && num > max)) {
+      invalid = true;
+      el.classList.add('invalid');
+      el.setAttribute('aria-invalid', 'true');
+      setFieldError(el, `err-${el.id}`, `Valeur hors bornes (minimum ${min}, maximum ${max}).`);
+      continue;
+    }
+    el.classList.remove('invalid');
+    el.setAttribute('aria-invalid', 'false');
+    setFieldError(el, `err-${el.id}`, '');
     filled = true; count++;
   }
   return { filled, invalid, count };
