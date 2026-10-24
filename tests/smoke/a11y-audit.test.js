@@ -37,20 +37,30 @@ check(/:root\.dark\s+nav\s+button,/.test(css) && /:root\.dark\s+nav\s+button[\s\
 // (:root.dark th { color: var(--on-accent) } donnait 1.15:1 sur --surface)
 check(/:root\.dark\s+th\[scope="row"\]\s*\{[^}]*color:\s*var\(--text\)/s.test(css),
   'thème sombre : th[scope="row"] utilise --text (contraste 13.15:1, pas --on-accent à 1.15:1)');
-// last3-table : la 1re colonne (noms de test) autorise le retour à la ligne
-check(/\.last3-table\s+th:first-child[\s\S]{0,100}?white-space:\s*normal/.test(css),
-  'last3-table : colonne Test autorise le retour à la ligne (pas de débordement)');
-// ifg-trends : overflow-wrap réservé aux en-têtes de colonne, pas aux th de ligne
-check(/#ifg-trends\s+th\[scope="col"\]\s*\{\s*overflow-wrap:\s*anywhere/.test(css),
-  'ifg-trends : overflow-wrap=anywhere sur th[scope="col"] uniquement');
+// last3-table : la 1re colonne (noms de test) est sur 1 ligne (nowrap)
+check(/\.last3-table\s*\{\s*table-layout:\s*auto/.test(css),
+  'last3-table : table-layout auto (colonne Test s\'adapte au contenu)');
+check(/\.last3-table\s+th:first-child[\s\S]{0,150}?white-space:\s*nowrap/.test(css),
+  'last3-table : colonne Test sur 1 ligne (white-space: nowrap)');
+// ifg-trends : Dimension élargie (30%), Score moyen (30 j) sur max 2 lignes
+check(/#ifg-trends\s+th:first-child\s*\{[^}]*width:\s*30%/.test(css),
+  'ifg-trends : colonne Dimension élargie à 30% (mots non coupés)');
+check(/#ifg-trends\s+th:nth-child\(2\)[\s\S]{0,60}?width:\s*20%/.test(css),
+  'ifg-trends : colonne Score moyen (30 j) à 20% (max 2 lignes)');
+check(/#ifg-trends\s+th\[scope="col"\]\s*\{\s*overflow-wrap:\s*break-word/.test(css),
+  'ifg-trends : th[scope="col"] en break-word (coupe entre les mots, pas au milieu)');
 check(/#ifg-trends\s+th\[scope="row"\]\s*\{[^}]*overflow-wrap:\s*break-word/.test(css),
   'ifg-trends : colonne Dimension (th[scope="row"]) coupe entre les mots (break-word)');
-// history-table : colonne Date sur une seule ligne (nowrap + largeur fixe)
+// history-table : colonnes Date et Type ajustées (1 ligne chacune)
 check(/#history-table\s+th:first-child[\s\S]{0,100}?white-space:\s*nowrap/.test(css),
   'history-table : colonne Date en nowrap (pas de saut de ligne)');
-// reference-table : table-layout fixed pour des colonnes stables
-check(/#reference-table\s+table\s*\{\s*table-layout:\s*fixed/.test(css),
-  'reference-table : table-layout fixed (colonnes stables)');
+check(/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?width:\s*190px/.test(css),
+  'history-table : colonne Type à 190px (Type le plus long sur 1 ligne)');
+// reference-table : colonne Test sur 1 ligne (nowrap)
+check(/#reference-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
+  'reference-table : table-layout auto (colonne Test s\'adapte au contenu)');
+check(/#reference-table\s+th:first-child[\s\S]{0,150}?white-space:\s*nowrap/.test(css),
+  'reference-table : colonne Test sur 1 ligne (white-space: nowrap)');
 
 // ============ 2. Navigation clavier ============
 // 2a. Skip link
@@ -203,7 +213,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v64/.test(sw), 'Service Worker : cache fittrack-v64 (bump fix contraste tableaux)');
+check(/fittrack-v65/.test(sw), 'Service Worker : cache fittrack-v65 (bump ajustement largeurs colonnes)');
 
 summary('a11y-audit');
 exit(true);
