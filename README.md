@@ -95,4 +95,14 @@ npm test   # lance tests/smoke/run.js (tous les *.test.js)
 - [x] 🍽 **Alimentation** : questionnaire 7 questions scorées (N7 alcool inclus, repère OMS ≤ 10 verres/sem), score /100, nouvelle dimension IFG (5 %, cardio au repos ramené à 20 %), bilan hebdomadaire, corrélation Alimentation ↔ IFG (nuage + Pearson), habitudes alimentaires déclaratives dans le Profil
 - [x] ⌚ **Badge provenance dans l'historique** : les mesures importées d'une montre connectée portent un badge « ⌚ montre » (avec le sport si connu, ex. Running pour un TCX) dans la colonne Type
 - [x] ♿ **Accessibilité** : revue UX des formulaires (labels explicites, focus visible renforcé, messages d'erreur textuels + `aria-invalid`/`aria-describedby`) · audit complet WCAG — contraste corrigé (thèmes clair & sombre ≥ 4,5:1), skip link, focus trap + restauration du focus dans les modales, `role="img"` + `aria-label` sur les 6 graphiques SVG, `<caption>` + `scope="col"/"row"` sur tous les tableaux, `aria-label` sur tous les boutons icône seule (timers, chrono, édition, métronome), régions nommées pour le chrono/timer, `.sr-only` pour les captions · smoke test `a11y-audit` (105 checks) en CI
+
+### Pistes gardées pour plus tard
+
+Toutes les pistes ci-dessous sont réalisées (PR #85 et #86) :
+
+- [x] Migrer les 2 contenus statiques de la modale info (`#info-modal-body`) vers du DOM — dernier morceau 100 % DOM (PR #85)
+- [x] Revue UX des formulaires (labels, focus visible, messages d'erreur) (PR #86)
+- [x] Tests automatisés dans le repo — smoke tests jsdom intégrés, exécutés en CI à chaque push/PR (PR #85)
+- [x] Audit accessibilité complet (contraste, navigation clavier, lecteur d'écran) (PR #86)
+
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
