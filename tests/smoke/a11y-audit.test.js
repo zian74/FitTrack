@@ -42,19 +42,19 @@ check(/\.last3-table\s*\{\s*table-layout:\s*auto/.test(css),
   'last3-table : table-layout auto (colonne Test s\'adapte au contenu)');
 check(/\.last3-table\s+th:first-child[\s\S]{0,150}?white-space:\s*nowrap/.test(css),
   'last3-table : colonne Test sur 1 ligne (white-space: nowrap)');
-// ifg-trends : Dimension élargie (42%), pas de césure automatique (hyphens: none)
-check(/#ifg-trends\s+th:first-child\s*\{[^}]*width:\s*42%/.test(css),
-  'ifg-trends : colonne Dimension élargie à 42% (mots non coupés)');
-check(/#ifg-trends\s+th:nth-child\(2\)[\s\S]{0,60}?width:\s*22%/.test(css),
-  'ifg-trends : colonne Score moyen (30 j) à 22% (max 2 lignes)');
-check(/#ifg-trends\s+th\[scope="col"\][\s\S]{0,120}?overflow-wrap:\s*break-word/.test(css),
-  'ifg-trends : th[scope="col"] en break-word (coupe entre les mots, pas au milieu)');
-check(/#ifg-trends\s+th\[scope="col"\][\s\S]{0,200}?hyphens:\s*none/.test(css),
+// ifg-trends : table-layout auto, toutes les colonnes en nowrap (largeur = contenu le plus long)
+check(/#ifg-trends\s+table\s*\{\s*table-layout:\s*auto/.test(css),
+  'ifg-trends : table-layout auto (colonnes = largeur du contenu)');
+check(/#ifg-trends\s+th[\s\S]{0,80}?white-space:\s*nowrap/.test(css),
+  'ifg-trends : toutes les cellules en nowrap (1 ligne, largeur exacte)');
+check(/#ifg-trends\s+th\[scope="col"\][\s\S]{0,80}?hyphens:\s*none/.test(css),
   'ifg-trends : th[scope="col"] hyphens:none (pas de césure auto fr)');
-check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,200}?overflow-wrap:\s*normal/.test(css),
-  'ifg-trends : colonne Dimension (th[scope="row"]) overflow-wrap:normal (pas de coupure mid-mot)');
-check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,250}?hyphens:\s*none/.test(css),
+check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,120}?hyphens:\s*none/.test(css),
   'ifg-trends : colonne Dimension (th[scope="row"]) hyphens:none (pas de césure auto fr)');
+check(!/#ifg-trends\s+th:first-child\s*\{[^}]*width:\s*\d+%/.test(css),
+  'ifg-trends : colonne Dimension sans width fixe % (s\'adapte au contenu)');
+check(!/#ifg-trends\s+th:nth-child\(2\)[\s\S]{0,60}?width:\s*\d+%/.test(css),
+  'ifg-trends : colonne Score moyen sans width fixe % (s\'adapte au contenu)');
 // history-table : table-layout auto, Date et Type s'adaptent à leur contenu (nowrap)
 check(/#history-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
   'history-table : table-layout auto (colonnes = largeur du contenu)');
@@ -66,6 +66,8 @@ check(!/#history-table\s+th:first-child[\s\S]{0,100}?width:\s*110px/.test(css),
   'history-table : colonne Date sans width fixe (s\'adapte au contenu)');
 check(!/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?width:\s*190px/.test(css),
   'history-table : colonne Type sans width fixe (s\'adapte au contenu)');
+check(/#history-table\s+th:nth-child\(3\)[\s\S]{0,80}?width:\s*100%/.test(css),
+  'history-table : colonne Résultats en width:100% (prend tout l\'espace restant)');
 // reference-table : colonne Test sur 1 ligne (nowrap)
 check(/#reference-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
   'reference-table : table-layout auto (colonne Test s\'adapte au contenu)');
@@ -223,7 +225,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v67/.test(sw), 'Service Worker : cache fittrack-v67 (bump hyphens:none ifg-trends + history-table auto)');
+check(/fittrack-v68/.test(sw), 'Service Worker : cache fittrack-v68 (bump tous tableaux en table-layout auto)');
 
 summary('a11y-audit');
 exit(true);
