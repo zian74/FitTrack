@@ -316,19 +316,27 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 /* Dimension élargie (30%) pour ne pas couper métabolisme/récupération/Alimentation.
    « Score moyen (30 j) » (20%) : retour à la ligne entre les mots → max 2 lignes.
    Avant (15%) et Tendance (20%) : valeurs courtes + libellé « ▲ en hausse ». */
-#ifg-trends th:first-child { width: 30%; min-width: 150px; }
-#ifg-trends th:nth-child(2), #ifg-trends td:nth-child(2) { width: 20%; }
-#ifg-trends th:nth-child(3), #ifg-trends td:nth-child(3) { width: 15%; }
-#ifg-trends th:nth-child(4), #ifg-trends td:nth-child(4) { width: 20%; }
+#ifg-trends th:first-child { width: 42%; }  /* assez large pour « métabolisme », « récupération », « Alimentation » sur 1 ligne */
+#ifg-trends th:nth-child(2), #ifg-trends td:nth-child(2) { width: 22%; }  /* « Score moyen (30 j) » : max 2 lignes */
+#ifg-trends th:nth-child(3), #ifg-trends td:nth-child(3) { width: 14%; }
+#ifg-trends th:nth-child(4), #ifg-trends td:nth-child(4) { width: 22%; }
 #ifg-trends th {
   white-space: normal;          /* autorise le retour à la ligne */
   line-height: 1.25;
   vertical-align: bottom;
 }
 /* Coupe propre uniquement sur les en-têtes de colonne (pas les th de ligne) */
-#ifg-trends th[scope="col"] { overflow-wrap: break-word; }  /* coupe entre les mots, max 2 lignes */
-/* Colonne Dimension (th de ligne) : retour à la ligne entre les mots, pas au milieu */
-#ifg-trends th[scope="row"] { overflow-wrap: break-word; text-align: left; }
+#ifg-trends th[scope="col"] {
+  overflow-wrap: break-word;   /* coupe entre les mots, max 2 lignes */
+  hyphens: none;               /* pas de césure automatique (fr) */
+}
+/* Colonne Dimension (th de ligne) : retour à la ligne entre les mots, jamais au milieu */
+#ifg-trends th[scope="row"] {
+  overflow-wrap: normal;       /* ne coupe pas un mot en deux */
+  word-break: normal;
+  hyphens: none;               /* pas de césure automatique (fr) */
+  text-align: left;
+}
 #ifg-trends td { text-align: center; }
 #ifg-trends td.muted { color: var(--faint); }
 #ifg-trends td.up { color: var(--ok); font-weight: 600; }
