@@ -42,15 +42,19 @@ check(/\.last3-table\s*\{\s*table-layout:\s*auto/.test(css),
   'last3-table : table-layout auto (colonne Test s\'adapte au contenu)');
 check(/\.last3-table\s+th:first-child[\s\S]{0,150}?white-space:\s*nowrap/.test(css),
   'last3-table : colonne Test sur 1 ligne (white-space: nowrap)');
-// ifg-trends : Dimension élargie (30%), Score moyen (30 j) sur max 2 lignes
-check(/#ifg-trends\s+th:first-child\s*\{[^}]*width:\s*30%/.test(css),
-  'ifg-trends : colonne Dimension élargie à 30% (mots non coupés)');
-check(/#ifg-trends\s+th:nth-child\(2\)[\s\S]{0,60}?width:\s*20%/.test(css),
-  'ifg-trends : colonne Score moyen (30 j) à 20% (max 2 lignes)');
-check(/#ifg-trends\s+th\[scope="col"\]\s*\{\s*overflow-wrap:\s*break-word/.test(css),
+// ifg-trends : Dimension élargie (42%), pas de césure automatique (hyphens: none)
+check(/#ifg-trends\s+th:first-child\s*\{[^}]*width:\s*42%/.test(css),
+  'ifg-trends : colonne Dimension élargie à 42% (mots non coupés)');
+check(/#ifg-trends\s+th:nth-child\(2\)[\s\S]{0,60}?width:\s*22%/.test(css),
+  'ifg-trends : colonne Score moyen (30 j) à 22% (max 2 lignes)');
+check(/#ifg-trends\s+th\[scope="col"\][\s\S]{0,120}?overflow-wrap:\s*break-word/.test(css),
   'ifg-trends : th[scope="col"] en break-word (coupe entre les mots, pas au milieu)');
-check(/#ifg-trends\s+th\[scope="row"\]\s*\{[^}]*overflow-wrap:\s*break-word/.test(css),
-  'ifg-trends : colonne Dimension (th[scope="row"]) coupe entre les mots (break-word)');
+check(/#ifg-trends\s+th\[scope="col"\][\s\S]{0,200}?hyphens:\s*none/.test(css),
+  'ifg-trends : th[scope="col"] hyphens:none (pas de césure auto fr)');
+check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,200}?overflow-wrap:\s*normal/.test(css),
+  'ifg-trends : colonne Dimension (th[scope="row"]) overflow-wrap:normal (pas de coupure mid-mot)');
+check(/#ifg-trends\s+th\[scope="row"\][\s\S]{0,250}?hyphens:\s*none/.test(css),
+  'ifg-trends : colonne Dimension (th[scope="row"]) hyphens:none (pas de césure auto fr)');
 // history-table : colonnes Date et Type ajustées (1 ligne chacune)
 check(/#history-table\s+th:first-child[\s\S]{0,100}?white-space:\s*nowrap/.test(css),
   'history-table : colonne Date en nowrap (pas de saut de ligne)');
@@ -213,7 +217,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v65/.test(sw), 'Service Worker : cache fittrack-v65 (bump ajustement largeurs colonnes)');
+check(/fittrack-v66/.test(sw), 'Service Worker : cache fittrack-v66 (bump hyphens:none + largeur Dimension 42%)');
 
 summary('a11y-audit');
 exit(true);
