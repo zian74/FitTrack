@@ -68,6 +68,8 @@ check(!/#history-table\s+th:nth-child\(2\)[\s\S]{0,100}?width:\s*190px/.test(css
   'history-table : colonne Type sans width fixe (s\'adapte au contenu)');
 check(/#history-table\s+th:nth-child\(3\)[\s\S]{0,80}?width:\s*100%/.test(css),
   'history-table : colonne Résultats en width:100% (prend tout l\'espace restant)');
+check(/#history-table\s+th:nth-child\(3\)[\s\S]{0,80}?min-width:\s*220px/.test(css),
+  'history-table : colonne Résultats min-width:220px (lisible sur mobile, pas écrasée)');
 // reference-table : colonne Test sur 1 ligne (nowrap)
 check(/#reference-table\s+table\s*\{\s*table-layout:\s*auto/.test(css),
   'reference-table : table-layout auto (colonne Test s\'adapte au contenu)');
@@ -225,7 +227,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v68/.test(sw), 'Service Worker : cache fittrack-v68 (bump tous tableaux en table-layout auto)');
+check(/fittrack-v69/.test(sw), 'Service Worker : cache fittrack-v69 (bump min-width Résultats 220px mobile)');
 
 summary('a11y-audit');
 exit(true);
