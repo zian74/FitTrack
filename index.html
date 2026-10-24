@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<a href="#main-content" class="skip-link">Aller au contenu principal</a>
 <header>
   <h1>🏃 FitTrack</h1>
   <nav>
@@ -28,7 +29,7 @@
   </nav>
 </header>
 
-<main>
+<main id="main-content">
 
   <!-- ============ DASHBOARD ============ -->
   <section id="view-dashboard" class="view active">
@@ -54,7 +55,7 @@
 
   <!-- Modale d'aide à la réalisation d'un test (icône ⓘ) -->
   <div id="info-modal" class="modal-overlay hidden">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
       <h2 id="info-modal-title">Comment réaliser ce test ?</h2>
       <div id="info-modal-body" class="info-body"></div>
       <div class="row" style="justify-content:flex-end">
@@ -65,7 +66,7 @@
 
   <!-- Modale d'édition d'une mesure -->
   <div id="edit-modal" class="modal-overlay hidden">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
       <h2 id="edit-title">Corriger la mesure</h2>
       <p class="small" id="edit-info"></p>
       <label style="font-size:1.3em">Valeur : <input type="number" step="any" id="edit-value" style="font-size:1.3em; width:140px"></label>
@@ -135,7 +136,7 @@
     <div class="grid2">
       <div class="card">
         <h2>Dimensions</h2>
-        <div id="ifg-radar"></div>
+        <div id="ifg-radar" role="img" aria-label="Graphique radar des dimensions de l'indice FitTrack : endurance, force, souplesse, récupération et mode de vie"></div>
         <div id="ifg-radar-legend" class="small"></div>
       </div>
       <div class="card">
@@ -146,7 +147,7 @@
     </div>
     <div class="card">
       <h2>Évolution de l'indice</h2>
-      <div id="ifg-chart"></div>
+      <div id="ifg-chart" role="img" aria-label="Graphique d'évolution de l'indice FitTrack global dans le temps"></div>
       <div id="ifg-chart-stats" class="small"></div>
     </div>
     <div class="grid2">
@@ -157,17 +158,17 @@
       <div class="card">
         <h2>Activité ↔ Forme <button class="info-btn" data-info-test="__ipaq__" title="Comprendre l'IPAQ et les MET-min/sem" aria-label="Informations sur l'IPAQ et les MET-min/semaine">ⓘ</button></h2>
         <p class="small">Niveau d'activité (IPAQ, MET-min/sem) en abscisse, indice en ordonnée — chaque point est une date de mesure.</p>
-        <div id="ifg-scatter"></div>
+        <div id="ifg-scatter" role="img" aria-label="Nuage de points : niveau d'activité IPAQ en abscisse, indice FitTrack en ordonnée"></div>
       </div>
       <div class="card">
         <h2>Sommeil ↔ Forme <button class="info-btn" data-info-test="__sleep__" title="Comprendre le score de sommeil" aria-label="Informations sur le score de sommeil">ⓘ</button></h2>
         <p class="small">Score de sommeil (/100) en abscisse, indice en ordonnée — chaque point est une date de mesure. Un bon sommeil favorise la récupération et la performance.</p>
-        <div id="ifg-sleep-scatter"></div>
+        <div id="ifg-sleep-scatter" role="img" aria-label="Nuage de points : score de sommeil en abscisse, indice FitTrack en ordonnée"></div>
       </div>
       <div class="card">
         <h2>Alimentation ↔ Forme <button class="info-btn" data-info-test="__nutrition__" title="Comprendre le score alimentaire" aria-label="Informations sur le score alimentaire">ⓘ</button></h2>
         <p class="small">Score alimentaire (/100) en abscisse, indice en ordonnée — chaque point est une date de mesure. Une alimentation équilibrée soutient le poids, la tension et la récupération.</p>
-        <div id="ifg-nutrition-scatter"></div>
+        <div id="ifg-nutrition-scatter" role="img" aria-label="Nuage de points : score alimentaire en abscisse, indice FitTrack en ordonnée"></div>
       </div>
     </div>
   </section>
@@ -176,8 +177,8 @@
   <section id="view-history" class="view">
     <div class="card">
       <h2>Graphiques par indicateur</h2>
-      <select id="chart-metric"></select>
-      <div id="chart"></div>
+      <select id="chart-metric" aria-label="Indicateur à afficher dans le graphique"></select>
+      <div id="chart" role="img" aria-label="Graphique d'évolution de l'indicateur sélectionné dans le temps"></div>
       <div id="chart-stats" class="small"></div>
     </div>
     <div class="card">
@@ -187,7 +188,7 @@
         <button id="export-json">⬇️ Export JSON</button>
         <button id="export-pdf">🖨️ Fiche de score PDF</button>
         <button id="import-btn">⬆️ Importer un fichier</button>
-        <input type="file" id="import-file" accept=".json,.csv" class="hidden">
+        <input type="file" id="import-file" accept=".json,.csv" class="hidden" aria-label="Fichier de sauvegarde FitTrack à importer (JSON ou CSV)">
         <span id="import-msg" class="ok hidden" role="status" aria-live="polite"></span>
       </div>
       <p class="small">L'import fusionne le profil et les mesures du fichier (JSON ou CSV) avec vos données actuelles — utile pour restaurer après un plantage ou changer d'appareil.</p>
@@ -197,7 +198,7 @@
         Les données sont lues <b>100 % localement</b> — aucun envoi sur un serveur.</p>
         <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
           <button id="import-watch-btn">⌚ Importer un fichier montre</button>
-          <input type="file" id="import-watch-file" accept=".csv,.tcx,.gpx" class="hidden">
+          <input type="file" id="import-watch-file" accept=".csv,.tcx,.gpx" class="hidden" aria-label="Fichier d'export de montre connectée à importer (CSV, TCX ou GPX)">
           <span class="small" style="color:var(--text-muted)">ou glissez-déposez le fichier ici</span>
         </div>
         <p class="small" style="margin-bottom:0">Données reconnues : <b>FC de repos</b> (min de la journée), <b>durée de sommeil</b>, <b>pas</b>, <b>durée d'activité</b>, <b>calories</b>.
@@ -309,8 +310,8 @@
 
 <!-- Onboarding (première visite) -->
 <div id="onboarding" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>Bienvenue sur FitTrack 🏃</h2>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+    <h2 id="onboarding-title">Bienvenue sur FitTrack 🏃</h2>
     <div class="info-body">
     <p>Suivez votre condition physique avec <b>16 tests simples</b>, mesurés au rythme :</p>
     <ul>
@@ -329,26 +330,26 @@
 </div>
 
 <!-- Chronomètre flottant -->
-<div id="chrono" class="hidden">
+<div id="chrono" class="hidden" role="region" aria-label="Chronomètre">
   <span id="chrono-target-name" class="small"></span>
   <span id="chrono-display">00:00</span>
-  <button id="chrono-startstop" class="primary" title="Démarrer">▶</button>
-  <button id="chrono-reset" title="Remettre à zéro">↺</button>
-  <button id="chrono-send" class="primary">↳ Reporter</button>
-  <button id="chrono-close" title="Fermer">✕</button>
+  <button id="chrono-startstop" class="primary" title="Démarrer" aria-label="Démarrer le chronomètre">▶</button>
+  <button id="chrono-reset" title="Remettre à zéro" aria-label="Remettre le chronomètre à zéro">↺</button>
+  <button id="chrono-send" class="primary" aria-label="Reporter le temps du chronomètre dans le champ">↳ Reporter</button>
+  <button id="chrono-close" title="Fermer" aria-label="Fermer le chronomètre">✕</button>
 </div>
 
 <!-- Timer compte à rebours générique (chaise 30 s, escalier 3 min, Cooper 12 min) -->
-<div id="timer" class="hidden">
+<div id="timer" class="hidden" role="region" aria-label="Compte à rebours">
   <span class="small"><b id="timer-label">Compte à rebours</b> <span id="timer-next-hint" class="hidden"></span></span>
   <span id="timer-duration-wrap" class="hidden">
-    <input type="number" id="timer-duration-min" min="0.5" max="60" step="0.5" value="3" style="width:70px" title="Durée en minutes"> min
+    <input type="number" id="timer-duration-min" min="0.5" max="60" step="0.5" value="3" style="width:70px" title="Durée en minutes" aria-label="Durée du compte à rebours en minutes"> min
   </span>
   <span id="timer-display">30 s</span>
-  <button id="timer-startstop" class="primary" title="Démarrer le compte à rebours">▶</button>
-  <button id="timer-reset" title="Remettre à zéro">↺</button>
-  <button id="timer-close" title="Fermer">✕</button>
-  <button id="timer-metronome" class="hidden" title="Métronome 96 bpm (4 bips = 1 aller-retour, 24 montées/min) — actif pendant le timer">🥁 96 bpm</button>
+  <button id="timer-startstop" class="primary" title="Démarrer le compte à rebours" aria-label="Démarrer le compte à rebours">▶</button>
+  <button id="timer-reset" title="Remettre à zéro" aria-label="Remettre le compte à rebours à zéro">↺</button>
+  <button id="timer-close" title="Fermer" aria-label="Fermer le compte à rebours">✕</button>
+  <button id="timer-metronome" class="hidden" title="Métronome 96 bpm (4 bips = 1 aller-retour, 24 montées/min) — actif pendant le timer" aria-label="Métronome 96 bpm, actif pendant le compte à rebours">🥁 96 bpm</button>
 </div>
 
 <script src="app.js"></script>

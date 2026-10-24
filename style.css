@@ -1,8 +1,8 @@
 :root {
   --accent: #1F4E79;
   --accent-light: #EAF1F8;
-  --ok: #2e7d32;
-  --warn: #e65100;
+  --ok: #1b5e20;
+  --warn: #c2410c;
   --bad: #b71c1c;
   --border: #c9d6e2;
   --text: #222;
@@ -10,7 +10,7 @@
   --surface: #fff;
   --surface-alt: #EAF1F8;
   --muted: #555;
-  --faint: #aaa;
+  --faint: #6b7280;
   --line-soft: #eee;
   --track: #e3e9ef;
   --warn-bg: #fff3cd;
@@ -23,18 +23,20 @@
   --shadow-strong: rgba(0,0,0,.25);
 }
 :root.dark {
-  --accent: #6ea8dc;
+  /* Texte foncé sur fond accent éclairci (contraste AA) */
+  --on-accent: #12181f;
+  --accent: #8db8e8;
   --accent-light: #22344a;
   --ok: #6fbf73;
   --warn: #f0a04b;
-  --bad: #e06c6c;
+  --bad: #f08080;
   --border: #3a4d63;
   --text: #e8edf3;
   --bg: #12181f;
   --surface: #1c2530;
   --surface-alt: #22344a;
   --muted: #a8b6c4;
-  --faint: #5c6b7a;
+  --faint: #8a99a8;
   --line-soft: #2a3644;
   --track: #2a3644;
   --warn-bg: #3d3319;
@@ -45,6 +47,22 @@
   --invalid-bg: #3d2222;
   --shadow: rgba(0,0,0,.3);
   --shadow-strong: rgba(0,0,0,.6);
+}
+/* Thème sombre : texte foncé sur les fonds accent (boutons primary, th, badges actifs) */
+:root.dark button.primary,
+:root.dark th,
+:root.dark header,
+:root.dark nav button,
+:root.dark .session-type-btn.active,
+:root.dark .ifg-period-opt:has(input:checked),
+:root.dark .theme-opt:has(input:checked) {
+  color: var(--on-accent);
+}
+/* Thème sombre : texte foncé sur bad/warn (boutons running/countdown) */
+:root.dark #chrono-startstop.running,
+:root.dark #timer-startstop.running,
+:root.dark #timer-startstop.countdown {
+  color: #12181f;
 }
 * { box-sizing: border-box; }
 @media (prefers-reduced-motion: reduce) {
@@ -61,6 +79,25 @@ body {
   background: var(--bg);
   font-size: 16px;
   transition: background .2s, color .2s;
+}
+/* Skip link : visible uniquement au focus clavier */
+.skip-link {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--accent); color: #fff;
+  padding: 10px 16px; border-radius: 0 0 8px 0;
+  font-weight: 600; z-index: 100;
+}
+.skip-link:focus {
+  left: 0; color: #fff;
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+:root.dark .skip-link { color: var(--on-accent, #12181f); }
+
+/* Classe utilitaire : contenu visible uniquement pour les lecteurs d'écran (captions de tableaux) */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 header {
   background: var(--accent);
@@ -116,6 +153,27 @@ label { display: block; margin: 6px 0; }
 input, select {
   padding: 8px; border: 1px solid var(--border); border-radius: 6px;
   font-size: 1em; background: var(--surface); color: var(--text);
+}
+/* Focus visible : contour accentué 2px + léger halo, jamais supprimé (a11y clavier) */
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+/* Champ invalide : bordure rouge + focus renforcé */
+input.invalid, select.invalid {
+  border-color: var(--bad); background: var(--invalid-bg);
+}
+input.invalid:focus, select.invalid:focus {
+  border-color: var(--bad);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 30%, transparent);
+}
+/* Message d'erreur de champ : texte explicite, pas seulement la couleur */
+.field-error {
+  display: block; margin-top: 4px; font-size: .85em;
+  color: var(--bad); font-weight: 600;
 }
 input[type="color"] { padding: 2px; width: 44px; height: 34px; }
 input[type="number"] { width: 110px; }
@@ -173,6 +231,8 @@ button.danger { background: var(--bad-bg); color: var(--bad); }
 table { border-collapse: collapse; width: 100%; font-size: .9em; }
 th, td { padding: 7px 10px; border: 1px solid var(--border); text-align: left; }
 th { background: var(--accent); color: #fff; }
+/* En-têtes de ligne (scope="row") : pas de fond accent, texte normal */
+th[scope="row"] { background: transparent; color: inherit; font-weight: 600; }
 tr:nth-child(even) td { background: var(--surface-alt); }
 .small { font-size: .85em; color: var(--muted); }
 /* Chrono flottant */
@@ -233,7 +293,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 /* Tableau « Dernière session » (2 sessions + delta) */
 .last3-table { table-layout: fixed; }
 .last3-table th:first-child,
-.last3-table td.test-name { width: 34%; }
+.last3-table th.test-name { width: 34%; text-align: left; font-weight: 600; }
 .last3-table th:not(:first-child),
 .last3-table td.num {
   width: 22%; text-align: right; white-space: nowrap;
@@ -244,7 +304,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 .last3-table td.down { color: var(--bad); font-weight: 600; }
 /* Tableau « Tendances par dimension » (onglet Analyse) */
 #ifg-trends table { table-layout: fixed; }
-#ifg-trends th:first-child, #ifg-trends td:first-child { width: 34%; }
+#ifg-trends th:first-child { width: 34%; }
 #ifg-trends th:not(:first-child), #ifg-trends td:not(:first-child) { width: 22%; }
 #ifg-trends th {
   white-space: normal;          /* autorise le retour à la ligne */
@@ -253,7 +313,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
   vertical-align: bottom;
 }
 #ifg-trends td { text-align: center; }
-#ifg-trends td:first-child { text-align: left; }
+#ifg-trends th[scope="row"] { text-align: left; }
 #ifg-trends td.muted { color: var(--faint); }
 #ifg-trends td.up { color: var(--ok); font-weight: 600; }
 #ifg-trends td.down { color: var(--bad); font-weight: 600; }
@@ -357,7 +417,6 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 .info-body { text-align: left; line-height: 1.55; }
 .info-body ul { margin: 0; padding-left: 20px; }
 .info-body li { margin: 6px 0; }
-input.invalid { border-color: var(--bad); background: var(--invalid-bg); }
 button:disabled { opacity: .5; cursor: not-allowed; }
 #session-progress { margin-left: 10px; color: var(--accent); font-weight: 600; }
 

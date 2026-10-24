@@ -73,10 +73,9 @@ function confirmDialog(msg, { danger = false } = {}) {
     $('#confirm-modal-msg').textContent = msg;
     $('#confirm-modal-ok').classList.toggle('danger', danger);
     $('#confirm-modal-ok').classList.toggle('primary', !danger);
-    ov.classList.remove('hidden');
-    $('#confirm-modal-ok').focus();
+    openModal(ov, $('#confirm-modal-ok'));
     const cleanup = v => {
-      ov.classList.add('hidden');
+      closeModal(ov);
       $('#confirm-modal-ok').removeEventListener('click', onOk);
       $('#confirm-modal-cancel').removeEventListener('click', onCancel);
       ov.removeEventListener('click', onOverlay);
@@ -1771,15 +1770,16 @@ function renderLastSession() {
   ids.sort((a, b) => TESTS.findIndex(t => t.id === a) - TESTS.findIndex(t => t.id === b));
 
   // En-tête : Test | <date + bouton supprimer> × colonnes | Δ
-  const headerCells = cols.map(c => h('th', {},
+  const headerCells = cols.map(c => h('th', { scope: 'col' },
     frDate(c.date), ' ',
     h('button', {
       class: 'delete-session-btn',
       title: 'Supprimer les sessions de cette date',
+      'aria-label': `Supprimer les sessions du ${frDate(c.date)}`,
       dataset: { delSession: c.sessions[0].id || '', delDate: c.date },
     }, '🗑️')
   ));
-  const thead = h('tr', {}, h('th', {}, 'Test'), ...headerCells, h('th', {}, 'Δ'));
+  const thead = h('tr', {}, h('th', { scope: 'col' }, 'Test'), ...headerCells, h('th', { scope: 'col' }, 'Δ'));
 
   const bodyRows = [];
   for (const id of ids) {
@@ -1832,13 +1832,14 @@ function renderLastSession() {
         h('button', {
           class: 'edit-btn',
           title: 'Corriger cette mesure',
+          'aria-label': `Corriger la mesure ${t.name} du ${frDate(s.date)}`,
           dataset: { editId: s.id || '', editDate: s.date, editTest: id },
         }, '✏️')
       );
     };
 
     bodyRows.push(h('tr', {},
-      h('td', { class: 'test-name' },
+      h('th', { scope: 'row', class: 'test-name' },
         h('span', { class: 'test-num' }, testNum(id)),
         t.name
       ),
@@ -1848,7 +1849,9 @@ function renderLastSession() {
     ));
   }
 
-  compEl.replaceChildren(h('table', { class: 'last3-table' }, thead, ...nodes(...bodyRows)));
+  compEl.replaceChildren(h('table', { class: 'last3-table' },
+    h('caption', { class: 'sr-only', text: 'Comparaison des deux dernières dates de mesure' }),
+    thead, ...nodes(...bodyRows)));
 }
 
 document.addEventListener('click', async e => {
@@ -1904,14 +1907,13 @@ function openEditModal(ctx) {
   $('#edit-value').min = t.min ?? 0;
   $('#edit-value').max = t.max ?? 999;
   $('#edit-value').placeholder = t.unit;
-  $('#edit-modal').classList.remove('hidden');
-  $('#edit-value').focus();
+  openModal($('#edit-modal'), $('#edit-value'));
   $('#edit-value').select();
 }
 
 function closeEditModal() {
   editCtx = null;
-  $('#edit-modal').classList.add('hidden');
+  closeModal($('#edit-modal'));
 }
 
 $('#edit-cancel').addEventListener('click', closeEditModal);
@@ -1994,7 +1996,7 @@ function renderIpaqBlock(block) {
   IPAQ_QUESTIONS.forEach(q => {
     const inp = h('input', {
       type: 'number', step: '1', min: String(q.min), max: String(q.max),
-      dataset: { ipaq: q.id }, placeholder: q.unit, style: { width: '110px' },
+      dataset: { ipaq: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
     });
     const row = h('div', { class: 'field-row' },
       h('label', {}, ...wrapParens(q.label), inp, ' ', h('span', { class: 'small' }, q.unit))
@@ -2005,6 +2007,7 @@ function renderIpaqBlock(block) {
       const num = raw === '' ? null : parseInt(raw, 10);
       const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
       inp.classList.toggle('invalid', invalid);
+      setFieldError(inp, `err-ipaq-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
       answers[q.id] = invalid ? null : num;
       updateIpaqResult(answers);
       updateSaveState();
@@ -2108,7 +2111,7 @@ function renderSleepBlock(block) {
     } else {
       const inp = h('input', {
         type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
-        dataset: { sleep: q.id }, placeholder: q.unit, style: { width: '110px' },
+        dataset: { sleep: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
       });
       row.append(h('label', {}, q.label, inp, ' ', h('span', { class: 'small' }, q.unit)));
       qWrap.appendChild(row);
@@ -2117,6 +2120,7 @@ function renderSleepBlock(block) {
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
         const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
         inp.classList.toggle('invalid', invalid);
+        setFieldError(inp, `err-sleep-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
         answers[q.id] = invalid ? null : num;
         updateSleepResult(answers);
         updateSaveState();
@@ -2218,7 +2222,7 @@ function renderNutritionBlock(block) {
     } else {
       const inp = h('input', {
         type: 'number', step: String(q.step), min: String(q.min), max: String(q.max),
-        dataset: { nutrition: q.id }, placeholder: q.unit, style: { width: '110px' },
+        dataset: { nutrition: q.id }, placeholder: q.unit, style: { width: '110px' }, 'aria-invalid': 'false',
       });
       if (q.id === 'alcohol' && lastAlcohol != null) inp.value = lastAlcohol;
       row.append(h('label', {}, q.label, infoBtn ? ' ' : null, infoBtn, inp, ' ', h('span', { class: 'small' }, q.unit)));
@@ -2228,6 +2232,7 @@ function renderNutritionBlock(block) {
         const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
         const invalid = raw !== '' && (isNaN(num) || num < q.min || num > q.max);
         inp.classList.toggle('invalid', invalid);
+        setFieldError(inp, `err-nutrition-${q.id}`, invalid ? `Valeur hors bornes (minimum ${q.min}, maximum ${q.max} ${q.unit}).` : '');
         answers[q.id] = invalid ? null : num;
         updateNutritionResult(answers);
         updateSaveState();
@@ -2321,7 +2326,7 @@ function renderSessionFields() {
         row.className = 'field-row stair-method-row';
         row.dataset.stairMethod = t.id;
         const chronoBtn = chronoBtns.includes(t.id)
-          ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
+          ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱', title: 'Ouvrir le chronomètre', 'aria-label': `Ouvrir le chronomètre pour ${t.name}` }) : null;
         // Timer 3 min (méthode 1, avec chaînage 1 min) ou 60 s (méthode 2)
         const stairTimerBtn = t.id === 'stair_pulse'
           ? h('button', {
@@ -2333,13 +2338,14 @@ function renderSessionFields() {
                 timerNextLabel: 'Escalier — mesure du pouls dans 1 min (asseyez-vous)'
               },
               title: 'Compte à rebours 3 min pour les montées d’escalier (3 s de préparation avec bip, durée réglable, métronome 96 bpm : 4 bips = 1 aller-retour), puis 1 min auto avant la mesure du pouls',
+              'aria-label': 'Compte à rebours 3 min pour le test escalier méthode 1, puis 1 min pour la mesure du pouls',
               text: '⏳'
             })
           : t.id === 'stair_steps'
             ? h('button', {
                 class: 'timer-btn',
                 dataset: { timerMs: '60000', timerLabel: 'Escalier — marches en 60 s' },
-                title: 'Compte à rebours 60 s pour compter les marches',
+                title: 'Compte à rebours 60 s pour compter les marches', 'aria-label': 'Compte à rebours 60 s pour le test escalier méthode 2',
                 text: '⏳'
               })
             : null;
@@ -2348,15 +2354,18 @@ function renderSessionFields() {
         const last = latestValues()[t.id]?.value;
         const lastInfo = last != null
           ? h('div', { class: 'field-last' }, 'Dernier : ', h('b', {}, `${last}`), ` ${t.unit}`) : null;
+        const inpId = `inp-${t.id}`;
+        const lblId = `lbl-${t.id}`;
         row.replaceChildren(...nodes(
-          h('label', {},
+          h('label', { id: lblId },
             h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
             infoBtn,
             h('div', { class: 'field-hint', text: t.hint || '' }),
             lastInfo),
           h('input', {
             type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
-            dataset: { test: t.id }, placeholder: t.unit,
+            dataset: { test: t.id }, placeholder: t.unit, 'aria-invalid': 'false',
+            id: inpId, 'aria-labelledby': lblId,
             ...(t.id !== 'stair_pulse' ? { disabled: true } : {})
           }),
           chronoBtn,
@@ -2369,13 +2378,14 @@ function renderSessionFields() {
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
-        ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
+        ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱', title: 'Ouvrir le chronomètre', 'aria-label': `Ouvrir le chronomètre pour ${t.name}` }) : null;
       // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
         ? h('button', {
             class: 'timer-btn',
             dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions', timerCountdown: '1' },
             title: 'Compte à rebours 30 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
+            'aria-label': 'Compte à rebours 30 s pour le test de la chaise',
             text: '⏳'
           }) : null;
       const infoBtn = t.info
@@ -2399,15 +2409,17 @@ function renderSessionFields() {
             h('div', { class: 'row', style: { margin: '6px 0' } },
               h('label', {},
                 'VMA (km/h) : ',
-                h('input', { type: 'number', id: 'cooper-vma', step: '0.1', min: '4', max: '30', placeholder: 'ex. 12,5', style: { width: '90px' } })),
+                h('input', { type: 'number', id: 'cooper-vma', step: '0.1', min: '4', max: '30', placeholder: 'ex. 12,5', style: { width: '90px' }, 'aria-invalid': 'false' })),
               h('label', {},
                 'VO2max (ml/kg/min) : ',
-                h('input', { type: 'number', id: 'cooper-vo2', step: '0.1', min: '10', max: '90', placeholder: 'ex. 44', style: { width: '90px' } }))),
+                h('input', { type: 'number', id: 'cooper-vo2', step: '0.1', min: '10', max: '90', placeholder: 'ex. 44', style: { width: '90px' }, 'aria-invalid': 'false' }))),
             h('div', { class: 'field-hint', text: 'Au moins un des 3 champs (distance, VMA ou VO2max) suffit à enregistrer la session.' }),
             h('div', { id: 'cooper-estim-result', class: 'estimation-box hidden' }))
         : null;
+      const inpId = `inp-${t.id}`;
+      const lblId = `lbl-${t.id}`;
       row.replaceChildren(...nodes(
-        h('label', {},
+        h('label', { id: lblId },
           h('span', { class: 'test-num', text: testNum(t.id) }), t.name, ' ',
           infoBtn,
           h('div', { class: 'field-hint', text: t.hint || '' }),
@@ -2415,7 +2427,8 @@ function renderSessionFields() {
         cooperSelect,
         h('input', {
           type: 'number', step: 'any', min: String(t.min ?? 0), max: String(t.max ?? 999),
-          dataset: { test: t.id }, placeholder: t.unit
+          dataset: { test: t.id }, placeholder: t.unit, 'aria-invalid': 'false',
+          id: inpId, 'aria-labelledby': lblId
         }),
         chronoBtn,
         chairTimerBtn,
@@ -3139,6 +3152,40 @@ const STATIC_INFOS = {
     ),
   },
 };
+
+// ---------- Focus trap pour les modales (navigation clavier) ----------
+// Mémorise l'élément qui avait le focus avant l'ouverture, le restaure à la fermeture,
+// et confine Tab/Shift+Tab à l'intérieur de la modale ouverte.
+let modalFocusReturn = null;
+function focusableIn(container) {
+  return Array.from(container.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.disabled && !el.closest('.hidden') && el.offsetParent !== null);
+}
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const open = ['info-modal', 'edit-modal', 'confirm-modal', 'onboarding']
+    .map(id => document.getElementById(id))
+    .find(ov => ov && !ov.classList.contains('hidden'));
+  if (!open) return;
+  const items = focusableIn(open);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+document.addEventListener('keydown', trapFocus);
+function openModal(ov, focusTarget) {
+  modalFocusReturn = document.activeElement;
+  ov.classList.remove('hidden');
+  (focusTarget || ov.querySelector('button, input, select, [tabindex]'))?.focus();
+}
+function closeModal(ov) {
+  ov.classList.add('hidden');
+  modalFocusReturn?.focus?.();
+  modalFocusReturn = null;
+}
+
 document.addEventListener('click', e => {
   const btn = e.target.closest('.info-btn');
   if (!btn) return;
@@ -3148,18 +3195,18 @@ document.addEventListener('click', e => {
     if (!s) return;
     $('#info-modal-title').textContent = s.name;
     $('#info-modal-body').replaceChildren(s.info());
-    $('#info-modal').classList.remove('hidden');
+    openModal($('#info-modal'), $('#info-modal-close'));
     return;
   }
   const t = byId(key);
   if (!t || !t.info) return;
   $('#info-modal-title').textContent = t.name;
   $('#info-modal-body').replaceChildren(t.info());
-  $('#info-modal').classList.remove('hidden');
+  openModal($('#info-modal'), $('#info-modal-close'));
 });
 
 function closeInfoModal() {
-  $('#info-modal').classList.add('hidden');
+  closeModal($('#info-modal'));
 }
 $('#info-modal-close').addEventListener('click', closeInfoModal);
 $('#info-modal').addEventListener('click', e => {
@@ -3174,8 +3221,30 @@ document.addEventListener('keydown', e => {
   else if (!$('#timer').classList.contains('hidden')) $('#timer-close').click();
 });
 
+// Affiche/masque un message d'erreur textuel sous un champ + aria-invalid/aria-describedby.
+// errId doit être unique par champ (ex. `err-${inp.dataset.test}`).
+function setFieldError(inp, errId, message) {
+  inp.setAttribute('aria-invalid', message ? 'true' : 'false');
+  // Le message d'erreur est inséré dans le .field-row (peut contenir label + input + boutons)
+  const row = inp.closest('.field-row') || inp.parentElement;
+  let err = row.querySelector(`[id="${errId}"]`);
+  if (!err) {
+    err = h('span', { class: 'field-error', id: errId, role: 'alert' });
+    row.appendChild(err);
+  }
+  if (message) {
+    err.textContent = message;
+    inp.setAttribute('aria-describedby', [inp.getAttribute('aria-describedby'), errId].filter(Boolean).join(' '));
+  } else {
+    err.textContent = '';
+    const desc = (inp.getAttribute('aria-describedby') || '').split(' ').filter(x => x !== errId);
+    if (desc.length) inp.setAttribute('aria-describedby', desc.join(' '));
+    else inp.removeAttribute('aria-describedby');
+  }
+}
+
 function updateFieldValidity(t, inp) {
-  if (inp.disabled) { inp.classList.remove('invalid'); return; } // méthode escalier inactive
+  if (inp.disabled) { inp.classList.remove('invalid'); setFieldError(inp, `err-${inp.dataset.test}`, ''); return; } // méthode escalier inactive
   const raw = inp.value.trim();
   const num = raw === '' ? null : parseFloat(raw.replace(',', '.'));
   // Bornes effectives : attributs min/max du champ (le demi-Cooper les resserre à 100–2500)
@@ -3183,6 +3252,14 @@ function updateFieldValidity(t, inp) {
   const max = inp.max !== '' ? parseFloat(inp.max) : t.max;
   const invalid = raw !== '' && (isNaN(num) || (min != null && num < min) || (max != null && num > max));
   inp.classList.toggle('invalid', invalid);
+  if (invalid) {
+    const borne = [];
+    if (min != null && (isNaN(num) || num < min)) borne.push(`minimum ${min}`);
+    if (max != null && num > max) borne.push(`maximum ${max}`);
+    setFieldError(inp, `err-${inp.dataset.test}`, `Valeur hors bornes (${borne.join(', ')}) ${t.unit}.`);
+  } else {
+    setFieldError(inp, `err-${inp.dataset.test}`, '');
+  }
   updateSaveState();
 }
 
@@ -3195,11 +3272,20 @@ function cooperEstimValid() {
     const el = $(sel);
     if (!el) continue;
     const raw = el.value.trim();
-    if (raw === '') continue;
+    if (raw === '') { el.classList.remove('invalid'); el.setAttribute('aria-invalid', 'false'); setFieldError(el, `err-${el.id}`, ''); continue; }
     const num = parseFloat(raw.replace(',', '.'));
     const min = el.min !== '' ? parseFloat(el.min) : null;
     const max = el.max !== '' ? parseFloat(el.max) : null;
-    if (isNaN(num) || (min != null && num < min) || (max != null && num > max)) { invalid = true; continue; }
+    if (isNaN(num) || (min != null && num < min) || (max != null && num > max)) {
+      invalid = true;
+      el.classList.add('invalid');
+      el.setAttribute('aria-invalid', 'true');
+      setFieldError(el, `err-${el.id}`, `Valeur hors bornes (minimum ${min}, maximum ${max}).`);
+      continue;
+    }
+    el.classList.remove('invalid');
+    el.setAttribute('aria-invalid', 'false');
+    setFieldError(el, `err-${el.id}`, '');
     filled = true; count++;
   }
   return { filled, invalid, count };
@@ -3499,6 +3585,7 @@ function timerSetBtn(running) {
   const b = $('#timer-startstop');
   b.textContent = running ? '⏸' : '▶';
   b.title = running ? 'Pause' : 'Démarrer le compte à rebours';
+  b.setAttribute('aria-label', running ? 'Mettre le compte à rebours en pause' : 'Démarrer le compte à rebours');
   b.classList.toggle('running', running);
 }
 function timerStop(finished = false) {
@@ -3694,6 +3781,7 @@ function chronoSetToggleBtn(running) {
   const b = $('#chrono-startstop');
   b.textContent = running ? '⏹' : '▶';
   b.title = running ? 'Arrêter' : 'Démarrer';
+  b.setAttribute('aria-label', running ? 'Arrêter le chronomètre' : 'Démarrer le chronomètre');
   b.classList.toggle('running', running);
 }
 function chronoToggle() {
@@ -3998,9 +4086,10 @@ function renderIfgTrends(profile) {
     }
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   };
-  const rows = [h('tr', {},
-    h('th', { text: 'Dimension' }), h('th', { text: 'Score moyen (30 j)' }),
-    h('th', { text: 'Avant' }), h('th', { text: 'Tendance' }))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Tendances de l’indice FitTrack par dimension sur 30 jours' }),
+    h('tr', {},
+    h('th', { scope: 'col', text: 'Dimension' }), h('th', { scope: 'col', text: 'Score moyen (30 j)' }),
+    h('th', { scope: 'col', text: 'Avant' }), h('th', { scope: 'col', text: 'Tendance' }))];
   for (const d of IFG_DIMENSIONS) {
     const r = avgDim(recent, d), p = avgDim(previous, d);
     if (r == null && p == null) continue;
@@ -4011,7 +4100,7 @@ function renderIfgTrends(profile) {
     else if (r < p - 2) trend = h('td', { class: 'down', text: '▼ en baisse' });
     else trend = h('td', { class: 'muted', text: '= stable' });
     rows.push(h('tr', {},
-      h('td', {}, `${d.icon} ${d.label}`),
+      h('th', { scope: 'row' }, `${d.icon} ${d.label}`),
       h('td', {}, h('b', {}, r != null ? String(r) : '—')),
       h('td', {}, p != null ? String(p) : '—'),
       trend));
@@ -4371,7 +4460,8 @@ function renderHistoryTable() {
   const sessions = getSessions().slice().reverse();
   const el = $('#history-table');
   if (!sessions.length) { el.replaceChildren(h('p', { class: 'small' }, 'Aucune mesure.')); return; }
-  const rows = [h('tr', {}, h('th', {}, 'Date'), h('th', {}, 'Type'), h('th', {}, 'Résultats'))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Historique de toutes les mesures enregistrées' }),
+    h('tr', {}, h('th', { scope: 'col' }, 'Date'), h('th', { scope: 'col' }, 'Type'), h('th', { scope: 'col' }, 'Résultats'))];
   for (const s of sessions) {
     const results = Object.entries(s.values || {})
       .filter(([, v]) => v != null && v !== '')
@@ -4384,6 +4474,7 @@ function renderHistoryTable() {
           h('button', {
             class: 'edit-btn',
             title: 'Corriger cette mesure',
+            'aria-label': `Corriger la mesure ${t.name} du ${s.date}`,
             dataset: { editId: s.id || '', editDate: s.date, editTest: id },
           }, '✏️'),
         ];
@@ -4395,7 +4486,7 @@ function renderHistoryTable() {
       resultsCell.push(...r);
     });
     rows.push(h('tr', {},
-      h('td', {}, s.date),
+      h('th', { scope: 'row' }, s.date),
       h('td', {}, GROUP_LABELS[s.type] || s.type, badgeNodes(s)),
       h('td', {}, resultsCell)
     ));
@@ -5047,12 +5138,13 @@ $('#save-profile').addEventListener('click', () => {
 
 function renderReferenceTable() {
   const profile = getProfile();
-  const rows = [h('tr', {}, h('th', {}, 'Test'), h('th', {}, 'Bon'), h('th', {}, 'Moyen'), h('th', {}, 'Faible'))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Repères de seuils (bon, moyen, faible) par test, adaptés à votre profil' }),
+    h('tr', {}, h('th', { scope: 'col' }, 'Test'), h('th', { scope: 'col' }, 'Bon'), h('th', { scope: 'col' }, 'Moyen'), h('th', { scope: 'col' }, 'Faible'))];
   for (const t of TESTS) {
     if (t.good == null || t.id === 'vma' || t.id === 'vo2max') continue; // rendus plus bas (avec valeur courante)
     const { good, mid, rev } = thresholds(t, profile);
     rows.push(h('tr', {},
-      h('td', {}, h('span', { class: 'test-num' }, testNum(t.id)), t.name),
+      h('th', { scope: 'row' }, h('span', { class: 'test-num' }, testNum(t.id)), t.name),
       h('td', {}, `${rev ? '≤ ' : '≥ '}${good}`),
       h('td', {}, `${rev ? '≤ ' : '≥ '}${mid}`),
       h('td', {}, `${rev ? '> ' : '< '}${mid} ${t.unit}`)
@@ -5070,7 +5162,7 @@ function renderReferenceTable() {
       ? h('span', { class: 'small' }, '(vous : ', h('b', {}, fmt1(cur)), ` ${t.unit}${src})`)
       : h('span', { class: 'small' }, '(aucune estimation)');
     rows.push(h('tr', {},
-      h('td', {}, h('span', { class: 'test-num' }, testNum(id)), t.name, ' ', curSpan),
+      h('th', { scope: 'row' }, h('span', { class: 'test-num' }, testNum(id)), t.name, ' ', curSpan),
       h('td', {}, `≥ ${good}`),
       h('td', {}, `≥ ${mid}`),
       h('td', {}, `< ${mid} ${t.unit}`)
@@ -5145,15 +5237,15 @@ if ('serviceWorker' in navigator) {
 
 // Onboarding au premier lancement
 if (!store.get('profile', null) && !store.get('onboarded', false)) {
-  $('#onboarding').classList.remove('hidden');
+  openModal($('#onboarding'), $('#onboarding-go'));
 }
 $('#onboarding-go').addEventListener('click', () => {
-  $('#onboarding').classList.add('hidden');
+  closeModal($('#onboarding'));
   store.set('onboarded', true);
   showView('profile');
 });
 $('#onboarding-skip').addEventListener('click', () => {
-  $('#onboarding').classList.add('hidden');
+  closeModal($('#onboarding'));
   store.set('onboarded', true);
 });
 
