@@ -73,10 +73,9 @@ function confirmDialog(msg, { danger = false } = {}) {
     $('#confirm-modal-msg').textContent = msg;
     $('#confirm-modal-ok').classList.toggle('danger', danger);
     $('#confirm-modal-ok').classList.toggle('primary', !danger);
-    ov.classList.remove('hidden');
-    $('#confirm-modal-ok').focus();
+    openModal(ov, $('#confirm-modal-ok'));
     const cleanup = v => {
-      ov.classList.add('hidden');
+      closeModal(ov);
       $('#confirm-modal-ok').removeEventListener('click', onOk);
       $('#confirm-modal-cancel').removeEventListener('click', onCancel);
       ov.removeEventListener('click', onOverlay);
@@ -1771,15 +1770,16 @@ function renderLastSession() {
   ids.sort((a, b) => TESTS.findIndex(t => t.id === a) - TESTS.findIndex(t => t.id === b));
 
   // En-tête : Test | <date + bouton supprimer> × colonnes | Δ
-  const headerCells = cols.map(c => h('th', {},
+  const headerCells = cols.map(c => h('th', { scope: 'col' },
     frDate(c.date), ' ',
     h('button', {
       class: 'delete-session-btn',
       title: 'Supprimer les sessions de cette date',
+      'aria-label': `Supprimer les sessions du ${frDate(c.date)}`,
       dataset: { delSession: c.sessions[0].id || '', delDate: c.date },
     }, '🗑️')
   ));
-  const thead = h('tr', {}, h('th', {}, 'Test'), ...headerCells, h('th', {}, 'Δ'));
+  const thead = h('tr', {}, h('th', { scope: 'col' }, 'Test'), ...headerCells, h('th', { scope: 'col' }, 'Δ'));
 
   const bodyRows = [];
   for (const id of ids) {
@@ -1832,13 +1832,14 @@ function renderLastSession() {
         h('button', {
           class: 'edit-btn',
           title: 'Corriger cette mesure',
+          'aria-label': `Corriger la mesure ${t.name} du ${frDate(s.date)}`,
           dataset: { editId: s.id || '', editDate: s.date, editTest: id },
         }, '✏️')
       );
     };
 
     bodyRows.push(h('tr', {},
-      h('td', { class: 'test-name' },
+      h('th', { scope: 'row', class: 'test-name' },
         h('span', { class: 'test-num' }, testNum(id)),
         t.name
       ),
@@ -1848,7 +1849,9 @@ function renderLastSession() {
     ));
   }
 
-  compEl.replaceChildren(h('table', { class: 'last3-table' }, thead, ...nodes(...bodyRows)));
+  compEl.replaceChildren(h('table', { class: 'last3-table' },
+    h('caption', { class: 'sr-only', text: 'Comparaison des deux dernières dates de mesure' }),
+    thead, ...nodes(...bodyRows)));
 }
 
 document.addEventListener('click', async e => {
@@ -1904,14 +1907,13 @@ function openEditModal(ctx) {
   $('#edit-value').min = t.min ?? 0;
   $('#edit-value').max = t.max ?? 999;
   $('#edit-value').placeholder = t.unit;
-  $('#edit-modal').classList.remove('hidden');
-  $('#edit-value').focus();
+  openModal($('#edit-modal'), $('#edit-value'));
   $('#edit-value').select();
 }
 
 function closeEditModal() {
   editCtx = null;
-  $('#edit-modal').classList.add('hidden');
+  closeModal($('#edit-modal'));
 }
 
 $('#edit-cancel').addEventListener('click', closeEditModal);
@@ -2324,7 +2326,7 @@ function renderSessionFields() {
         row.className = 'field-row stair-method-row';
         row.dataset.stairMethod = t.id;
         const chronoBtn = chronoBtns.includes(t.id)
-          ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
+          ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱', title: 'Ouvrir le chronomètre', 'aria-label': `Ouvrir le chronomètre pour ${t.name}` }) : null;
         // Timer 3 min (méthode 1, avec chaînage 1 min) ou 60 s (méthode 2)
         const stairTimerBtn = t.id === 'stair_pulse'
           ? h('button', {
@@ -2336,13 +2338,14 @@ function renderSessionFields() {
                 timerNextLabel: 'Escalier — mesure du pouls dans 1 min (asseyez-vous)'
               },
               title: 'Compte à rebours 3 min pour les montées d’escalier (3 s de préparation avec bip, durée réglable, métronome 96 bpm : 4 bips = 1 aller-retour), puis 1 min auto avant la mesure du pouls',
+              'aria-label': 'Compte à rebours 3 min pour le test escalier méthode 1, puis 1 min pour la mesure du pouls',
               text: '⏳'
             })
           : t.id === 'stair_steps'
             ? h('button', {
                 class: 'timer-btn',
                 dataset: { timerMs: '60000', timerLabel: 'Escalier — marches en 60 s' },
-                title: 'Compte à rebours 60 s pour compter les marches',
+                title: 'Compte à rebours 60 s pour compter les marches', 'aria-label': 'Compte à rebours 60 s pour le test escalier méthode 2',
                 text: '⏳'
               })
             : null;
@@ -2375,13 +2378,14 @@ function renderSessionFields() {
       const row = document.createElement('div');
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
-        ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱' }) : null;
+        ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱', title: 'Ouvrir le chronomètre', 'aria-label': `Ouvrir le chronomètre pour ${t.name}` }) : null;
       // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
       const chairTimerBtn = t.id === 'chair'
         ? h('button', {
             class: 'timer-btn',
             dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions', timerCountdown: '1' },
             title: 'Compte à rebours 30 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
+            'aria-label': 'Compte à rebours 30 s pour le test de la chaise',
             text: '⏳'
           }) : null;
       const infoBtn = t.info
@@ -3148,6 +3152,40 @@ const STATIC_INFOS = {
     ),
   },
 };
+
+// ---------- Focus trap pour les modales (navigation clavier) ----------
+// Mémorise l'élément qui avait le focus avant l'ouverture, le restaure à la fermeture,
+// et confine Tab/Shift+Tab à l'intérieur de la modale ouverte.
+let modalFocusReturn = null;
+function focusableIn(container) {
+  return Array.from(container.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.disabled && !el.closest('.hidden') && el.offsetParent !== null);
+}
+function trapFocus(e) {
+  if (e.key !== 'Tab') return;
+  const open = ['info-modal', 'edit-modal', 'confirm-modal', 'onboarding']
+    .map(id => document.getElementById(id))
+    .find(ov => ov && !ov.classList.contains('hidden'));
+  if (!open) return;
+  const items = focusableIn(open);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+document.addEventListener('keydown', trapFocus);
+function openModal(ov, focusTarget) {
+  modalFocusReturn = document.activeElement;
+  ov.classList.remove('hidden');
+  (focusTarget || ov.querySelector('button, input, select, [tabindex]'))?.focus();
+}
+function closeModal(ov) {
+  ov.classList.add('hidden');
+  modalFocusReturn?.focus?.();
+  modalFocusReturn = null;
+}
+
 document.addEventListener('click', e => {
   const btn = e.target.closest('.info-btn');
   if (!btn) return;
@@ -3157,18 +3195,18 @@ document.addEventListener('click', e => {
     if (!s) return;
     $('#info-modal-title').textContent = s.name;
     $('#info-modal-body').replaceChildren(s.info());
-    $('#info-modal').classList.remove('hidden');
+    openModal($('#info-modal'), $('#info-modal-close'));
     return;
   }
   const t = byId(key);
   if (!t || !t.info) return;
   $('#info-modal-title').textContent = t.name;
   $('#info-modal-body').replaceChildren(t.info());
-  $('#info-modal').classList.remove('hidden');
+  openModal($('#info-modal'), $('#info-modal-close'));
 });
 
 function closeInfoModal() {
-  $('#info-modal').classList.add('hidden');
+  closeModal($('#info-modal'));
 }
 $('#info-modal-close').addEventListener('click', closeInfoModal);
 $('#info-modal').addEventListener('click', e => {
@@ -3547,6 +3585,7 @@ function timerSetBtn(running) {
   const b = $('#timer-startstop');
   b.textContent = running ? '⏸' : '▶';
   b.title = running ? 'Pause' : 'Démarrer le compte à rebours';
+  b.setAttribute('aria-label', running ? 'Mettre le compte à rebours en pause' : 'Démarrer le compte à rebours');
   b.classList.toggle('running', running);
 }
 function timerStop(finished = false) {
@@ -3742,6 +3781,7 @@ function chronoSetToggleBtn(running) {
   const b = $('#chrono-startstop');
   b.textContent = running ? '⏹' : '▶';
   b.title = running ? 'Arrêter' : 'Démarrer';
+  b.setAttribute('aria-label', running ? 'Arrêter le chronomètre' : 'Démarrer le chronomètre');
   b.classList.toggle('running', running);
 }
 function chronoToggle() {
@@ -4046,9 +4086,10 @@ function renderIfgTrends(profile) {
     }
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   };
-  const rows = [h('tr', {},
-    h('th', { text: 'Dimension' }), h('th', { text: 'Score moyen (30 j)' }),
-    h('th', { text: 'Avant' }), h('th', { text: 'Tendance' }))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Tendances de l’indice FitTrack par dimension sur 30 jours' }),
+    h('tr', {},
+    h('th', { scope: 'col', text: 'Dimension' }), h('th', { scope: 'col', text: 'Score moyen (30 j)' }),
+    h('th', { scope: 'col', text: 'Avant' }), h('th', { scope: 'col', text: 'Tendance' }))];
   for (const d of IFG_DIMENSIONS) {
     const r = avgDim(recent, d), p = avgDim(previous, d);
     if (r == null && p == null) continue;
@@ -4059,7 +4100,7 @@ function renderIfgTrends(profile) {
     else if (r < p - 2) trend = h('td', { class: 'down', text: '▼ en baisse' });
     else trend = h('td', { class: 'muted', text: '= stable' });
     rows.push(h('tr', {},
-      h('td', {}, `${d.icon} ${d.label}`),
+      h('th', { scope: 'row' }, `${d.icon} ${d.label}`),
       h('td', {}, h('b', {}, r != null ? String(r) : '—')),
       h('td', {}, p != null ? String(p) : '—'),
       trend));
@@ -4419,7 +4460,8 @@ function renderHistoryTable() {
   const sessions = getSessions().slice().reverse();
   const el = $('#history-table');
   if (!sessions.length) { el.replaceChildren(h('p', { class: 'small' }, 'Aucune mesure.')); return; }
-  const rows = [h('tr', {}, h('th', {}, 'Date'), h('th', {}, 'Type'), h('th', {}, 'Résultats'))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Historique de toutes les mesures enregistrées' }),
+    h('tr', {}, h('th', { scope: 'col' }, 'Date'), h('th', { scope: 'col' }, 'Type'), h('th', { scope: 'col' }, 'Résultats'))];
   for (const s of sessions) {
     const results = Object.entries(s.values || {})
       .filter(([, v]) => v != null && v !== '')
@@ -4432,6 +4474,7 @@ function renderHistoryTable() {
           h('button', {
             class: 'edit-btn',
             title: 'Corriger cette mesure',
+            'aria-label': `Corriger la mesure ${t.name} du ${s.date}`,
             dataset: { editId: s.id || '', editDate: s.date, editTest: id },
           }, '✏️'),
         ];
@@ -4443,7 +4486,7 @@ function renderHistoryTable() {
       resultsCell.push(...r);
     });
     rows.push(h('tr', {},
-      h('td', {}, s.date),
+      h('th', { scope: 'row' }, s.date),
       h('td', {}, GROUP_LABELS[s.type] || s.type, badgeNodes(s)),
       h('td', {}, resultsCell)
     ));
@@ -5095,12 +5138,13 @@ $('#save-profile').addEventListener('click', () => {
 
 function renderReferenceTable() {
   const profile = getProfile();
-  const rows = [h('tr', {}, h('th', {}, 'Test'), h('th', {}, 'Bon'), h('th', {}, 'Moyen'), h('th', {}, 'Faible'))];
+  const rows = [h('caption', { class: 'sr-only', text: 'Repères de seuils (bon, moyen, faible) par test, adaptés à votre profil' }),
+    h('tr', {}, h('th', { scope: 'col' }, 'Test'), h('th', { scope: 'col' }, 'Bon'), h('th', { scope: 'col' }, 'Moyen'), h('th', { scope: 'col' }, 'Faible'))];
   for (const t of TESTS) {
     if (t.good == null || t.id === 'vma' || t.id === 'vo2max') continue; // rendus plus bas (avec valeur courante)
     const { good, mid, rev } = thresholds(t, profile);
     rows.push(h('tr', {},
-      h('td', {}, h('span', { class: 'test-num' }, testNum(t.id)), t.name),
+      h('th', { scope: 'row' }, h('span', { class: 'test-num' }, testNum(t.id)), t.name),
       h('td', {}, `${rev ? '≤ ' : '≥ '}${good}`),
       h('td', {}, `${rev ? '≤ ' : '≥ '}${mid}`),
       h('td', {}, `${rev ? '> ' : '< '}${mid} ${t.unit}`)
@@ -5118,7 +5162,7 @@ function renderReferenceTable() {
       ? h('span', { class: 'small' }, '(vous : ', h('b', {}, fmt1(cur)), ` ${t.unit}${src})`)
       : h('span', { class: 'small' }, '(aucune estimation)');
     rows.push(h('tr', {},
-      h('td', {}, h('span', { class: 'test-num' }, testNum(id)), t.name, ' ', curSpan),
+      h('th', { scope: 'row' }, h('span', { class: 'test-num' }, testNum(id)), t.name, ' ', curSpan),
       h('td', {}, `≥ ${good}`),
       h('td', {}, `≥ ${mid}`),
       h('td', {}, `< ${mid} ${t.unit}`)
@@ -5193,15 +5237,15 @@ if ('serviceWorker' in navigator) {
 
 // Onboarding au premier lancement
 if (!store.get('profile', null) && !store.get('onboarded', false)) {
-  $('#onboarding').classList.remove('hidden');
+  openModal($('#onboarding'), $('#onboarding-go'));
 }
 $('#onboarding-go').addEventListener('click', () => {
-  $('#onboarding').classList.add('hidden');
+  closeModal($('#onboarding'));
   store.set('onboarded', true);
   showView('profile');
 });
 $('#onboarding-skip').addEventListener('click', () => {
-  $('#onboarding').classList.add('hidden');
+  closeModal($('#onboarding'));
   store.set('onboarded', true);
 });
 
