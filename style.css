@@ -339,7 +339,7 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #history-table th:nth-child(2),
 #history-table td:nth-child(2) { white-space: nowrap; text-align: left; }  /* Type : largeur exacte du plus long libellé */
 #history-table th:nth-child(3),
-#history-table td:nth-child(3) { width: 100%; }  /* Résultats : prend tout l'espace restant */
+#history-table td:nth-child(3) { width: 100%; min-width: 220px; }  /* Résultats : prend le reste, min 220px (lisible sur mobile) */
 
 /* Bouton crayon d'édition dans les tableaux */
 .edit-btn {
