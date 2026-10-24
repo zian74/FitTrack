@@ -23,7 +23,8 @@ cp "$ROOT/screenshot-narrow.png" "$ROOT/screenshot-wide.png" "$PUBLIC/"
 sed "s|if ('serviceWorker' in navigator)|if (false \&\& 'serviceWorker' in navigator)|" \
   "$ROOT/app.js" > "$PUBLIC/app.js"
 
-# Permissions Android pour les rappels (le dossier android/ est régénéré à chaque build)
+# Permissions Android pour les rappels (POST_NOTIFICATIONS, SCHEDULE_EXACT_ALARM)
+# Le dossier android/ est régénéré à chaque build (ignoré dans git)
 MANIFEST="$ROOT/android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ] && ! grep -q 'POST_NOTIFICATIONS' "$MANIFEST"; then
   python3 - "$MANIFEST" <<'PYEOF'
