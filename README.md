@@ -115,4 +115,8 @@ Toutes les pistes ci-dessous sont réalisées (PR #85 et #86) :
 - [x] Tests automatisés dans le repo — smoke tests jsdom intégrés, exécutés en CI à chaque push/PR (PR #85)
 - [x] Audit accessibilité complet (contraste, navigation clavier, lecteur d'écran) (PR #86)
 
+Pistes restantes (non réalisées) :
+
+- [ ] **APK release signé / Play Store** : générer un keystore, configurer `signingConfig` dans `android/app/build.gradle`, builder `assembleRelease` (AAB pour le Play Store), workflow CI `build-aab.yml`, et préparer la fiche Play Store (captures, description, politique de confidentialité)
+
 Par design, l'app est **mono-profil** : une seule personne, données uniquement locales sur l'appareil.
