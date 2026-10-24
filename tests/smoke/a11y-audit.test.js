@@ -33,6 +33,24 @@ check(/:root\.dark\s+nav\s+button\.active\s*\{[^}]*color:\s*var\(--accent\)/s.te
   'thème sombre : nav button.active garde color: var(--accent) (contraste 7.5:1, pas --on-accent)');
 check(/:root\.dark\s+nav\s+button,/.test(css) && /:root\.dark\s+nav\s+button[\s\S]{0,200}?color:\s*var\(--on-accent\)/.test(css),
   'thème sombre : nav button (inactif) utilise --on-accent sur fond accent (8.6:1)');
+// En-têtes de ligne de tableaux (th[scope="row"]) : lisibles en thème sombre
+// (:root.dark th { color: var(--on-accent) } donnait 1.15:1 sur --surface)
+check(/:root\.dark\s+th\[scope="row"\]\s*\{[^}]*color:\s*var\(--text\)/s.test(css),
+  'thème sombre : th[scope="row"] utilise --text (contraste 13.15:1, pas --on-accent à 1.15:1)');
+// last3-table : la 1re colonne (noms de test) autorise le retour à la ligne
+check(/\.last3-table\s+th:first-child[\s\S]{0,100}?white-space:\s*normal/.test(css),
+  'last3-table : colonne Test autorise le retour à la ligne (pas de débordement)');
+// ifg-trends : overflow-wrap réservé aux en-têtes de colonne, pas aux th de ligne
+check(/#ifg-trends\s+th\[scope="col"\]\s*\{\s*overflow-wrap:\s*anywhere/.test(css),
+  'ifg-trends : overflow-wrap=anywhere sur th[scope="col"] uniquement');
+check(/#ifg-trends\s+th\[scope="row"\]\s*\{[^}]*overflow-wrap:\s*break-word/.test(css),
+  'ifg-trends : colonne Dimension (th[scope="row"]) coupe entre les mots (break-word)');
+// history-table : colonne Date sur une seule ligne (nowrap + largeur fixe)
+check(/#history-table\s+th:first-child[\s\S]{0,100}?white-space:\s*nowrap/.test(css),
+  'history-table : colonne Date en nowrap (pas de saut de ligne)');
+// reference-table : table-layout fixed pour des colonnes stables
+check(/#reference-table\s+table\s*\{\s*table-layout:\s*fixed/.test(css),
+  'reference-table : table-layout fixed (colonnes stables)');
 
 // ============ 2. Navigation clavier ============
 // 2a. Skip link
@@ -185,7 +203,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v63/.test(sw), 'Service Worker : cache fittrack-v63 (bump fix contraste nav actif)');
+check(/fittrack-v64/.test(sw), 'Service Worker : cache fittrack-v64 (bump fix contraste tableaux)');
 
 summary('a11y-audit');
 exit(true);
