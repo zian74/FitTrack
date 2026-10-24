@@ -341,12 +341,12 @@ tr:nth-child(even) td { background: var(--surface-alt); }
 #reference-table th:not(:first-child),
 #reference-table td:not(:first-child) { text-align: right; white-space: nowrap; padding-left: 16px; }
 
-/* Tableau « Toutes les mesures » (Historique) : Date et Type sur 1 ligne */
-#history-table table { table-layout: fixed; }
+/* Tableau « Toutes les mesures » (Historique) : Date et Type s'adaptent à leur contenu */
+#history-table table { table-layout: auto; }  /* auto : chaque colonne = largeur de son contenu le plus long */
 #history-table th:first-child,
-#history-table td:first-child { width: 110px; white-space: nowrap; }  /* Date : 2025-01-10 */
+#history-table td:first-child { white-space: nowrap; text-align: left; }  /* Date : largeur exacte de « 2025-01-10 » */
 #history-table th:nth-child(2),
-#history-table td:nth-child(2) { width: 190px; white-space: nowrap; }  /* Type : « Activité & sédentarité » */
+#history-table td:nth-child(2) { white-space: nowrap; text-align: left; }  /* Type : largeur exacte du plus long libellé */
 #history-table th:nth-child(3),
 #history-table td:nth-child(3) { width: auto; }  /* Résultats : prend le reste */
 
