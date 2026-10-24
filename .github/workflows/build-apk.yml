@@ -46,8 +46,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Installer le SDK Android
+      - name: Installer le SDK Android (plateformes + build-tools)
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          cmdline-tools-version: 13.0
+
+      - name: Installer les composants SDK requis
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager --licenses <<< "y" || true
 
       - name: Installer les dépendances npm (Capacitor)
         run: npm ci
