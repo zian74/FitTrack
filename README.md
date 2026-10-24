@@ -64,6 +64,17 @@ npm run apk                  # build l'APK debug localement (nécessite JDK 17 +
 
 L'APK est téléchargeable en artifact (`fittrack-debug-apk`) dans l'onglet **Actions** du run du workflow `Build APK`. Le service worker est désactivé dans l'APK (assets embarqués) et les rappels de re-test passent par le plugin `@capacitor/local-notifications` (permission `POST_NOTIFICATIONS` demandée au premier lancement).
 
+**Télécharger l'APK** (script automatisé, nécessite la CLI [gh](https://cli.github.com/) authentifiée) :
+
+```bash
+./scripts/download-apk.sh                 # télécharge le dernier APK dans le dossier courant
+./scripts/download-apk.sh ~/Downloads     # télécharge dans un dossier précis
+./scripts/download-apk.sh --list          # liste les 10 derniers runs CI
+./scripts/download-apk.sh --run <ID>      # télécharge l'APK d'un run précis
+```
+
+Le script sélectionne automatiquement le dernier run CI terminé avec succès, vérifie que l'artifact n'est pas expiré (rétention 30 jours), télécharge le zip et extrait `app-debug.apk`.
+
 **Démo en ligne (GitHub Pages)** : à activer via *Settings → Pages → Deploy from a branch → `main` / racine*. L'URL sera `https://zian74.github.io/HealthTest/`. Tous les chemins (`./sw.js`, `./manifest.webmanifest`, icônes) sont relatifs, donc compatibles avec un sous-chemin.
 
 ### Documentation
