@@ -27,6 +27,12 @@ check(/:root\.dark\s+button\.primary.*color:\s*var\(--on-accent\)/s.test(css.rep
 for (const bad of ['#2e7d32', '#e65100', '--faint: #aaa', '--accent: #6ea8dc', '--faint: #5c6b7a', '--bad: #e06c6c']) {
   check(!css.includes(bad), `ancienne valeur faible contraste absente : ${bad}`);
 }
+// Bouton nav actif en thème sombre : le texte doit rester lisible sur --surface
+// (la règle :root.dark nav button { color: var(--on-accent) } donnait 1.15:1)
+check(/:root\.dark\s+nav\s+button\.active\s*\{[^}]*color:\s*var\(--accent\)/s.test(css),
+  'thème sombre : nav button.active garde color: var(--accent) (contraste 7.5:1, pas --on-accent)');
+check(/:root\.dark\s+nav\s+button,/.test(css) && /:root\.dark\s+nav\s+button[\s\S]{0,200}?color:\s*var\(--on-accent\)/.test(css),
+  'thème sombre : nav button (inactif) utilise --on-accent sur fond accent (8.6:1)');
 
 // ============ 2. Navigation clavier ============
 // 2a. Skip link
@@ -179,7 +185,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v62/.test(sw), 'Service Worker : cache fittrack-v62 (bump point 4)');
+check(/fittrack-v63/.test(sw), 'Service Worker : cache fittrack-v63 (bump fix contraste nav actif)');
 
 summary('a11y-audit');
 exit(true);
