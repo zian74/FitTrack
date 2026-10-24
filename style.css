@@ -58,6 +58,11 @@
 :root.dark .theme-opt:has(input:checked) {
   color: var(--on-accent);
 }
+/* Thème sombre : le bouton nav actif a un fond sombre (--surface),
+   il faut un texte clair (--accent), pas --on-accent (trop foncé, 1.15:1) */
+:root.dark nav button.active {
+  color: var(--accent);
+}
 /* Thème sombre : texte foncé sur bad/warn (boutons running/countdown) */
 :root.dark #chrono-startstop.running,
 :root.dark #timer-startstop.running,
