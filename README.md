@@ -55,6 +55,15 @@ npm test   # lance tests/smoke/run.js (tous les *.test.js)
 
 **PWA installable** : servie via HTTP(S), l'app peut être installée sur mobile/desktop (manifest + service worker, fonctionne hors ligne).
 
+**APK Android** : l'app est empaquetée en APK natif via [Capacitor](https://capacitorjs.com/) (WebView + plugins natifs). Le build tourne en CI (GitHub Actions) à chaque push sur les fichiers web :
+
+```bash
+./scripts/build-android.sh   # génère public/ + projet android/
+npm run apk                  # build l'APK debug localement (nécessite JDK 17 + SDK Android)
+```
+
+L'APK est téléchargeable en artifact (`fittrack-debug-apk`) dans l'onglet **Actions** du run du workflow `Build APK`. Le service worker est désactivé dans l'APK (assets embarqués) et les rappels de re-test passent par le plugin `@capacitor/local-notifications` (permission `POST_NOTIFICATIONS` demandée au premier lancement).
+
 **Démo en ligne (GitHub Pages)** : à activer via *Settings → Pages → Deploy from a branch → `main` / racine*. L'URL sera `https://zian74.github.io/HealthTest/`. Tous les chemins (`./sw.js`, `./manifest.webmanifest`, icônes) sont relatifs, donc compatibles avec un sous-chemin.
 
 ### Documentation
@@ -94,6 +103,7 @@ npm test   # lance tests/smoke/run.js (tous les *.test.js)
 - [x] 📊 **Corrélation Sommeil ↔ IFG** : nuage de points (score sommeil/100 ↔ IFG recalculé à chaque date de sommeil, repères 80/60) + coefficient de Pearson r avec libellé (forte/modérée/faible/négligeable), ⓘ explicatif
 - [x] 🍽 **Alimentation** : questionnaire 7 questions scorées (N7 alcool inclus, repère OMS ≤ 10 verres/sem), score /100, nouvelle dimension IFG (5 %, cardio au repos ramené à 20 %), bilan hebdomadaire, corrélation Alimentation ↔ IFG (nuage + Pearson), habitudes alimentaires déclaratives dans le Profil
 - [x] ⌚ **Badge provenance dans l'historique** : les mesures importées d'une montre connectée portent un badge « ⌚ montre » (avec le sport si connu, ex. Running pour un TCX) dans la colonne Type
+- [x] 📱 **APK Android** (Capacitor) : build CI, artifact téléchargeable, notifications natives (`@capacitor/local-notifications`), service worker désactivé dans l'APK
 - [x] ♿ **Accessibilité** : revue UX des formulaires (labels explicites, focus visible renforcé, messages d'erreur textuels + `aria-invalid`/`aria-describedby`) · audit complet WCAG — contraste corrigé (thèmes clair & sombre ≥ 4,5:1), skip link, focus trap + restauration du focus dans les modales, `role="img"` + `aria-label` sur les 6 graphiques SVG, `<caption>` + `scope="col"/"row"` sur tous les tableaux, `aria-label` sur tous les boutons icône seule (timers, chrono, édition, métronome), régions nommées pour le chrono/timer, `.sr-only` pour les captions · smoke test `a11y-audit` (105 checks) en CI
 
 ### Pistes gardées pour plus tard

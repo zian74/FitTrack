@@ -5281,7 +5281,9 @@ function syncRemindersToSW() {
 function scheduleReminder() {
   clearTimeout(remindTimer);
   const cfg = getReminders();
-  if (!cfg.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+  // En APK (Capacitor), la permission est gérée nativement : on ne bloque pas sur Notification.permission
+  const permOk = isCapacitor ? true : ('Notification' in window && Notification.permission === 'granted');
+  if (!cfg.enabled || !('Notification' in window) || !permOk) return;
   const now = new Date();
   const target = new Date(now);
   target.setHours(cfg.hour, 0, 0, 0);
@@ -5305,10 +5307,20 @@ function scheduleReminder() {
 }
 
 // Demande la permission si l'utilisateur active les rappels
-function ensureNotificationPermission() {
-  if (!('Notification' in window)) return Promise.resolve('unsupported');
-  if (Notification.permission === 'granted') return Promise.resolve('granted');
-  if (Notification.permission === 'denied') return Promise.resolve('denied');
+async function ensureNotificationPermission() {
+  if (!('Notification' in window)) return 'unsupported';
+  if (isCapacitor) {
+    // Demande la permission système Android 13+ via le plugin Capacitor
+    try {
+      const { LocalNotifications } = window.Capacitor.Plugins || {};
+      if (LocalNotifications?.requestPermissions) {
+        const res = await LocalNotifications.requestPermissions();
+        if (res?.display === 'granted') return 'granted';
+      }
+    } catch (e) { /* repli sur l'API web */ }
+  }
+  if (Notification.permission === 'granted') return 'granted';
+  if (Notification.permission === 'denied') return 'denied';
   return Notification.requestPermission();
 }
 
@@ -5347,7 +5359,8 @@ $('#reminders-hour').addEventListener('change', e => {
 // Au démarrage : rattrapage si l'app n'a pas tourné à l'heure prévue (ex. fermée à 9h)
 function catchUpReminder() {
   const cfg = getReminders();
-  if (!cfg.enabled || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const permOk = isCapacitor ? true : ('Notification' in window && Notification.permission === 'granted');
+  if (!cfg.enabled || !('Notification' in window) || !permOk) return;
   if (cfg.lastShown === todayStr()) return; // déjà notifié aujourd'hui
   const now = new Date();
   const dueAt = new Date(now); dueAt.setHours(cfg.hour, 0, 0, 0);
@@ -5374,7 +5387,7 @@ function renderRemindersForm() {
     note.classList.remove('hidden');
     $('#reminders-enabled').disabled = true;
     $('#reminders-hour').disabled = true;
-  } else if (perm === 'denied') {
+  } else if (perm === 'denied' && !isCapacitor) {
     note.textContent = 'Permission refusée — activez les notifications pour FitTrack dans les réglages du navigateur.';
     note.classList.remove('hidden');
     $('#reminders-enabled').disabled = true;
@@ -5383,13 +5396,26 @@ function renderRemindersForm() {
     $('#reminders-enabled').disabled = false;
     $('#reminders-hour').disabled = !cfg.enabled;
   }
-  if (cfg.enabled && supported && perm === 'granted') {
+  if (cfg.enabled && supported && (perm === 'granted' || isCapacitor)) {
     const status = $('#reminders-status');
     status.textContent = `Rappels actifs — notification quotidienne à ${String(cfg.hour).padStart(2, '0')}:00 si des tests sont dus.`;
     status.className = 'ok';
     status.classList.remove('hidden');
   }
 }
+
+// Détection Capacitor (APK Android) : demande la permission POST_NOTIFICATIONS (Android 13+)
+const isCapacitor = typeof window !== 'undefined' && !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+async function ensureNativeNotificationPermission() {
+  if (!isCapacitor) return;
+  try {
+    const { LocalNotifications } = window.Capacitor.Plugins || {};
+    if (LocalNotifications && LocalNotifications.requestPermissions) {
+      await LocalNotifications.requestPermissions();
+    }
+  } catch (e) { /* plugin absent : le WebView gère la permission */ }
+}
+ensureNativeNotificationPermission();
 
 renderRemindersForm();
 scheduleReminder();
