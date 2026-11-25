@@ -227,7 +227,7 @@ check(document.querySelectorAll('[role="status"], [aria-live]').length >= 2,
 
 // ============ 4. Service Worker : cache bumpé ============
 const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-check(/fittrack-v69/.test(sw), 'Service Worker : cache fittrack-v69 (bump min-width Résultats 220px mobile)');
+check(/fittrack-v71/.test(sw), 'Service Worker : cache fittrack-v71 (bump illustrations exercices pompes/plank)');
 
 summary('a11y-audit');
 exit(true);

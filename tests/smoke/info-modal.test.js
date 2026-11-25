@@ -35,6 +35,10 @@ const plankImg = byKey['plank'].querySelector('img.info-illustration');
 check(!!plankImg && (plankImg.getAttribute('alt') || '').length > 20
   && (plankImg.getAttribute('src') || '') === './assets/plank-exercise.gif',
   'plank : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
+const pushupsImg = byKey['pushups'].querySelector('img.info-illustration');
+check(!!pushupsImg && (pushupsImg.getAttribute('alt') || '').length > 20
+  && (pushupsImg.getAttribute('src') || '') === './assets/knee-push-up.gif',
+  'pushups : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
 
 // --- 3. Ouverture/fermeture de la modale via les boutons présents ---
 const body = document.getElementById('info-modal-body');
