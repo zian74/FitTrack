@@ -8,7 +8,7 @@ Webapp offline-first (HTML/CSS/JS vanilla, zéro dépendance) qui couvre le plan
 
 - **Tests au repos** (mensuel) : FC de repos, pression artérielle, tour de taille, poids/IMC, ratio taille/hauteur
 - **Mobilité & équilibre** : unipodal yeux ouverts/fermés, sit-and-reach
-- **Force** (trimestriel) : préhension, pompes, gainage planche, chaise 30 s
+- **Force** (trimestriel) : préhension, pompes sur les genoux (max en 1 min), gainage planche, chaise 30 s
 - **Cardio** (trimestriel) : test escalier (pouls de récupération), Cooper 12 min ou demi-Cooper 6 min (distance normalisée ×2)
 - **Activité & sédentarité** (trimestriel) : questionnaire **IPAQ court** (7 questions, score MET-min/semaine calculé automatiquement : niveau d'activité + temps assis/jour)
 - **Sommeil & récupération** (hebdomadaire) : questionnaire **5 questions** sur les 7 derniers jours (durée, qualité, latence, réveils, sensation au réveil), **score de sommeil /100** calculé automatiquement
@@ -117,7 +117,7 @@ Le script sélectionne automatiquement le dernier run CI terminé avec succès, 
 - [x] 📱 **APK Android** (Capacitor) : build CI, artifact téléchargeable, notifications natives (`@capacitor/local-notifications`), service worker désactivé dans l'APK
 - [x] ♿ **Accessibilité** : revue UX des formulaires (labels explicites, focus visible renforcé, messages d'erreur textuels + `aria-invalid`/`aria-describedby`) · audit complet WCAG — contraste corrigé (thèmes clair & sombre ≥ 4,5:1), skip link, focus trap + restauration du focus dans les modales, `role="img"` + `aria-label` sur les 6 graphiques SVG, `<caption>` + `scope="col"/"row"` sur tous les tableaux, `aria-label` sur tous les boutons icône seule (timers, chrono, édition, métronome), régions nommées pour le chrono/timer, `.sr-only` pour les captions · smoke test `a11y-audit` (105 checks) en CI
 
-- [x] 🖼️ Illustrations animées dans les modales d'aide (gainage planche `assets/plank-exercise.gif`, pompes variante genoux `assets/knee-push-up.gif`, test escalier méthode Harvard `assets/stair-step-up.gif` : embarquées dans l'APK, mises en cache par le service worker, `alt` descriptif)
+- [x] 🖼️ Illustrations animées dans les modales d'aide (gainage planche `assets/plank-exercise.gif`, pompes sur les genoux 1 min `assets/knee-push-up.gif`, test escalier méthode Harvard `assets/stair-step-up.gif` : embarquées dans l'APK, mises en cache par le service worker, `alt` descriptif)
 
 ### Pistes gardées pour plus tard
 

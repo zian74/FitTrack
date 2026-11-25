@@ -69,7 +69,7 @@ tour de taille OMS/IDF (risque accru ≥ 94 cm H / ≥ 80 cm F, substantiellemen
 | # | Test | Unité | Sens | 🟢 Bon | 🟡 Moyen | Seuils sexe (H / F) |
 |---|---|---|---|---|---|---|
 | 9 | Préhension (meilleure main) | kg | ↑ | ≥ 45 | ≥ 35 | H : 45/35 · F : 30/20 |
-| 10 | Pompes maximales | rép. | ↑ | ≥ 35 | ≥ 20 | H : 35/20 · F : 20/10 |
+| 10 | Pompes sur les genoux (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 25 | ≥ 15 | H : 25/15 · F : 18/10 |
 | 11 | Gainage planche | s | ↑ | ≥ 120 | ≥ 60 | — |
 | 12 | Chaise 30 s | rép. | ↑ | ≥ 17 | ≥ 12 | H : 17/12 · F : 16/11 |
 
