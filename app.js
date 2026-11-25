@@ -500,29 +500,48 @@ const TESTS = [
       ),
     )
      },
-  { id: 'chair', name: 'Chaise 30 s (répétitions)', unit: 'rép.', group: 'strength',
-    hint: 'Bras croisés, se lever/asseoir pendant 30 s', good: 17, mid: 12, max: 40, min: 0,
-    gender: { H: { good: 17, mid: 12 }, F: { good: 16, mid: 11 } },
+  { id: 'chair', name: 'Squat poids du corps — max en 1 min', unit: 'rép.', group: 'strength',
+    hint: 'Pieds largeur hanches, 1 min chronométrée (bouton ⏳)', good: 30, mid: 20, max: 100, min: 0,
+    gender: { H: { good: 30, mid: 20 }, F: { good: 22, mid: 14 } },
     info: () =>
+      h('div', {},
+      h('img', {
+        src: './assets/squat-bodyweight.gif',
+        alt: 'Illustration animée du squat poids du corps : pieds écartés de la largeur des hanches, hanches en arrière, cuisses parallèles au sol, puis remontée en poussant dans les talons',
+        class: 'info-illustration',
+        width: '310',
+        height: '520',
+        loading: 'lazy',
+      }),
       h('ul', {},
       h('li', {},
-        'Adossé(e) à un mur, ',
+        'Position : ',
         h('b', {},
           'pieds écartés de la largeur des hanches',
         ),
-        ', à environ 50 cm du mur.',
+        ' (orteils légèrement vers l\'extérieur), dos droit, regard devant vous.',
       ),
         ' ',
       h('li', {},
-        'Glissez le dos le long du mur jusqu\'à ce que les ',
         h('b', {},
-          'cuisses soient parallèles au sol',
+          'Descendez',
         ),
-        ' (angle 90° aux genoux), ',
+        ' en poussant les hanches en arrière comme pour vous asseoir, jusqu\'à ce que les cuisses soient au moins parallèles au sol (talons au sol).',
+      ),
+        ' ',
+      h('li', {},
         h('b', {},
-          'bras croisés sur la poitrine',
+          'Remontez',
         ),
-        '.',
+        ' en poussant dans les talons, jambes tendues en haut sans verrouiller les genoux.',
+      ),
+        ' ',
+      h('li', {},
+        'Gardez le ',
+        h('b', {},
+          'dos droit',
+        ),
+        ' et le poids sur les talons ; ne laissez pas les genoux rentrer vers l\'intérieur.',
       ),
         ' ',
       h('li', {},
@@ -532,21 +551,26 @@ const TESTS = [
         ),
         ' à côté du champ ouvre un ',
         h('b', {},
-          'compte à rebours de 30 s',
+          'compte à rebours de 60 s',
         ),
-        ' : pendant ce temps, ',
+        ' : enchaînez les squats dès le départ du chrono.',
+      ),
+        ' ',
+      h('li', {},
+        'Enchaînez ',
         h('b', {},
-          'levez-vous et rasseyez-vous',
+          'sans pause pendant 1 minute',
         ),
-        ' complètement, bras toujours croisés.',
+        '. Comptez uniquement les répétitions ',
+        h('b', {},
+          'techniquement correctes',
+        ),
+        ' (descente + remontée = 1) et reportez le total dans le champ.',
       ),
         ' ',
       h('li', {},
-        'Comptez vos répétitions complètes (descente + remontée = 1) et reportez le total dans le champ.',
+        'Respirez : inspirez en descendant, expirez en montant. Arrêtez en cas de douleur au genou ou au dos.',
       ),
-        ' ',
-      h('li', {},
-        'Respirez normalement ; arrêtez si vous ressentez une douleur au genou ou au dos.',
       ),
     )
      },
@@ -2421,13 +2445,13 @@ function renderSessionFields() {
       row.className = 'field-row';
       const chronoBtn = chronoBtns.includes(t.id)
         ? h('button', { class: 'chrono-btn', dataset: { chronoTarget: t.id }, text: '⏱', title: 'Ouvrir le chronomètre', 'aria-label': `Ouvrir le chronomètre pour ${t.name}` }) : null;
-      // Timer compte à rebours à durée fixe : chaise 30 s (compter les répétitions)
+      // Timer compte à rebours 60 s : squat poids du corps (compter les répétitions en 1 min)
       const chairTimerBtn = t.id === 'chair'
         ? h('button', {
             class: 'timer-btn',
-            dataset: { timerMs: '30000', timerLabel: 'Chaise 30 s — répétitions', timerCountdown: '1' },
-            title: 'Compte à rebours 30 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
-            'aria-label': 'Compte à rebours 30 s pour le test de la chaise',
+            dataset: { timerMs: '60000', timerLabel: 'Squat poids du corps — 1 min', timerCountdown: '1' },
+            title: 'Compte à rebours 60 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
+            'aria-label': 'Compte à rebours 60 s pour les squats poids du corps',
             text: '⏳'
           }) : null;
       // Timer compte à rebours 60 s : pompes sur les genoux (compter les répétitions en 1 min)
@@ -3036,9 +3060,9 @@ const STATIC_INFOS = {
         ' ',
       h('li', {},
         h('b', {},
-          'Force musculaire (préhension, pompes sur les genoux 1 min, chaise 30 s, gainage)',
+          'Force musculaire (préhension, pompes sur les genoux 1 min, squat 1 min, gainage)',
         ),
-        ' : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli & Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).',
+        ' : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli & Jones, « Senior Fitness Test », 1999, pour la souplesse ; protocoles communautaires usuels pour les autres, dont le squat 1 min).',
       ),
         ' ',
       h('li', {},
@@ -3510,12 +3534,12 @@ $('#save-session').addEventListener('click', () => {
 let chronoTimer = null, chronoStart = 0, chronoElapsed = 0, chronoTargetId = null;
 
 // ---------- Timer compte à rebours générique ----------
-// Utilisé par les tests à durée fixe : chaise 30 s (compter les répétitions),
+// Utilisé par les tests à durée fixe : squat 1 min et pompes sur les genoux 1 min (compter les répétitions),
 // escalier 3 min (montées à 24/min), Cooper 12 min (ou 6 min demi-Cooper).
 // Le timer démarre/pause/reset manuellement, s'arrête seul à 00:00 avec un bip.
-// Certains tests (chaise 30 s, escalier méthode 1) lancent un compte à rebours de 3 s
+// Certains tests (squat 1 min, pompes 1 min, escalier méthode 1) lancent un compte à rebours de 3 s
 // avec bip sonore avant le démarrage automatique du timer.
-const DEFAULT_TIMER_MS = 30000; // 30 s (chaise)
+const DEFAULT_TIMER_MS = 30000; // durée par défaut du panneau timer
 // data-timer-countdown="1" sur le bouton ⏳ : compte à rebours 3 s + bip avant démarrage auto
 const TIMER_COUNTDOWN_MS = 3000;
 let timerId = null, timerRemaining = DEFAULT_TIMER_MS, timerRunning = false, timerDuration = DEFAULT_TIMER_MS;
@@ -3715,7 +3739,7 @@ function openTimer(durationMs, label, durationEditable = false, next = null, met
     timerRemaining = timerDuration;
     $('#timer-display').textContent = timerFmt(timerRemaining);
   }
-  // Compte à rebours de 3 s (bip) avant démarrage auto — chaise 30 s, escalier méthode 1
+  // Compte à rebours de 3 s (bip) avant démarrage auto — squat/pompes 1 min, escalier méthode 1
   if (countdown && !timerRunning) startTimerCountdown();
 }
 $('#timer-startstop').addEventListener('click', timerToggle);
@@ -3765,7 +3789,7 @@ document.addEventListener('click', e => {
     : null;
   // data-timer-metronome="1" : active le métronome 96 bpm (test escalier méthode 1)
   const metronome = b.dataset.timerMetronome === '1';
-  // data-timer-countdown="1" : compte à rebours 3 s + bip avant démarrage auto (chaise, escalier méthode 1)
+  // data-timer-countdown="1" : compte à rebours 3 s + bip avant démarrage auto (squat/pompes 1 min, escalier méthode 1)
   const countdown = b.dataset.timerCountdown === '1';
   openTimer(dur, b.dataset.timerLabel || 'Compte à rebours', editable, next, metronome, countdown);
 });
@@ -3985,7 +4009,7 @@ function renderAnalysis() {
     const tips = {
       cardio_rest: 'Priorisez la FC de repos et la tension artérielle : marchez 30 min/jour, limitez le sel, consultez si la tension reste élevée.',
       endurance: '2 séances de 20–30 min d\'endurance modérée par semaine (vélo, marche rapide, natation) font progresser vite.',
-      strength: '2 séances de renforcement par semaine : pompes sur les genoux (1 min), gainage et chaise 30 s suffisent à démarrer.',
+      strength: '2 séances de renforcement par semaine : pompes sur les genoux (1 min), gainage et squat (1 min) suffisent à démarrer.',
       balance: 'Travaillez l\'équilibre 5 min/jour (unipodal, yeux ouverts puis fermés) et la souplesse des jambes.',
       activity: 'Levez-vous toutes les heures et visez 150 min d\'activité modérée par semaine (marche comprise).',
       sleep: 'Visez 7–9 h de sommeil par nuit, avec des horaires réguliers — le sommeil régule l\'appétit et la récupération.',

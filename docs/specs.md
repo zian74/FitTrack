@@ -25,7 +25,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 9 | Préhension (dynamomètre) | force | trimestriel | H 45–55 / F 30–35 kg |
 | 10 | Pompes sur les genoux — max en 1 min | force | trimestriel | H ≥ 25 / F ≥ 18 |
 | 11 | Gainage planche | force | trimestriel | 2 min |
-| 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
+| 12 | Squat poids du corps — max en 1 min | force | trimestriel | H ≥ 30 / F ≥ 22 |
 | 13 | Test escalier — méthode 1 (pouls 1 min) | cardio | trimestriel | ≤ 100 / ≤ 110 (inversé) |
 | 14 | Test escalier — méthode 2 (marches en 60 s) | cardio | trimestriel | ≥ 80 / ≥ 60 |
 | 15 | Test escalier — méthode 3 (4 étages chronométrés) | cardio | trimestriel | ≤ 45 / ≤ 60 (inversé) |
@@ -100,12 +100,12 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 - **Avertissement avant test maximal (Cooper)** déclenché par tout facteur majeur (déclaré ou IMC ≥ 30), avec conseil de privilégier le test de l'escalier (sous-maximal) ; les facteurs non majeurs (antécédents familiaux, alcool < 14, surpoids, IMC 25–29,9) n'affichent pas l'avertissement
 - Chronomètre intégré pour les tests chronométrés
 - ⏳ **Timer compte à rebours générique** (panneau flottant : démarrage/pause, reset ↺, fermeture ✕, arrêt auto à 00:00 avec bip sonore + état « finished » vert, compatible mode sombre, décale au-dessus du chrono si les deux sont ouverts) :
-  - test 12 « Chaise 30 s » : 30 s fixe (compter les répétitions)
+  - test 12 « Squat poids du corps — 1 min » : 60 s fixe (compter les répétitions)
   - test 13 « Escalier — méthode 1 » : **3 min par défaut, durée réglable** en minutes (montées à 24/min) ; **à la fin des 3 min, un compte à rebours de 1 min se lance automatiquement** (« Escalier — mesure du pouls dans 1 min (asseyez-vous) ») pour indiquer le délai avant la prise du pouls — chaînage auto du timer générique via `data-timer-next-ms` / `data-timer-next-label`, annulable par fermeture (✕) ou reset (↺) ; **métronome 96 bpm** 🥁 (bouton `#timer-metronome` dans le timer, `data-timer-metronome="1"` sur le `.timer-btn`) : 1 bip aigu (1320 Hz) toutes les 625 ms, soit **4 bips = 1 aller-retour** (montée + descente en 2,5 s = 24 montées/min), synchronisé avec le timer (démarre/pause/s'arrête/reset/fermeture), activé par défaut et désactivable d'un clic
   - test 14 « Escalier — méthode 2 » : **60 s fixe** (compter les marches gravis), pas de chaînage
   - test 15 « Escalier — méthode 3 » : **chronomètre ⏱** (pas de timer ⏳) — reporte le temps écoulé dans le champ
   - ~~test 14 « Cooper »~~ : **timer ⏳ supprimé** (le Cooper n'a plus de compte à rebours)
-- ⓘ instructions du test chaise (position mur, bras croisés, cuisses parallèles au sol)
+- ⓘ instructions du test squat (position pieds largeur hanches, hanches en arrière, cuisses parallèles au sol, timer 60 s)
 - ⓘ instructions du test préhension n°9 (dynamométrie : échauffement mains/avant-bras, debout coude fléchi à 90° avant-bras neutre, réglage poignée sur la 2ᵉ phalange, serrage progressif max 2–3 s sans bouger le bras, 2–3 essais par main avec 30 s de repos, meilleure valeur des deux mains retenue, respiration normale sans Valsalva, arrêt en cas de douleur)
 - Test 9 renommé « **Préhension** — meilleure main (kg) » ; propriété `aliases: ['Poigne — meilleure main (kg)']` pour que l'import CSV reconnaisse aussi l'ancien nom de colonne
 - **Test escalier — 3 méthodes au choix** (sélecteur radio pilules « Méthode 1 — Pouls à 1 min » / « Méthode 2 — Marches en 60 s » / « Méthode 3 — 4 étages chronométrés ») :
