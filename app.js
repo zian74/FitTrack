@@ -359,6 +359,15 @@ const TESTS = [
     good: 35, mid: 20, max: 200, min: 0,
     gender: { H: { good: 35, mid: 20 }, F: { good: 20, mid: 10 } },
     info: () =>
+      h('div', {},
+      h('img', {
+        src: './assets/knee-push-up.gif',
+        alt: 'Illustration animée des pompes, variante sur les genoux : mains à plat à la largeur des épaules, corps aligné, poitrine qui descend vers le sol',
+        class: 'info-illustration',
+        width: '550',
+        height: '350',
+        loading: 'lazy',
+      }),
       h('ul', {},
       h('li', {},
         'Position de départ : ',
@@ -412,6 +421,7 @@ const TESTS = [
         ' ',
       h('li', {},
         'Respirez : inspirez en descendant, expirez en montant.',
+      ),
       ),
     )
      },
