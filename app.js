@@ -354,15 +354,15 @@ const TESTS = [
       ),
     )
      },
-  { id: 'pushups', name: 'Pompes maximales', unit: 'rép.', group: 'strength',
-    hint: 'Sans pause, technique correcte',
-    good: 35, mid: 20, max: 200, min: 0,
-    gender: { H: { good: 35, mid: 20 }, F: { good: 20, mid: 10 } },
+  { id: 'pushups', name: 'Pompes sur les genoux — max en 1 min', unit: 'rép.', group: 'strength',
+    hint: 'Genoux au sol, 1 min chronométrée (bouton ⏳)',
+    good: 25, mid: 15, max: 100, min: 0,
+    gender: { H: { good: 25, mid: 15 }, F: { good: 18, mid: 10 } },
     info: () =>
       h('div', {},
       h('img', {
         src: './assets/knee-push-up.gif',
-        alt: 'Illustration animée des pompes, variante sur les genoux : mains à plat à la largeur des épaules, corps aligné, poitrine qui descend vers le sol',
+        alt: 'Illustration animée des pompes sur les genoux : mains à plat à la largeur des épaules, genoux au sol, corps aligné des épaules aux genoux, poitrine qui descend vers le sol',
         class: 'info-illustration',
         width: '550',
         height: '350',
@@ -370,11 +370,23 @@ const TESTS = [
       }),
       h('ul', {},
       h('li', {},
-        'Position de départ : ',
+        'Position : appui sur les ',
         h('b', {},
-          'planche haute',
+          'mains et les genoux',
         ),
-        ', mains à plat au sol à la largeur des épaules, bras tendus, corps bien aligné (tête, hanches, talons).',
+        ' (pointes de pieds relevées), mains à plat à la largeur des épaules, corps aligné des épaules aux genoux.',
+      ),
+        ' ',
+      h('li', {},
+        'Le bouton ',
+        h('b', {},
+          '⏳',
+        ),
+        ' ouvre un ',
+        h('b', {},
+          'compte à rebours de 60 s',
+        ),
+        ' : enchaînez les pompes dès le départ du chrono.',
       ),
         ' ',
       h('li', {},
@@ -406,17 +418,17 @@ const TESTS = [
       h('li', {},
         'Enchaînez ',
         h('b', {},
-          'sans pause',
+          'sans pause pendant 1 minute',
         ),
-        ' jusqu\'à échec musculaire (dernière répétition propre). Comptez uniquement les répétitions ',
+        '. Comptez uniquement les répétitions ',
         h('b', {},
           'techniquement correctes',
         ),
-        '.',
+        ' et reportez le total dans le champ.',
       ),
         ' ',
       h('li', {},
-        'Échauffez les épaules et les poignets 2–3 min avant. Variante si besoin : pompes sur les genoux ou mains surélevé (comptoir).',
+        'Échauffez les épaules et les poignets 2–3 min avant. Arrêtez en cas de douleur au poignet, au coude ou à l\'épaule.',
       ),
         ' ',
       h('li', {},
@@ -2418,6 +2430,15 @@ function renderSessionFields() {
             'aria-label': 'Compte à rebours 30 s pour le test de la chaise',
             text: '⏳'
           }) : null;
+      // Timer compte à rebours 60 s : pompes sur les genoux (compter les répétitions en 1 min)
+      const pushupsTimerBtn = t.id === 'pushups'
+        ? h('button', {
+            class: 'timer-btn',
+            dataset: { timerMs: '60000', timerLabel: 'Pompes sur les genoux — 1 min', timerCountdown: '1' },
+            title: 'Compte à rebours 60 s pour compter les répétitions (3 s de préparation avec bip, puis démarrage auto)',
+            'aria-label': 'Compte à rebours 60 s pour les pompes sur les genoux',
+            text: '⏳'
+          }) : null;
       const infoBtn = t.info
         ? h('button', { class: 'info-btn', dataset: { infoTest: t.id }, title: 'Comment réaliser ce test ?', 'aria-label': `Informations sur ${t.name}`, text: 'ⓘ' }) : null;
       const last = latestValues()[t.id]?.value;
@@ -2462,6 +2483,7 @@ function renderSessionFields() {
         }),
         chronoBtn,
         chairTimerBtn,
+        pushupsTimerBtn,
         cooperEstim));
       block.appendChild(row); // ← le row DOIT être dans le DOM avant initCooperEstim
       const inp = row.querySelector('input[data-test]');
@@ -3014,7 +3036,7 @@ const STATIC_INFOS = {
         ' ',
       h('li', {},
         h('b', {},
-          'Force musculaire (préhension, pompes, chaise 30 s, gainage)',
+          'Force musculaire (préhension, pompes sur les genoux 1 min, chaise 30 s, gainage)',
         ),
         ' : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli & Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).',
       ),
@@ -3963,7 +3985,7 @@ function renderAnalysis() {
     const tips = {
       cardio_rest: 'Priorisez la FC de repos et la tension artérielle : marchez 30 min/jour, limitez le sel, consultez si la tension reste élevée.',
       endurance: '2 séances de 20–30 min d\'endurance modérée par semaine (vélo, marche rapide, natation) font progresser vite.',
-      strength: '2 séances de renforcement par semaine : pompes, gainage et chaise 30 s suffisent à démarrer.',
+      strength: '2 séances de renforcement par semaine : pompes sur les genoux (1 min), gainage et chaise 30 s suffisent à démarrer.',
       balance: 'Travaillez l\'équilibre 5 min/jour (unipodal, yeux ouverts puis fermés) et la souplesse des jambes.',
       activity: 'Levez-vous toutes les heures et visez 150 min d\'activité modérée par semaine (marche comprise).',
       sleep: 'Visez 7–9 h de sommeil par nuit, avec des horaires réguliers — le sommeil régule l\'appétit et la récupération.',

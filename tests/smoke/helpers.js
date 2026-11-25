@@ -25,7 +25,7 @@ function loadApp() {
   window.matchMedia = window.matchMedia || (() => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }));
 
   // Expose les const du scope script (jsdom : const/let ne fuient pas sur window)
-  window.eval(js + '\n;window.__TESTS = TESTS; window.__STATIC_INFOS = STATIC_INFOS; window.__byId = byId; window.__store = store;');
+  window.eval(js + '\n;window.__TESTS = TESTS; window.__STATIC_INFOS = STATIC_INFOS; window.__byId = byId; window.__store = store; window.__statusOf = statusOf; window.__IFG_DIMENSIONS = IFG_DIMENSIONS;');
 
   return { window, document, dom, js, html };
 }

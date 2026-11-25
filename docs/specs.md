@@ -23,7 +23,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 7 | Équilibre yeux fermés | repos | mensuel | > 10 s |
 | 8 | Sit-and-reach | repos | mensuel | toucher les pieds |
 | 9 | Préhension (dynamomètre) | force | trimestriel | H 45–55 / F 30–35 kg |
-| 10 | Pompes maximales | force | trimestriel | H > 35 / F > 20 |
+| 10 | Pompes sur les genoux — max en 1 min | force | trimestriel | H ≥ 25 / F ≥ 18 |
 | 11 | Gainage planche | force | trimestriel | 2 min |
 | 12 | Chaise 30 s | force | trimestriel | H 12–17 / F 11–16 |
 | 13 | Test escalier — méthode 1 (pouls 1 min) | cardio | trimestriel | ≤ 100 / ≤ 110 (inversé) |
