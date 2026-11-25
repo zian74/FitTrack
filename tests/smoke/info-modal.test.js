@@ -31,6 +31,10 @@ check(byKey['__nutrition__'].querySelectorAll('ul li ul li').length === 2
   '__nutrition__ : sous-liste <ul> imbriquée rendue');
 check(byKey['stair_4floors'].querySelector('i')?.textContent.includes('Plus le temps est court'),
   'stair_4floors : <i> conservé');
+const plankImg = byKey['plank'].querySelector('img.info-illustration');
+check(!!plankImg && (plankImg.getAttribute('alt') || '').length > 20
+  && (plankImg.getAttribute('src') || '') === './assets/plank-exercise.gif',
+  'plank : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
 
 // --- 3. Ouverture/fermeture de la modale via les boutons présents ---
 const body = document.getElementById('info-modal-body');
