@@ -71,7 +71,11 @@ tour de taille OMS/IDF (risque accru ≥ 94 cm H / ≥ 80 cm F, substantiellemen
 | 9 | Préhension (meilleure main) | kg | ↑ | ≥ 45 | ≥ 35 | H : 45/35 · F : 30/20 |
 | 10 | Pompes sur les genoux (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 25 | ≥ 15 | H : 25/15 · F : 18/10 |
 | 11 | Gainage planche | s | ↑ | ≥ 120 | ≥ 60 | — |
-| 12 | Squat poids du corps (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 30 | ≥ 20 | H : 30/20 · F : 22/14 |
+| 12 | Squat poids du corps (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 54 | ≥ 23 | H : 54/23 · F : 38/12 |
+
+**Paliers squat 1 min (répétitions)** — H : débutant < 2, novice ≈ 23, intermédiaire ≈ 54,
+avancé ≈ 92, élite ≈ 138 ; F : débutant < 1, novice ≈ 12, intermédiaire ≈ 38, avancé ≈ 72,
+élite ≈ 114. L'app retient 🟢 bon = intermédiaire et 🟡 moyen = novice.
 
 **Référence** : batterie de tests de forme fonctionnelle pour adultes — Rikli & Jones,
 *Senior Fitness Test* (1999) pour la souplesse ; protocoles communautaires usuels
@@ -280,7 +284,7 @@ ancienne ne peut donc plus écraser une estimation Cooper plus récente.
 (25 à 100). Chaque test est noté via `statusOf` (seuils sexe du §2.2 ;
 pour le test 10 « pompes sur les genoux — max en 1 min » : H ≥ 25 bon / ≥ 15 moyen,
 F ≥ 18 bon / ≥ 10 moyen ; pour le test 12 « squat poids du corps — max en 1 min » :
-H ≥ 30 bon / ≥ 20 moyen, F ≥ 22 bon / ≥ 14 moyen) puis `SCORE_PTS` = { bon 100, moyen 60, faible 25 }.
+H ≥ 54 bon / ≥ 23 moyen, F ≥ 38 bon / ≥ 12 moyen) puis `SCORE_PTS` = { bon 100, moyen 60, faible 25 }.
 
 **IFG /100** = Σ (score de la dimension × poids de la dimension), arrondi à l'entier.
 
