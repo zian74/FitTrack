@@ -270,14 +270,16 @@ ancienne ne peut donc plus écraser une estimation Cooper plus récente.
 |---|---|---|
 | 🫀 Cardio au repos & métabolisme | **20 %** | FC repos, PA sys, PA dia, tour de taille |
 | 🏃 Endurance cardio | **20 %** | 1 seul indicateur : dernière VMA/VO2max estimée/renseignée, sinon escalier (§4.3) |
-| 💪 Force musculaire | **20 %** | Préhension, pompes, gainage, chaise 30 s |
+| 💪 Force musculaire | **20 %** | Préhension, pompes sur les genoux (1 min), gainage, chaise 30 s |
 | ⚖️ Équilibre & mobilité | **15 %** | Équilibre yeux ouverts/fermés, sit-and-reach |
 | 🏃 Habitudes d'activité | **10 %** | IPAQ, temps assis |
 | 🌙 Sommeil & récupération | **10 %** | Score de sommeil, durée de sommeil |
 | 🍽 Alimentation | **5 %** | Score alimentaire |
 
 **Score d'une dimension** = moyenne des SCORE_PTS de ses tests scorés
-(25 à 100).
+(25 à 100). Chaque test est noté via `statusOf` (seuils sexe du §2.2 ;
+pour le test 10 « pompes sur les genoux — max en 1 min » : H ≥ 25 bon / ≥ 15 moyen,
+F ≥ 18 bon / ≥ 10 moyen) puis `SCORE_PTS` = { bon 100, moyen 60, faible 25 }.
 
 **IFG /100** = Σ (score de la dimension × poids de la dimension), arrondi à l'entier.
 

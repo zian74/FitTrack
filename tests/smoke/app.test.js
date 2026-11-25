@@ -92,4 +92,19 @@ check(confirmModal.classList.contains('hidden'), 'modale de confirmation cachée
 window.__store.set('smoke-test', { ok: true });
 check(window.__store.get('smoke-test').ok === true, 'store.set/get fonctionne');
 
+// --- 10. Repères du test 10 (pompes sur les genoux — max en 1 min) appliqués au scoring IFG ---
+const pushupsT = window.__byId('pushups');
+const profH = { sex: 'H' }, profF = { sex: 'F' };
+check(pushupsT.name.includes('genoux') && pushupsT.name.includes('1 min'),
+  `test 10 renommé : "${pushupsT.name}"`);
+check(window.__statusOf(pushupsT, 25, profH) === 'good' && window.__statusOf(pushupsT, 15, profH) === 'mid'
+  && window.__statusOf(pushupsT, 14, profH) === 'low',
+  'pushups seuils H : 25=good · 15=mid · 14=low');
+check(window.__statusOf(pushupsT, 18, profF) === 'good' && window.__statusOf(pushupsT, 10, profF) === 'mid'
+  && window.__statusOf(pushupsT, 9, profF) === 'low',
+  'pushups seuils F : 18=good · 10=mid · 9=low');
+const strengthDim = window.__IFG_DIMENSIONS.find(d => d.key === 'strength');
+check(!!strengthDim && strengthDim.weight === 0.20 && strengthDim.tests.includes('pushups'),
+  'IFG : dimension force 20 % inclut bien pushups (scoré via statusOf → SCORE_PTS)');
+
 exit(summary('app.test.js'));

@@ -3036,7 +3036,7 @@ const STATIC_INFOS = {
         ' ',
       h('li', {},
         h('b', {},
-          'Force musculaire (préhension, pompes, chaise 30 s, gainage)',
+          'Force musculaire (préhension, pompes sur les genoux 1 min, chaise 30 s, gainage)',
         ),
         ' : repères issus des batteries de tests de forme fonctionnelle pour adultes (Rikli & Jones, « Senior Fitness Test », 1999, pour la chaise 30 s ; protocoles communautaires usuels pour les autres).',
       ),
@@ -3985,7 +3985,7 @@ function renderAnalysis() {
     const tips = {
       cardio_rest: 'Priorisez la FC de repos et la tension artérielle : marchez 30 min/jour, limitez le sel, consultez si la tension reste élevée.',
       endurance: '2 séances de 20–30 min d\'endurance modérée par semaine (vélo, marche rapide, natation) font progresser vite.',
-      strength: '2 séances de renforcement par semaine : pompes, gainage et chaise 30 s suffisent à démarrer.',
+      strength: '2 séances de renforcement par semaine : pompes sur les genoux (1 min), gainage et chaise 30 s suffisent à démarrer.',
       balance: 'Travaillez l\'équilibre 5 min/jour (unipodal, yeux ouverts puis fermés) et la souplesse des jambes.',
       activity: 'Levez-vous toutes les heures et visez 150 min d\'activité modérée par semaine (marche comprise).',
       sleep: 'Visez 7–9 h de sommeil par nuit, avec des horaires réguliers — le sommeil régule l\'appétit et la récupération.',
