@@ -541,6 +541,15 @@ const TESTS = [
   { id: 'stair_pulse', name: 'Test escalier — pouls à 1 min (méthode 1)', unit: 'bpm', group: 'cardio', rev: true,
     hint: '3 min de montées (24/min), pouls 1 min après', good: 100, mid: 110, max: 200, min: 50,
     info: () =>
+      h('div', {},
+      h('img', {
+        src: './assets/stair-step-up.gif',
+        alt: 'Illustration animée du test escalier (méthode Harvard) : montée et descente d\'une marche à allure régulière, un aller-retour toutes les 2,5 s',
+        class: 'info-illustration',
+        width: '430',
+        height: '550',
+        loading: 'lazy',
+      }),
       h('ul', {},
       h('li', {},
         h('b', {},
@@ -627,6 +636,7 @@ const TESTS = [
         ' ',
       h('li', {},
         'Test sous-maximal : évitez si vous avez des antécédents cardiaques ou un traitement bêtabloquant (voir avertissement dans l\'onglet Session).',
+      ),
       ),
     )
      },
