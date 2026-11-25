@@ -107,4 +107,16 @@ const strengthDim = window.__IFG_DIMENSIONS.find(d => d.key === 'strength');
 check(!!strengthDim && strengthDim.weight === 0.20 && strengthDim.tests.includes('pushups'),
   'IFG : dimension force 20 % inclut bien pushups (scoré via statusOf → SCORE_PTS)');
 
+// --- 11. Repères du test 12 (squat poids du corps — max en 1 min) appliqués au scoring IFG ---
+const chairT = window.__byId('chair');
+check(chairT.name.includes('Squat') && chairT.name.includes('1 min'),
+  `test 12 renommé : "${chairT.name}"`);
+check(window.__statusOf(chairT, 30, profH) === 'good' && window.__statusOf(chairT, 20, profH) === 'mid'
+  && window.__statusOf(chairT, 19, profH) === 'low',
+  'squat seuils H : 30=good · 20=mid · 19=low');
+check(window.__statusOf(chairT, 22, profF) === 'good' && window.__statusOf(chairT, 14, profF) === 'mid'
+  && window.__statusOf(chairT, 13, profF) === 'low',
+  'squat seuils F : 22=good · 14=mid · 13=low');
+check(strengthDim.tests.includes('chair'), 'IFG : dimension force 20 % inclut bien chair (squat)');
+
 exit(summary('app.test.js'));

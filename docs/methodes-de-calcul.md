@@ -71,11 +71,11 @@ tour de taille OMS/IDF (risque accru ≥ 94 cm H / ≥ 80 cm F, substantiellemen
 | 9 | Préhension (meilleure main) | kg | ↑ | ≥ 45 | ≥ 35 | H : 45/35 · F : 30/20 |
 | 10 | Pompes sur les genoux (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 25 | ≥ 15 | H : 25/15 · F : 18/10 |
 | 11 | Gainage planche | s | ↑ | ≥ 120 | ≥ 60 | — |
-| 12 | Chaise 30 s | rép. | ↑ | ≥ 17 | ≥ 12 | H : 17/12 · F : 16/11 |
+| 12 | Squat poids du corps (max en 1 min, timer 60 s) | rép. | ↑ | ≥ 30 | ≥ 20 | H : 30/20 · F : 22/14 |
 
 **Référence** : batterie de tests de forme fonctionnelle pour adultes — Rikli & Jones,
-*Senior Fitness Test* (1999) pour la chaise 30 s ; protocoles communautaires usuels
-pour les autres.
+*Senior Fitness Test* (1999) pour la souplesse ; protocoles communautaires usuels
+pour les autres (dont le squat 1 min).
 
 ### 2.3 Cardio
 
@@ -270,7 +270,7 @@ ancienne ne peut donc plus écraser une estimation Cooper plus récente.
 |---|---|---|
 | 🫀 Cardio au repos & métabolisme | **20 %** | FC repos, PA sys, PA dia, tour de taille |
 | 🏃 Endurance cardio | **20 %** | 1 seul indicateur : dernière VMA/VO2max estimée/renseignée, sinon escalier (§4.3) |
-| 💪 Force musculaire | **20 %** | Préhension, pompes sur les genoux (1 min), gainage, chaise 30 s |
+| 💪 Force musculaire | **20 %** | Préhension, pompes sur les genoux (1 min), squat 1 min, gainage |
 | ⚖️ Équilibre & mobilité | **15 %** | Équilibre yeux ouverts/fermés, sit-and-reach |
 | 🏃 Habitudes d'activité | **10 %** | IPAQ, temps assis |
 | 🌙 Sommeil & récupération | **10 %** | Score de sommeil, durée de sommeil |
@@ -279,7 +279,8 @@ ancienne ne peut donc plus écraser une estimation Cooper plus récente.
 **Score d'une dimension** = moyenne des SCORE_PTS de ses tests scorés
 (25 à 100). Chaque test est noté via `statusOf` (seuils sexe du §2.2 ;
 pour le test 10 « pompes sur les genoux — max en 1 min » : H ≥ 25 bon / ≥ 15 moyen,
-F ≥ 18 bon / ≥ 10 moyen) puis `SCORE_PTS` = { bon 100, moyen 60, faible 25 }.
+F ≥ 18 bon / ≥ 10 moyen ; pour le test 12 « squat poids du corps — max en 1 min » :
+H ≥ 30 bon / ≥ 20 moyen, F ≥ 22 bon / ≥ 14 moyen) puis `SCORE_PTS` = { bon 100, moyen 60, faible 25 }.
 
 **IFG /100** = Σ (score de la dimension × poids de la dimension), arrondi à l'entier.
 
@@ -453,7 +454,7 @@ que la cadence (ou n'existe pas → « jamais effectué »).
    élevée 130–139/85–89 mmHg.
 8. **ESC 2021** — recommandations sur la prévention cardiovasculaire ; score **SCORE2**
    (âge, sexe, tabagisme, PA systolique, cholestérol, antécédents familiaux).
-9. **Rikli RE & Jones CJ** — *Senior Fitness Test*, 1999. → chaise 30 s, souplesse
+9. **Rikli RE & Jones CJ** — *Senior Fitness Test*, 1999. → souplesse
    (sit-and-reach), protocoles standardisés.
 10. **Kodama S et al.** — méta-analyse, *JAMA*, 2009. → marche/course et mortalité
     (VO2max élevée = mortalité réduite).

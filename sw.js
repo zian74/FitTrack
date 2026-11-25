@@ -1,5 +1,5 @@
 /* Service worker FitTrack — network-first pour les fichiers de l'app, repli cache hors ligne */
-const CACHE = 'fittrack-v73';
+const CACHE = 'fittrack-v74';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const ASSETS = [
   './assets/plank-exercise.gif',
   './assets/knee-push-up.gif',
   './assets/stair-step-up.gif',
+  './assets/squat-bodyweight.gif',
 ];
 
 self.addEventListener('install', e => {

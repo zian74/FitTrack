@@ -43,6 +43,10 @@ const stairImg = byKey['stair_pulse'].querySelector('img.info-illustration');
 check(!!stairImg && (stairImg.getAttribute('alt') || '').length > 20
   && (stairImg.getAttribute('src') || '') === './assets/stair-step-up.gif',
   'stair_pulse : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
+const chairImg = byKey['chair'].querySelector('img.info-illustration');
+check(!!chairImg && (chairImg.getAttribute('alt') || '').length > 20
+  && (chairImg.getAttribute('src') || '') === './assets/squat-bodyweight.gif',
+  'chair (squat) : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
 
 // --- 3. Ouverture/fermeture de la modale via les boutons présents ---
 const body = document.getElementById('info-modal-body');
