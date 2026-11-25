@@ -418,6 +418,15 @@ const TESTS = [
   { id: 'plank', name: 'Gainage planche (s)', unit: 's', group: 'strength',
     hint: 'Dos plat, tenue maximale', good: 120, mid: 60, max: 600, min: 0,
     info: () =>
+      h('div', {},
+      h('img', {
+        src: './assets/plank-exercise.gif',
+        alt: 'Illustration animée du gainage planche : appui sur les avant-bras, pointes de pieds au sol, corps aligné de la tête aux talons',
+        class: 'info-illustration',
+        width: '397',
+        height: '231',
+        loading: 'lazy',
+      }),
       h('ul', {},
       h('li', {},
         'Position : ',
@@ -465,6 +474,7 @@ const TESTS = [
         ' ',
       h('li', {},
         'Échauffez le core 2–3 min avant (gainage ventral léger, mobilité du bassin).',
+      ),
       ),
     )
      },

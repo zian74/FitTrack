@@ -17,6 +17,8 @@ cp "$ROOT/index.html" "$ROOT/style.css" "$ROOT/sw.js" "$PUBLIC/"
 cp "$ROOT/manifest.webmanifest" "$PUBLIC/"
 cp "$ROOT/icon-192.png" "$ROOT/icon-512.png" "$PUBLIC/"
 cp "$ROOT/screenshot-narrow.png" "$ROOT/screenshot-wide.png" "$PUBLIC/"
+mkdir -p "$PUBLIC/assets"
+cp "$ROOT"/assets/* "$PUBLIC/assets/"
 
 # app.js : le service worker est désactivé dans l'APK (assets embarqués,
 # le SW casserait la mise à jour du cache)
