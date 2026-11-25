@@ -47,6 +47,10 @@ const chairImg = byKey['chair'].querySelector('img.info-illustration');
 check(!!chairImg && (chairImg.getAttribute('alt') || '').length > 20
   && (chairImg.getAttribute('src') || '') === './assets/squat-bodyweight.gif',
   'chair (squat) : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
+const gripImg = byKey['grip'].querySelector('img.info-illustration');
+check(!!gripImg && (gripImg.getAttribute('alt') || '').length > 20
+  && (gripImg.getAttribute('src') || '') === './assets/grip-strength.gif',
+  'grip (préhension) : illustration <img class="info-illustration"> avec alt descriptif + src assets/');
 
 // --- 3. Ouverture/fermeture de la modale via les boutons présents ---
 const body = document.getElementById('info-modal-body');

@@ -273,6 +273,15 @@ const TESTS = [
     good: 45, mid: 35, max: 100, min: 5,
     gender: { H: { good: 45, mid: 35 }, F: { good: 30, mid: 20 } },
     info: () =>
+      h('div', {},
+      h('img', {
+        src: './assets/grip-strength.gif',
+        alt: 'Illustration animée du test de préhension : une main serre un dynamomètre à cadran, l’aiguille monte jusqu’en zone rouge au serrage maximal',
+        class: 'info-illustration',
+        width: '440',
+        height: '333',
+        loading: 'lazy',
+      }),
       h('ul', {},
       h('li', {},
         'Échauffez vos ',
@@ -351,6 +360,7 @@ const TESTS = [
           'douleur',
         ),
         ' au poignet, au coude ou à l\'épaule.',
+      ),
       ),
     )
      },
