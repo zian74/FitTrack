@@ -501,8 +501,8 @@ const TESTS = [
     )
      },
   { id: 'chair', name: 'Squat poids du corps — max en 1 min', unit: 'rép.', group: 'strength',
-    hint: 'Pieds largeur hanches, 1 min chronométrée (bouton ⏳)', good: 30, mid: 20, max: 100, min: 0,
-    gender: { H: { good: 30, mid: 20 }, F: { good: 22, mid: 14 } },
+    hint: 'Pieds largeur hanches, 1 min chronométrée (bouton ⏳)', good: 54, mid: 23, max: 200, min: 0,
+    gender: { H: { good: 54, mid: 23 }, F: { good: 38, mid: 12 } },
     info: () =>
       h('div', {},
       h('img', {

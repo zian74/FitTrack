@@ -25,7 +25,7 @@ objectives (repos, mobilité, force, cardio, activité/sédentarité). Logique p
 | 9 | Préhension (dynamomètre) | force | trimestriel | H 45–55 / F 30–35 kg |
 | 10 | Pompes sur les genoux — max en 1 min | force | trimestriel | H ≥ 25 / F ≥ 18 |
 | 11 | Gainage planche | force | trimestriel | 2 min |
-| 12 | Squat poids du corps — max en 1 min | force | trimestriel | H ≥ 30 / F ≥ 22 |
+| 12 | Squat poids du corps — max en 1 min | force | trimestriel | H ≥ 54 (moyen ≥ 23) / F ≥ 38 (moyen ≥ 12) |
 | 13 | Test escalier — méthode 1 (pouls 1 min) | cardio | trimestriel | ≤ 100 / ≤ 110 (inversé) |
 | 14 | Test escalier — méthode 2 (marches en 60 s) | cardio | trimestriel | ≥ 80 / ≥ 60 |
 | 15 | Test escalier — méthode 3 (4 étages chronométrés) | cardio | trimestriel | ≤ 45 / ≤ 60 (inversé) |
