@@ -1790,7 +1790,7 @@ function renderDashboard() {
   const due = dueGroups().map(d => {
     if (!d.last) return h('li', {}, h('b', {}, d.label), ' — jamais effectué ', h('span', { class: 'badge low' }, 'à faire'));
     const lastFr = d.last.split('-').reverse().join('/');
-    const dueLabel = d.unit === 'jours' ? `à refaire (${d.daysDue} j)` : `à refaire (${d.monthsDue} mois)`;
+    const dueLabel = 'à refaire';
     return d.due
       ? h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge low' }, dueLabel))
       : h('li', {}, h('b', {}, d.label), ` — dernier : ${lastFr} `, h('span', { class: 'badge good' }, 'à jour'));
